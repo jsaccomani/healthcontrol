@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:clinical_core/clinical_core.dart';
 import '../../../core/storage/health_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/design_system/design_system.dart';
 import '../../diary/screens/new_entry_screen.dart';
 import '../../emergency/screens/emergency_screen.dart';
 import '../../cact/screens/cact_quiz_screen.dart';
@@ -141,9 +142,11 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: HCResponsiveContainer(
+            maxWidth: 840,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // 1. Identificação do Filho
               HomeHeaderCard(
                 profile: _profile!,
@@ -258,6 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

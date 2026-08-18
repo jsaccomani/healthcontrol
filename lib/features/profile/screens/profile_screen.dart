@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:clinical_core/clinical_core.dart';
 import '../../../core/storage/health_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/design_system/design_system.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -284,11 +285,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // Conteúdo das 5 Abas
-          Expanded(
-            child: TabBarView(
+      body: HCResponsiveContainer(
+        maxWidth: 840,
+        child: Column(
+          children: [
+            // Conteúdo das 5 Abas
+            Expanded(
+              child: TabBarView(
               controller: _tabController,
               children: [
                 _buildChildDataTab(),
@@ -325,8 +328,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // 1. Aba Criança & Nascimento
   Widget _buildChildDataTab() {

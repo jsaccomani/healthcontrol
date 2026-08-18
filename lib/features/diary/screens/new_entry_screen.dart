@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:clinical_core/clinical_core.dart';
 import '../../../core/storage/health_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/design_system/design_system.dart';
 import '../widgets/procedure_chip_selector.dart';
 import '../widgets/prescribed_meds_checklist.dart';
 import '../widgets/peak_flow_input_card.dart';
@@ -242,9 +243,12 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
         title: const Text('Nova Anotação de Saúde', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
       body: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
+        child: HCResponsiveContainer(
+          maxWidth: 720,
+          child: Column(
+            children: [
             // Seletor Modular de Procedimentos
             ProcedureChipSelector(
               includeMedication: _includeMedication,
@@ -353,6 +357,7 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

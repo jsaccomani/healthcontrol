@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/storage/health_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/design_system/design_system.dart';
 import 'package:clinical_core/clinical_core.dart';
 
 class ProConnectScreen extends StatefulWidget {
@@ -63,9 +64,11 @@ class _ProConnectScreenState extends State<ProConnectScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: HCResponsiveContainer(
+          maxWidth: 720,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Banner de Apresentação
             Container(
               padding: const EdgeInsets.all(16),
@@ -185,8 +188,9 @@ class _ProConnectScreenState extends State<ProConnectScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildConsultationStat({
     required String title,

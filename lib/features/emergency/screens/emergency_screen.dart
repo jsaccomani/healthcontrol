@@ -72,8 +72,10 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
+        child: HCResponsiveContainer(
+          maxWidth: 720,
+          child: Column(
+            children: [
             // 1. Banner para Apresentação Imediata ao Plantonista
             Container(
               width: double.infinity,
@@ -181,8 +183,9 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildEmergencyCard({
     required String title,
