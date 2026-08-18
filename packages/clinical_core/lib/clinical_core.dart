@@ -9,3 +9,5 @@ export 'src/peak_flow_calculator.dart';
 export 'src/models/event_log.dart';
 export 'src/models/health_control.dart';
 export 'src/models/patient.dart';
+export 'src/models/prescription.dart';
+export 'src/pediatric_pharmacopeia.dart';

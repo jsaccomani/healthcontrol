@@ -386,4 +386,101 @@ class HealthStorageService {
       ),
     ];
   }
+
+  static const String _keyPrescriptionsPrefix = 'health_control_prescriptions_';
+
+  /// Retorna a lista de prescrições médicas ativas do paciente.
+  Future<List<PrescriptionRecord>> getPrescriptions(String patientId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final rawList = prefs.getStringList('$_keyPrescriptionsPrefix$patientId');
+
+    if (rawList == null || rawList.isEmpty) {
+      final seed = [_generateDefaultArthurPrescription(patientId)];
+      await _savePrescriptionsList(patientId, seed);
+      return seed;
+    }
+
+    try {
+      return rawList
+          .map((str) => PrescriptionRecord.fromJson(jsonDecode(str) as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Salva ou atualiza uma prescrição médica escaneada/inserida.
+  Future<void> savePrescription(PrescriptionRecord prescription) async {
+    final list = await getPrescriptions(prescription.patientId);
+    final idx = list.indexWhere((p) => p.id == prescription.id);
+    List<PrescriptionRecord> updated;
+    if (idx >= 0) {
+      updated = List.from(list)..[idx] = prescription;
+    } else {
+      updated = [prescription, ...list];
+    }
+    await _savePrescriptionsList(prescription.patientId, updated);
+  }
+
+  /// Remove uma prescrição médica.
+  Future<void> deletePrescription(String patientId, String prescriptionId) async {
+    final list = await getPrescriptions(patientId);
+    final updated = list.where((p) => p.id != prescriptionId).toList();
+    await _savePrescriptionsList(patientId, updated);
+  }
+
+  Future<void> _savePrescriptionsList(String patientId, List<PrescriptionRecord> list) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = list.map((p) => jsonEncode(p.toJson())).toList();
+    await prefs.setStringList('$_keyPrescriptionsPrefix$patientId', raw);
+  }
+
+  PrescriptionRecord _generateDefaultArthurPrescription(String patientId) {
+    return PrescriptionRecord(
+      id: 'presc_arthur_initial',
+      patientId: patientId,
+      doctorName: 'Dr. Marco Aurélio Valente',
+      doctorCrm: 'CRM/SP 129.840 - RQE 48.211',
+      clinicName: 'Instituto Pediátrico de Pneumologia e Alergia',
+      prescriptionDate: DateTime.now().subtract(const Duration(days: 20)),
+      validityMonths: 6,
+      medications: const [
+        PrescribedMedication(
+          id: 'med_01',
+          commercialName: 'Clenil HFA 250mcg Spray',
+          activeIngredient: 'Dipropionato de Beclometasona',
+          category: MedicationCategory.maintenanceInhaled,
+          dosage: '1 jato (puff)',
+          frequency: '12/12 horas (Manhã e Noite)',
+          instructions: 'Agitar bem a bombinha, usar com espaçador valvulado e máscara facial. Bochechar a boca com água após o uso para prevenir candidíase.',
+          spacerRequired: true,
+          isContinuous: true,
+        ),
+        PrescribedMedication(
+          id: 'med_02',
+          commercialName: 'Aerolin Spray 100mcg',
+          activeIngredient: 'Sulfato de Salbutamol',
+          category: MedicationCategory.rescueInhaled,
+          dosage: '2 a 4 jatos',
+          frequency: 'Uso se tosse, chiado ou falta de ar (Resgate)',
+          instructions: 'Aplicar 1 jato por vez no espaçador, aguardar 6 respirações calmas por jato. Repetir conforme plano de ação.',
+          spacerRequired: true,
+          isContinuous: false,
+        ),
+        PrescribedMedication(
+          id: 'med_03',
+          commercialName: 'Singulair Baby 4mg Sachê',
+          activeIngredient: 'Montelucaste de Sódio',
+          category: MedicationCategory.antileukotrieneOral,
+          dosage: '1 sachê (grânulos orais)',
+          frequency: '1x ao dia à noite',
+          instructions: 'Administrar à noite misturado em uma colher de alimento pastoso.',
+          spacerRequired: false,
+          isContinuous: true,
+        ),
+      ],
+      notes: 'Plano terapêutico de manutenção para Asma Grave Pediátrica. Retorno programado em 6 meses com diário e medições de Peak Flow.',
+      isLmeAltoCusto: false,
+    );
+  }
 }

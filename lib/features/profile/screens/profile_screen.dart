@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:clinical_core/clinical_core.dart';
 import '../../../core/storage/health_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../prescription/screens/prescription_scan_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -758,6 +759,45 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 controller: _doctorPhoneCtrl,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(labelText: 'Telefone / WhatsApp do Consultório', hintText: '(11) 99999-8888'),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // Prescrições Médicas, Bombinhas & Scanner OCR
+          _buildCardSection(
+            title: '💊 4. Prescrições Médicas & Scanner de Receitas',
+            children: [
+              const Text(
+                'Mantenha as receitas do pneumopediatra digitalizadas para controle de validade e inclusão automática de bombinhas de manutenção e resgate.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.3),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F766E),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.document_scanner),
+                  label: const Text('Escanear / Gerenciar Receitas Médicas ➔', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PrescriptionScanScreen(
+                          patientId: _activeProfile!.id,
+                          patientName: _activeProfile!.name,
+                        ),
+                      ),
+                    );
+                    _loadAllData();
+                  },
+                ),
               ),
             ],
           ),

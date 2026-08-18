@@ -9,6 +9,7 @@ import '../../cact/screens/cact_quiz_screen.dart';
 import '../../physio/screens/physio_screen.dart';
 import '../../pro_connect/screens/pro_connect_screen.dart';
 import '../../profile/screens/profile_screen.dart';
+import '../../prescription/screens/prescription_scan_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -509,6 +510,31 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(width: 10),
+            Expanded(
+              child: _buildActionButton(
+                label: '💊 Receitas & Bombinhas',
+                subtitle: 'Scanner OCR & Validade',
+                color: const Color(0xFF0F766E),
+                bgColor: const Color(0xFFCCFBF1),
+                icon: Icons.document_scanner,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PrescriptionScanScreen(
+                        patientId: _profile!.id,
+                        patientName: _profile!.name,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
             Expanded(
               child: _buildActionButton(
                 label: '👨‍⚕️ Health Control Pro',
