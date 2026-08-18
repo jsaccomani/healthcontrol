@@ -17,7 +17,7 @@ open web_prototype/index.html
 
 ### Forma 2: Testar o App Flutter no seu Computador (Chrome / Desktop)
 ```bash
-cd /Users/jsaccomani/Documents/Jetsky/Personal/asmacontrol-pro
+cd /Users/jsaccomani/Documents/Jetsky/Personal/healthcontrol
 export PATH="/Users/jsaccomani/development/flutter/bin:$PATH"
 flutter run -d chrome
 ```
