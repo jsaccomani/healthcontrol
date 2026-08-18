@@ -13,7 +13,6 @@ class NewEntryScreen extends StatefulWidget {
 class _NewEntryScreenState extends State<NewEntryScreen> {
   final HealthStorageService _storageService = HealthStorageService();
 
-  PatientProfile? _patientProfile;
   List<PrescribedMedication> _childPrescribedMeds = [];
   bool _isLoading = true;
 
@@ -103,7 +102,6 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
     }
 
     setState(() {
-      _patientProfile = profile;
       _childPrescribedMeds = allMeds;
       _isLoading = false;
     });

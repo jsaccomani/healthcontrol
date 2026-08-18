@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:clinical_core/clinical_core.dart';
@@ -15,12 +16,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   final HealthStorageService _storageService = HealthStorageService();
   late TabController _tabController;
 
-  List<PatientProfile> _allProfiles = [];
   PatientProfile? _activeProfile;
   List<PrescriptionRecord> _prescriptions = [];
   bool _isLoading = true;
 
-  // Controladores - Dados da Criança
+  // Debounce para Salvamento Automático do Histórico
+  Timer? _autoSaveDebounce;
+  String _autoSaveStatus = '🟢 Salvo automaticamente';
+
+  // 1. Controladores - Criança & Nascimento
   late TextEditingController _nameCtrl;
   late TextEditingController _heightCtrl;
   late TextEditingController _weightCtrl;
@@ -28,12 +32,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   late TextEditingController _susCtrl;
   late TextEditingController _insuranceCtrl;
   late TextEditingController _insuranceCardCtrl;
+  late TextEditingController _gestationalWeeksCtrl;
+  late TextEditingController _birthWeightCtrl;
+  bool _neonatalIcuOrOxygen = false;
   String _gender = 'Masculino';
   String _bloodType = 'A+';
   String _selectedAvatar = 'boy_1';
   DateTime _birthDate = DateTime(2021, 5, 15);
 
-  // Controladores - Dados dos Pais
+  // 2. Controladores - Dados dos Pais
   late TextEditingController _motherNameCtrl;
   late TextEditingController _motherPhoneCtrl;
   late TextEditingController _motherEmailCtrl;
@@ -43,29 +50,48 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   late TextEditingController _emergencyContactPhoneCtrl;
   late TextEditingController _addressCtrl;
 
-  // Controladores - Anamnese Médica
+  // 3. Controladores - Triagem Médica & Perguntas Clínicas
   late TextEditingController _symptomsStartAgeCtrl;
   bool _hadIcuAdmission = false;
+  bool _intubatedPast = false;
   late TextEditingController _icuCountCtrl;
-  late TextEditingController _lastHospCtrl;
-  late TextEditingController _igeCtrl;
-  late TextEditingController _eosCtrl;
+  late TextEditingController _erVisitsCtrl;
+  late TextEditingController _steroidCoursesCtrl;
+  late TextEditingController _nightAwakeningsCtrl;
+  String _activityLimitation = 'Normal - sem limitações para brincar';
+  bool _fluVaccineUpToDate = true;
+  bool _pneumoVaccineUpToDate = true;
+  bool _householdSmokers = false;
+  String _householdPets = 'Nenhum';
+
   late TextEditingController _doctorNameCtrl;
   late TextEditingController _doctorPhoneCtrl;
+  late TextEditingController _preferredHospitalCtrl;
 
+  List<String> _crisisTriggers = ['Resfriados / Gripes', 'Mudança brusca de temperatura', 'Tempo seco e poeira'];
   List<String> _familyHistory = ['Mãe (Rinite/Asma)'];
   List<String> _drugAllergies = [];
   List<String> _foodAllergies = [];
   List<String> _environmentalAllergies = ['Ácaros da poeira', 'Poeira', 'Tempo frio'];
   List<String> _comorbidities = ['Rinite Alérgica Perene', 'Hiper-reatividade Brônquica'];
 
+  // 4. Histórico Contado pelos Pais (Espaço Amplo com Auto-Save)
+  late TextEditingController _familyNotesCtrl;
+
   final List<String> _commonBloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Não informado'];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadAllData();
+  }
+
+  @override
+  void dispose() {
+    _autoSaveDebounce?.cancel();
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadAllData() async {
@@ -74,7 +100,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final current = await _storageService.getPatientProfile();
     final prescriptions = await _storageService.getPrescriptions(current.id);
 
-    _allProfiles = profiles;
     _activeProfile = current;
     _prescriptions = prescriptions;
     _populateControllers(current);
@@ -83,6 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   void _populateControllers(PatientProfile p) {
+    // 1. Criança & Nascimento
     _nameCtrl = TextEditingController(text: p.name);
     _heightCtrl = TextEditingController(text: p.heightCm.toStringAsFixed(0));
     _weightCtrl = TextEditingController(text: p.weightKg.toStringAsFixed(1));
@@ -90,12 +116,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     _susCtrl = TextEditingController(text: p.susCardNumber);
     _insuranceCtrl = TextEditingController(text: p.healthInsurance);
     _insuranceCardCtrl = TextEditingController(text: p.insuranceCardNumber);
+    _gestationalWeeksCtrl = TextEditingController(text: p.gestationalAgeWeeks.toString());
+    _birthWeightCtrl = TextEditingController(text: p.birthWeightGrams.toString());
+    _neonatalIcuOrOxygen = p.neonatalIcuOrOxygen;
     _gender = p.gender;
     _bloodType = p.bloodType;
     _selectedAvatar = p.avatarId;
     _birthDate = p.birthDate;
 
-    // Pais
+    // 2. Pais
     _motherNameCtrl = TextEditingController(text: p.motherName);
     _motherPhoneCtrl = TextEditingController(text: p.motherPhone);
     _motherEmailCtrl = TextEditingController(text: p.motherEmail);
@@ -105,459 +134,64 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     _emergencyContactPhoneCtrl = TextEditingController(text: p.emergencyContactPhone);
     _addressCtrl = TextEditingController(text: p.addressCityState);
 
-    // Anamnese
+    // 3. Triagem Médica
     _symptomsStartAgeCtrl = TextEditingController(text: p.symptomsStartAge);
     _hadIcuAdmission = p.hadIcuAdmission;
+    _intubatedPast = p.intubatedPast;
     _icuCountCtrl = TextEditingController(text: p.icuAdmissionsCount.toString());
-    _lastHospCtrl = TextEditingController(text: p.lastHospitalizationInfo);
-    _igeCtrl = TextEditingController(text: p.igeLevel.toStringAsFixed(0));
-    _eosCtrl = TextEditingController(text: p.eosinophilsCount.toString());
+    _erVisitsCtrl = TextEditingController(text: p.erVisitsLast12Months.toString());
+    _steroidCoursesCtrl = TextEditingController(text: p.oralSteroidCoursesLastYear.toString());
+    _nightAwakeningsCtrl = TextEditingController(text: p.nightAwakeningsPerMonth.toString());
+    _activityLimitation = p.activityLimitation;
+    _fluVaccineUpToDate = p.fluVaccineUpToDate;
+    _pneumoVaccineUpToDate = p.pneumococcalVaccine;
+    _householdSmokers = p.householdSmokers;
+    _householdPets = p.householdPets;
     _doctorNameCtrl = TextEditingController(text: p.doctorName);
     _doctorPhoneCtrl = TextEditingController(text: p.doctorPhone);
+    _preferredHospitalCtrl = TextEditingController(text: p.preferredHospital);
 
+    _crisisTriggers = List.from(p.crisisTriggers);
     _familyHistory = List.from(p.familyAsthmaHistory);
     _drugAllergies = List.from(p.drugAllergies);
     _foodAllergies = List.from(p.foodAllergies);
     _environmentalAllergies = List.from(p.environmentalAllergies);
     _comorbidities = List.from(p.comorbidities);
+
+    // 4. Histórico da Família
+    _familyNotesCtrl = TextEditingController(text: p.familyNotesAndHistory);
   }
 
-  Future<void> _switchChild(PatientProfile target) async {
-    await _storageService.setSelectedProfileId(target.id);
-    _activeProfile = target;
-    _populateControllers(target);
-    final presc = await _storageService.getPrescriptions(target.id);
-    _prescriptions = presc;
-    setState(() {});
+  void _onFamilyHistoryChanged(String text) {
+    setState(() => _autoSaveStatus = '⏳ Salvando alterações...');
+    _autoSaveDebounce?.cancel();
+    _autoSaveDebounce = Timer(const Duration(milliseconds: 900), () async {
+      await _silentSaveProfile();
+      if (mounted) {
+        setState(() => _autoSaveStatus = '🟢 Salvo automaticamente às ${DateFormat('HH:mm:ss').format(DateTime.now())}');
+      }
+    });
   }
 
-  Future<void> _showAddChildDialog() async {
-    final nameNewCtrl = TextEditingController();
-    final weightNewCtrl = TextEditingController(text: '18.0');
-    final heightNewCtrl = TextEditingController(text: '105');
-    final pefNewCtrl = TextEditingController(text: '200');
-    DateTime newBirth = DateTime.now().subtract(const Duration(days: 365 * 4));
-    String newGender = 'Feminino';
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: const [
-              Icon(Icons.person_add_alt_1, color: AppTheme.primaryTeal),
-              SizedBox(width: 8),
-              Text('Cadastrar Outro Filho', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameNewCtrl,
-                  decoration: const InputDecoration(labelText: 'Nome da Criança', hintText: 'ex: Beatriz Saccomani'),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: newGender,
-                        decoration: const InputDecoration(labelText: 'Sexo'),
-                        items: const [
-                          DropdownMenuItem(value: 'Masculino', child: Text('Menino')),
-                          DropdownMenuItem(value: 'Feminino', child: Text('Menina')),
-                        ],
-                        onChanged: (v) {
-                          if (v != null) setDialogState(() => newGender = v);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: weightNewCtrl,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Peso (kg)', hintText: '18.0'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: pefNewCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Melhor Sopro / PFE (L/min)', hintText: '200'),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameNewCtrl.text.trim().isEmpty) return;
-                final created = await _storageService.createNewChildProfile(
-                  name: nameNewCtrl.text.trim(),
-                  birthDate: newBirth,
-                  gender: newGender,
-                  heightCm: double.tryParse(heightNewCtrl.text) ?? 105.0,
-                  weightKg: double.tryParse(weightNewCtrl.text) ?? 18.0,
-                  personalBestPef: int.tryParse(pefNewCtrl.text) ?? 200,
-                  avatarId: newGender == 'Feminino' ? 'girl_1' : 'boy_2',
-                );
-                Navigator.pop(ctx);
-                await _loadAllData();
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Perfil de ${created.name} criado com sucesso!')),
-                );
-              },
-              child: const Text('Cadastrar'),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> _silentSaveProfile() async {
+    if (_activeProfile == null) return;
+    final updated = _buildCurrentProfileObject();
+    await _storageService.savePatientProfile(updated);
+    _activeProfile = updated;
   }
 
-  void _openScanPrescriptionModal() {
-    final rawTextCtrl = TextEditingController();
-    int sampleSelected = 0;
-
-    final samples = [
-      {
-        'title': '📋 Receita Médica de Rotina (Manutenção + Resgate)',
-        'text': '''INSTITUTO PEDIÁTRICO DE PNEUMOLOGIA
-Dr. Marco Aurélio Valente - CRM 129.840/SP
-Data: 18/08/2026
-
-Paciente: ${_activeProfile!.name}
-
-USO INALATÓRIO:
-1. Clenil HFA 250mcg Spray
-   - Fazer 1 jato (puff) de 12 em 12 horas.
-   - Usar com espaçador valvulado e máscara.
-   - Lavar/enxaguar a boca após a aplicação.
-
-2. Aerolin Spray 100mcg (Sulfato de Salbutamol)
-   - Fazer 2 jatos no espaçador em caso de tosse, chiado ou falta de ar.
-
-USO ORAL:
-3. Singulair Baby 4mg Sachê (Montelucaste)
-   - 1 sachê à noite misturado em alimento pastoso.
-
-Validade: 6 meses.''',
-      },
-      {
-        'title': '🚨 Receita de Crise / Exacerbação',
-        'text': '''HOSPITAL INFANTIL PRONTO-SOCORRO
-Dra. Renata Silveira - CRM 165.430/SP
-Data: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}
-
-Paciente: ${_activeProfile!.name}
-
-1. Aerolin 100mcg Spray
-   - 2 a 4 jatos a cada 4 horas com espaçador por 48 horas.
-
-2. Prednisolona 3mg/mL Solução Oral
-   - Tomar 6,5 mL (1mg/kg) 1x ao dia pela manhã por 5 dias consecutivos.
-
-3. Clenil HFA 250mcg
-   - Manter 1 jato 12/12h com espaçador.''',
-      },
-    ];
-
-    rawTextCtrl.text = samples[0]['text'] as String;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.document_scanner, color: AppTheme.primaryTeal, size: 24),
-                        SizedBox(width: 8),
-                        Text(
-                          'Escanear Receita do Médico',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Tire foto da receita ou use o leitor inteligente para cadastrar as bombinhas, horários e data de validade sem precisar digitar nada.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.3),
-                ),
-                const SizedBox(height: 14),
-
-                // Botões de Câmera e Arquivo
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.camera_alt, size: 18),
-                        label: const Text('Tirar Foto da Receita'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.primaryTeal,
-                          side: const BorderSide(color: AppTheme.primaryTeal),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Foto da receita capturada! Reconhecendo medicações...')),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.picture_as_pdf, size: 18),
-                        label: const Text('Importar PDF'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF0284C7),
-                          side: const BorderSide(color: Color(0xFF0284C7)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Receita digital PDF carregada.')),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 14),
-
-                const Text('Modelos de Teste (Simular Leitura OCR):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF475569))),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  children: List.generate(samples.length, (idx) {
-                    final isSel = sampleSelected == idx;
-                    return ChoiceChip(
-                      label: Text(idx == 0 ? 'Receita de Rotina (Clenil+Aerolin)' : 'Receita de Crise (Prednisolona)', style: const TextStyle(fontSize: 11)),
-                      selected: isSel,
-                      selectedColor: AppTheme.primaryLight,
-                      onSelected: (sel) {
-                        if (sel) {
-                          setModalState(() {
-                            sampleSelected = idx;
-                            rawTextCtrl.text = samples[idx]['text'] as String;
-                          });
-                        }
-                      },
-                    );
-                  }),
-                ),
-
-                const SizedBox(height: 10),
-
-                TextField(
-                  controller: rawTextCtrl,
-                  maxLines: 6,
-                  style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
-                  decoration: InputDecoration(
-                    labelText: 'Texto Extraído da Receita',
-                    alignLabelWithHint: true,
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.auto_awesome),
-                    label: const Text('Cadastrar Medicações da Receita', style: TextStyle(fontWeight: FontWeight.bold)),
-                    onPressed: () async {
-                      if (rawTextCtrl.text.trim().isEmpty) return;
-
-                      final parsed = PrescriptionOcrParser.parseRawPrescriptionText(
-                        rawText: rawTextCtrl.text.trim(),
-                        patientId: _activeProfile!.id,
-                      );
-
-                      await _storageService.savePrescription(parsed);
-                      Navigator.pop(ctx);
-                      await _loadAllData();
-
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Receita médica de ${parsed.doctorName} cadastrada com sucesso! ✅'),
-                          backgroundColor: const Color(0xFF059669),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openAddMedicationCatalog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.8,
-        maxChildSize: 0.95,
-        minChildSize: 0.5,
-        expand: false,
-        builder: (_, scrollCtrl) => Padding(
-          padding: const EdgeInsets.all(20),
-          child: ListView(
-            controller: scrollCtrl,
-            children: [
-              Row(
-                children: const [
-                  Icon(Icons.medication, color: AppTheme.primaryTeal),
-                  SizedBox(width: 8),
-                  Text(
-                    'Escolher Bombinha ou Remédio',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Toque no remédio que o médico receitou para adicionar à ficha:',
-                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 14),
-
-              ...PediatricPharmacopeia.catalog.map((item) {
-                final category = item['category'] as MedicationCategory;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  elevation: 0,
-                  color: const Color(0xFFF8FAFC),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    side: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.white,
-                      child: Text(category.iconEmoji, style: const TextStyle(fontSize: 18)),
-                    ),
-                    title: Text(
-                      item['name'] as String,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
-                    ),
-                    subtitle: Text('${item['active']} • ${item['defaultDosage']}\n${category.displayName}', style: const TextStyle(fontSize: 11, color: Color(0xFF475569))),
-                    trailing: const Icon(Icons.add_circle, color: AppTheme.primaryTeal),
-                    onTap: () async {
-                      final newMed = PrescribedMedication(
-                        id: 'med_${DateTime.now().millisecondsSinceEpoch}',
-                        commercialName: item['name'] as String,
-                        activeIngredient: item['active'] as String,
-                        category: category,
-                        dosage: item['defaultDosage'] as String,
-                        frequency: item['defaultFrequency'] as String,
-                        instructions: item['instructions'] as String,
-                        spacerRequired: item['spacer'] as bool,
-                        isContinuous: item['continuous'] as bool,
-                      );
-
-                      if (_prescriptions.isNotEmpty) {
-                        final active = _prescriptions.first;
-                        final updated = PrescriptionRecord(
-                          id: active.id,
-                          patientId: active.patientId,
-                          doctorName: active.doctorName,
-                          doctorCrm: active.doctorCrm,
-                          clinicName: active.clinicName,
-                          prescriptionDate: active.prescriptionDate,
-                          validityMonths: active.validityMonths,
-                          medications: [...active.medications, newMed],
-                          notes: active.notes,
-                        );
-                        await _storageService.savePrescription(updated);
-                      } else {
-                        final newPresc = PrescriptionRecord(
-                          id: 'presc_manual_${DateTime.now().millisecondsSinceEpoch}',
-                          patientId: _activeProfile!.id,
-                          doctorName: 'Prescrição Cadastrada pelos Pais',
-                          prescriptionDate: DateTime.now(),
-                          validityMonths: 6,
-                          medications: [newMed],
-                        );
-                        await _storageService.savePrescription(newPresc);
-                      }
-
-                      Navigator.pop(ctx);
-                      await _loadAllData();
-
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${newMed.commercialName} adicionado com sucesso! ✅')),
-                      );
-                    },
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _saveCurrentProfile() async {
+  PatientProfile _buildCurrentProfileObject() {
     final height = double.tryParse(_heightCtrl.text.trim()) ?? 110.0;
     final weight = double.tryParse(_weightCtrl.text.trim()) ?? 19.5;
     final pef = int.tryParse(_pefCtrl.text.trim()) ?? 220;
-    final ige = double.tryParse(_igeCtrl.text.trim()) ?? 450.0;
-    final eos = int.tryParse(_eosCtrl.text.trim()) ?? 550;
     final icuCount = int.tryParse(_icuCountCtrl.text.trim()) ?? 0;
+    final erVisits = int.tryParse(_erVisitsCtrl.text.trim()) ?? 1;
+    final steroidCourses = int.tryParse(_steroidCoursesCtrl.text.trim()) ?? 2;
+    final nightAwakenings = int.tryParse(_nightAwakeningsCtrl.text.trim()) ?? 1;
+    final gestWeeks = int.tryParse(_gestationalWeeksCtrl.text.trim()) ?? 39;
+    final birthWeight = int.tryParse(_birthWeightCtrl.text.trim()) ?? 3200;
 
-    final updated = PatientProfile(
+    return PatientProfile(
       id: _activeProfile!.id,
       name: _nameCtrl.text.trim(),
       photoBase64: _activeProfile!.photoBase64,
@@ -571,6 +205,9 @@ Paciente: ${_activeProfile!.name}
       susCardNumber: _susCtrl.text.trim(),
       healthInsurance: _insuranceCtrl.text.trim(),
       insuranceCardNumber: _insuranceCardCtrl.text.trim(),
+      gestationalAgeWeeks: gestWeeks,
+      birthWeightGrams: birthWeight,
+      neonatalIcuOrOxygen: _neonatalIcuOrOxygen,
       motherName: _motherNameCtrl.text.trim(),
       motherPhone: _motherPhoneCtrl.text.trim(),
       motherEmail: _motherEmailCtrl.text.trim(),
@@ -582,31 +219,41 @@ Paciente: ${_activeProfile!.name}
       symptomsStartAge: _symptomsStartAgeCtrl.text.trim(),
       hadIcuAdmission: _hadIcuAdmission,
       icuAdmissionsCount: icuCount,
-      lastHospitalizationInfo: _lastHospCtrl.text.trim(),
+      intubatedPast: _intubatedPast,
+      erVisitsLast12Months: erVisits,
+      oralSteroidCoursesLastYear: steroidCourses,
+      hospitalizationsCount: _activeProfile!.hospitalizationsCount,
+      lastHospitalizationInfo: _activeProfile!.lastHospitalizationInfo,
+      nightAwakeningsPerMonth: nightAwakenings,
+      activityLimitation: _activityLimitation,
+      crisisTriggers: _crisisTriggers,
+      fluVaccineUpToDate: _fluVaccineUpToDate,
+      pneumococcalVaccine: _pneumoVaccineUpToDate,
+      householdSmokers: _householdSmokers,
+      householdPets: _householdPets,
       familyAsthmaHistory: _familyHistory,
       drugAllergies: _drugAllergies,
       foodAllergies: _foodAllergies,
       environmentalAllergies: _environmentalAllergies,
       comorbidities: _comorbidities,
-      igeLevel: ige,
-      eosinophilsCount: eos,
+      continuousMedications: _activeProfile!.continuousMedications,
+      igeLevel: _activeProfile!.igeLevel,
+      eosinophilsCount: _activeProfile!.eosinophilsCount,
       doctorName: _doctorNameCtrl.text.trim(),
       doctorPhone: _doctorPhoneCtrl.text.trim(),
-    );
-
-    await _storageService.savePatientProfile(updated);
-    await _loadAllData();
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ficha do paciente salva com sucesso! ✅')),
+      preferredHospital: _preferredHospitalCtrl.text.trim(),
+      familyNotesAndHistory: _familyNotesCtrl.text,
     );
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  Future<void> _saveAll() async {
+    final updated = _buildCurrentProfileObject();
+    await _storageService.savePatientProfile(updated);
+    await _loadAllData();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Ficha completa da criança salva com sucesso! ✅'), backgroundColor: Color(0xFF059669)),
+    );
   }
 
   @override
@@ -620,16 +267,10 @@ Paciente: ${_activeProfile!.name}
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Ficha & Anamnese da Criança', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        actions: [
-          IconButton(
-            tooltip: 'Cadastrar outro filho',
-            icon: const Icon(Icons.person_add_alt, color: AppTheme.primaryTeal),
-            onPressed: _showAddChildDialog,
-          ),
-        ],
+        title: const Text('Ficha Médica & Anamnese', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           labelColor: AppTheme.primaryTeal,
           unselectedLabelColor: const Color(0xFF64748B),
           indicatorColor: AppTheme.primaryTeal,
@@ -639,43 +280,48 @@ Paciente: ${_activeProfile!.name}
             Tab(icon: Icon(Icons.child_care, size: 18), text: '1. Criança'),
             Tab(icon: Icon(Icons.family_restroom, size: 18), text: '2. Pais'),
             Tab(icon: Icon(Icons.medication, size: 18), text: '3. Remédios'),
-            Tab(icon: Icon(Icons.favorite_border, size: 18), text: '4. Saúde'),
+            Tab(icon: Icon(Icons.local_hospital, size: 18), text: '4. Triagem Médica'),
+            Tab(icon: Icon(Icons.menu_book, size: 18), text: '5. História da Família ✍️'),
           ],
         ),
       ),
       body: Column(
         children: [
-          // Barra de Filhos
-          _buildChildrenSwitcherBar(),
-
-          // Conteúdo das Abas
+          // Conteúdo das 5 Abas
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
                 _buildChildDataTab(),
                 _buildParentsDataTab(),
-                _buildMedicationsAndPrescriptionsTab(),
-                _buildHealthHistoryTab(),
+                _buildMedicationsTab(),
+                _buildMedicalTriageTab(),
+                _buildFamilyHistoryFreeTextTab(),
               ],
             ),
           ),
 
-          // Botão Salvar
+          // Barra Inferior de Ação
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: const BoxDecoration(
               color: Colors.white,
               border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
             ),
-            child: SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: _saveCurrentProfile,
-                icon: const Icon(Icons.save),
-                label: const Text('Salvar Dados da Ficha', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _autoSaveStatus,
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: _saveAll,
+                  icon: const Icon(Icons.save, size: 16),
+                  label: const Text('Salvar Tudo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ],
             ),
           ),
         ],
@@ -683,44 +329,7 @@ Paciente: ${_activeProfile!.name}
     );
   }
 
-  Widget _buildChildrenSwitcherBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Colors.white,
-      child: Row(
-        children: [
-          const Text('Filho:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF64748B))),
-          const SizedBox(width: 8),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _allProfiles.map((p) {
-                  final isSel = p.id == _activeProfile!.id;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: ChoiceChip(
-                      avatar: Text(p.gender == 'Feminino' ? '👧' : '👦', style: const TextStyle(fontSize: 12)),
-                      label: Text(p.name, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
-                      selected: isSel,
-                      selectedColor: AppTheme.primaryLight,
-                      onSelected: (_) => _switchChild(p),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add_circle, color: AppTheme.primaryTeal, size: 20),
-            tooltip: 'Cadastrar outro filho',
-            onPressed: _showAddChildDialog,
-          ),
-        ],
-      ),
-    );
-  }
-
+  // 1. Aba Criança & Nascimento
   Widget _buildChildDataTab() {
     final double weight = double.tryParse(_weightCtrl.text) ?? _activeProfile!.weightKg;
     final double height = double.tryParse(_heightCtrl.text) ?? _activeProfile!.heightCm;
@@ -729,19 +338,15 @@ Paciente: ${_activeProfile!.name}
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Foto / Avatar
+          // Identificação
           Center(
             child: Column(
               children: [
                 CircleAvatar(
-                  radius: 40,
+                  radius: 38,
                   backgroundColor: AppTheme.primaryLight,
-                  child: Text(
-                    _gender == 'Feminino' ? '👧' : '👦',
-                    style: const TextStyle(fontSize: 40),
-                  ),
+                  child: Text(_gender == 'Feminino' ? '👧' : '👦', style: const TextStyle(fontSize: 38)),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -749,7 +354,7 @@ Paciente: ${_activeProfile!.name}
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
                 ),
                 Text(
-                  'IMC: ${bmi.toStringAsFixed(1)} kg/m² • Tipo Sanguíneo: $_bloodType',
+                  'IMC: ${bmi.toStringAsFixed(1)} kg/m² • Sangue: $_bloodType',
                   style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                 ),
               ],
@@ -759,12 +364,9 @@ Paciente: ${_activeProfile!.name}
           const SizedBox(height: 14),
 
           _buildCardSection(
-            title: '👦 1. Dados da Criança',
+            title: '👦 1. Dados Pessoais da Criança',
             children: [
-              TextField(
-                controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'Nome Completo da Criança'),
-              ),
+              TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nome Completo da Criança')),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -821,8 +423,8 @@ Paciente: ${_activeProfile!.name}
                 controller: _pefCtrl,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: 'Melhor Sopro Pessoal (Pico de Fluxo em L/min)',
-                  hintText: 'ex: 220 (valor de referência quando ele está 100% bem)',
+                  labelText: 'Melhor Sopro Pessoal (Pico de Fluxo - L/min)',
+                  hintText: 'ex: 220 (valor de referência quando está bem)',
                 ),
               ),
             ],
@@ -831,28 +433,50 @@ Paciente: ${_activeProfile!.name}
           const SizedBox(height: 12),
 
           _buildCardSection(
-            title: '🏥 2. Cartão SUS e Convênio',
+            title: '🍼 2. Histórico de Nascimento & Perinatal',
             children: [
-              TextField(
-                controller: _susCtrl,
-                decoration: const InputDecoration(labelText: 'Nº do Cartão SUS', hintText: '898 0000 1234 5678'),
-              ),
-              const SizedBox(height: 10),
               Row(
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: _insuranceCtrl,
-                      decoration: const InputDecoration(labelText: 'Plano de Saúde', hintText: 'Bradesco / Unimed'),
+                      controller: _gestationalWeeksCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Idade Gestacional (Semanas)', hintText: '39'),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
-                      controller: _insuranceCardCtrl,
-                      decoration: const InputDecoration(labelText: 'Nº da Carteirinha', hintText: '987654321'),
+                      controller: _birthWeightCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Peso ao Nascer (gramas)', hintText: '3200'),
                     ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Precisou de Oxigênio ou UTI Neonatal ao nascer?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                value: _neonatalIcuOrOxygen,
+                activeThumbColor: AppTheme.primaryTeal,
+                onChanged: (v) => setState(() => _neonatalIcuOrOxygen = v),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          _buildCardSection(
+            title: '🏥 3. Cartão SUS & Convênio Médico',
+            children: [
+              TextField(controller: _susCtrl, decoration: const InputDecoration(labelText: 'Nº do Cartão Nacional de Saúde (SUS)', hintText: '898 0000 1234 5678')),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(child: TextField(controller: _insuranceCtrl, decoration: const InputDecoration(labelText: 'Plano de Saúde', hintText: 'Bradesco / Unimed'))),
+                  const SizedBox(width: 8),
+                  Expanded(child: TextField(controller: _insuranceCardCtrl, decoration: const InputDecoration(labelText: 'Nº da Carteirinha', hintText: '987654321'))),
                 ],
               ),
             ],
@@ -863,6 +487,7 @@ Paciente: ${_activeProfile!.name}
     );
   }
 
+  // 2. Aba Pais
   Widget _buildParentsDataTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -871,63 +496,31 @@ Paciente: ${_activeProfile!.name}
           _buildCardSection(
             title: '👩 Dados da Mãe / Responsável',
             children: [
-              TextField(
-                controller: _motherNameCtrl,
-                decoration: const InputDecoration(labelText: 'Nome da Mãe', hintText: 'Juliana Saccomani'),
-              ),
+              TextField(controller: _motherNameCtrl, decoration: const InputDecoration(labelText: 'Nome da Mãe', hintText: 'Juliana Saccomani')),
               const SizedBox(height: 10),
-              TextField(
-                controller: _motherPhoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'WhatsApp / Celular da Mãe', hintText: '(11) 98765-4321'),
-              ),
+              TextField(controller: _motherPhoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'WhatsApp / Celular da Mãe', hintText: '(11) 98765-4321')),
             ],
           ),
-
           const SizedBox(height: 12),
-
           _buildCardSection(
             title: '👨 Dados do Pai / 2º Responsável',
             children: [
-              TextField(
-                controller: _fatherNameCtrl,
-                decoration: const InputDecoration(labelText: 'Nome do Pai', hintText: 'Pai'),
-              ),
+              TextField(controller: _fatherNameCtrl, decoration: const InputDecoration(labelText: 'Nome do Pai', hintText: 'Pai')),
               const SizedBox(height: 10),
-              TextField(
-                controller: _fatherPhoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'WhatsApp / Celular do Pai', hintText: '(11) 91234-5678'),
-              ),
+              TextField(controller: _fatherPhoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'WhatsApp / Celular do Pai', hintText: '(11) 91234-5678')),
             ],
           ),
-
           const SizedBox(height: 12),
-
           _buildCardSection(
             title: '📍 Endereço & Contato de Emergência Imediata',
             children: [
-              TextField(
-                controller: _addressCtrl,
-                decoration: const InputDecoration(labelText: 'Cidade / Bairro / Endereço', hintText: 'São Paulo - SP'),
-              ),
+              TextField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'Cidade / Endereço Completo', hintText: 'São Paulo - SP')),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _emergencyContactNameCtrl,
-                      decoration: const InputDecoration(labelText: 'Contato de Emergência', hintText: 'Mãe (Juliana)'),
-                    ),
-                  ),
+                  Expanded(child: TextField(controller: _emergencyContactNameCtrl, decoration: const InputDecoration(labelText: 'Contato de Emergência', hintText: 'Mãe (Juliana)'))),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _emergencyContactPhoneCtrl,
-                      keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(labelText: 'Telefone', hintText: '(11) 98765-4321'),
-                    ),
-                  ),
+                  Expanded(child: TextField(controller: _emergencyContactPhoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Telefone', hintText: '(11) 98765-4321'))),
                 ],
               ),
             ],
@@ -938,13 +531,13 @@ Paciente: ${_activeProfile!.name}
     );
   }
 
-  Widget _buildMedicationsAndPrescriptionsTab() {
+  // 3. Aba Remédios
+  Widget _buildMedicationsTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Banner de Scanner com 1 Toque
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -962,108 +555,38 @@ Paciente: ${_activeProfile!.name}
                   children: const [
                     Icon(Icons.document_scanner, color: Colors.white, size: 20),
                     SizedBox(width: 8),
-                    Text(
-                      'Escanear Receita do Pneumopediatra',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
+                    Text('Escanear Receita do Médico', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                   ],
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Tire foto da receita para o app ler os nomes das bombinhas, doses e acompanhar a data de validade automaticamente.',
+                  'Tire foto da receita para o app ler os nomes das bombinhas e horários automaticamente.',
                   style: TextStyle(color: Colors.white70, fontSize: 11, height: 1.3),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: const Color(0xFF0F766E),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: const Icon(Icons.camera_alt, size: 16),
-                        label: const Text('Tirar Foto / Ler OCR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                        onPressed: _openScanPrescriptionModal,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: const BorderSide(color: Colors.white),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: const Icon(Icons.add, size: 16),
-                        label: const Text('Escolher da Lista', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                        onPressed: _openAddMedicationCatalog,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Lista de Prescrições e Bombinhas
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Bombinhas e Remédios Cadastrados',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
-              ),
-              TextButton(
-                onPressed: _openAddMedicationCatalog,
-                child: const Text('+ Adicionar Remédio', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-
+          const SizedBox(height: 14),
+          const Text('Bombinhas & Remédios Cadastrados', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+          const SizedBox(height: 8),
           if (_prescriptions.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(20),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: const Column(
-                children: [
-                  Icon(Icons.medication_outlined, color: Color(0xFF94A3B8), size: 36),
-                  SizedBox(height: 6),
-                  Text('Nenhum remédio cadastrado ainda.', style: TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
-                  Text('Toque em "Escanear Receita" acima para começar.', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-                ],
-              ),
-            )
+            const Text('Nenhum remédio cadastrado.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B)))
           else
-            ..._prescriptions.map((p) => _buildPrescriptionCardInAnamnesis(p)),
-
+            ..._prescriptions.map((p) => _buildPrescriptionCard(p)),
           const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  Widget _buildPrescriptionCardInAnamnesis(PrescriptionRecord p) {
-    final isExp = p.isExpired;
-    final days = p.daysUntilExpiration;
-
+  Widget _buildPrescriptionCard(PrescriptionRecord p) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isExp ? const Color(0xFFFCA5A5) : const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1071,112 +594,98 @@ Paciente: ${_activeProfile!.name}
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Text(
-                  'Receita: ${p.doctorName}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isExp ? const Color(0xFFFEE2E2) : const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: isExp ? const Color(0xFFEF4444) : const Color(0xFF10B981)),
-                ),
-                child: Text(
-                  isExp ? 'Receita Vencida' : 'Válida ($days dias)',
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: isExp ? const Color(0xFFDC2626) : const Color(0xFF059669)),
-                ),
-              ),
+              Text('Receita: ${p.doctorName}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
+              Text('Válida (${p.daysUntilExpiration} dias)', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
             ],
           ),
-          const SizedBox(height: 2),
-          Text('Emitida em ${DateFormat('dd/MM/yyyy').format(p.prescriptionDate)}', style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
-          const Divider(height: 16, color: Color(0xFFF1F5F9)),
-
-          ...p.medications.map((m) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(m.category.iconEmoji, style: const TextStyle(fontSize: 20)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(m.commercialName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: m.isContinuous ? const Color(0xFFE0F2FE) : const Color(0xFFFEF3C7),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                m.isContinuous ? 'Todo dia' : 'Resgate',
-                                style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: m.isContinuous ? const Color(0xFF0369A1) : const Color(0xFFB45309)),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Text('Dose: ${m.dosage} • ${m.frequency}', style: const TextStyle(fontSize: 11, color: Color(0xFF475569))),
-                        if (m.spacerRequired)
-                          const Text('🫧 Usar com espaçador e máscara facial', style: TextStyle(fontSize: 10, color: AppTheme.primaryTeal, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
+          const Divider(height: 12),
+          ...p.medications.map((m) => Text('• ${m.commercialName} - ${m.dosage} (${m.frequency})', style: const TextStyle(fontSize: 11, color: Color(0xFF334155)))),
         ],
       ),
     );
   }
 
-  Widget _buildHealthHistoryTab() {
+  // 4. Aba Triagem Médica & Perguntas de Consultório
+  Widget _buildMedicalTriageTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           _buildCardSection(
-            title: '🫁 Início dos Sintomas & Gravidade',
+            title: '🚨 1. Gravidade das Crises & Histórico de Pronto-Socorro',
             children: [
-              TextField(
-                controller: _symptomsStartAgeCtrl,
-                decoration: const InputDecoration(labelText: 'Com que idade começaram as tosses/chiados?', hintText: 'ex: Aos 8 meses'),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _erVisitsCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Idas ao PS (Últimos 12 meses)', hintText: '1'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _steroidCoursesCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Ciclos de Prednisolona/ano', hintText: '2'),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Já precisou ficar internado em UTI por crise?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                title: const Text('Já precisou ficar internado em UTI por crise de falta de ar?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                 value: _hadIcuAdmission,
                 activeThumbColor: const Color(0xFFEF4444),
                 onChanged: (v) => setState(() => _hadIcuAdmission = v),
               ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Já precisou de intubação endotraqueal no passado?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                value: _intubatedPast,
+                activeThumbColor: const Color(0xFFEF4444),
+                onChanged: (v) => setState(() => _intubatedPast = v),
+              ),
             ],
           ),
 
           const SizedBox(height: 12),
 
           _buildCardSection(
-            title: '⚠️ Alergias & O que piora a respiração dele:',
+            title: '🌙 2. Sintomas Noturnos & Limitação nas Brincadeiras',
             children: [
-              _buildMultiTagSelector('Alergias a Medicamentos:', _drugAllergies, [
-                'Nenhuma medicamentosa', 'Dipirona', 'Ibuprofeno / AINEs', 'Amoxicilina'
-              ]),
+              TextField(
+                controller: _nightAwakeningsCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Quantas noites por mês acorda tossindo ou chiando?', hintText: '1'),
+              ),
               const SizedBox(height: 10),
-              _buildMultiTagSelector('Alergias do Ambiente / Gatilhos:', _environmentalAllergies, [
-                'Ácaros da poeira', 'Poeira', 'Pólen', 'Gato / Cachorro', 'Mofo', 'Tempo frio', 'Fumaça'
-              ]),
-              const SizedBox(height: 10),
-              _buildMultiTagSelector('Outros problemas associados:', _comorbidities, [
-                'Rinite Alérgica', 'Hiper-reatividade Brônquica', 'Dermatite', 'Refluxo'
+              DropdownButtonFormField<String>(
+                value: _activityLimitation,
+                decoration: const InputDecoration(labelText: 'Limitação nas Atividades / Brincadeiras da Escola'),
+                items: const [
+                  DropdownMenuItem(value: 'Normal - sem limitações para brincar', child: Text('Normal - corre e brinca normalmente')),
+                  DropdownMenuItem(value: 'Leve - tosse apenas em corrida intensa', child: Text('Leve - tosse em corrida intensa')),
+                  DropdownMenuItem(value: 'Moderada - cansa antes dos coleguinhas', child: Text('Moderada - cansa antes dos amigos')),
+                  DropdownMenuItem(value: 'Severa - evita brincadeiras ativas', child: Text('Severa - evita brincadeiras ativas')),
+                ],
+                onChanged: (v) {
+                  if (v != null) setState(() => _activityLimitation = v);
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          _buildCardSection(
+            title: '⚡ 3. O que costuma desencadear as crises dele (Gatilhos):',
+            children: [
+              _buildMultiTagSelector('Gatilhos Principais:', _crisisTriggers, [
+                'Resfriados / Gripes', 'Mudança brusca de temperatura', 'Tempo seco e poeira',
+                'Fumaça / Queimadas', 'Cheiros fortes / Perfumes', 'Exercício físico intenso', 'Riso ou choro forte'
               ]),
             ],
           ),
@@ -1184,19 +693,132 @@ Paciente: ${_activeProfile!.name}
           const SizedBox(height: 12),
 
           _buildCardSection(
-            title: '👨‍⚕️ Médico Pediatra / Pneumopediatra',
+            title: '💉 4. Vacinação & Ambiente da Casa',
             children: [
-              TextField(
-                controller: _doctorNameCtrl,
-                decoration: const InputDecoration(labelText: 'Nome do Médico Assistente', hintText: 'Dr. Nome do Médico'),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Vacina da Gripe (Influenza) anual em dia?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                value: _fluVaccineUpToDate,
+                activeThumbColor: const Color(0xFF059669),
+                onChanged: (v) => setState(() => _fluVaccineUpToDate = v),
               ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _doctorPhoneCtrl,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Telefone / WhatsApp do Consultório', hintText: '(11) 99999-8888'),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Há fumantes no ambiente da casa ou carro?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                value: _householdSmokers,
+                activeThumbColor: const Color(0xFFEF4444),
+                onChanged: (v) => setState(() => _householdSmokers = v),
+              ),
+              DropdownButtonFormField<String>(
+                value: _householdPets,
+                decoration: const InputDecoration(labelText: 'Animais de Estimação em Casa'),
+                items: const [
+                  DropdownMenuItem(value: 'Nenhum', child: Text('Nenhum')),
+                  DropdownMenuItem(value: 'Cachorro', child: Text('Cachorro')),
+                  DropdownMenuItem(value: 'Gato', child: Text('Gato')),
+                  DropdownMenuItem(value: 'Cachorro e Gato', child: Text('Cachorro e Gato')),
+                  DropdownMenuItem(value: 'Outros', child: Text('Outros')),
+                ],
+                onChanged: (v) {
+                  if (v != null) setState(() => _householdPets = v);
+                },
               ),
             ],
+          ),
+
+          const SizedBox(height: 12),
+
+          _buildCardSection(
+            title: '👨‍⚕️ 5. Médico Assistente & Hospital de Emergência',
+            children: [
+              TextField(controller: _doctorNameCtrl, decoration: const InputDecoration(labelText: 'Nome do Pediatra / Pneumopediatra', hintText: 'Dr. Marco Aurélio Valente')),
+              const SizedBox(height: 10),
+              TextField(controller: _doctorPhoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Telefone / WhatsApp do Consultório', hintText: '(11) 98888-7777')),
+              const SizedBox(height: 10),
+              TextField(controller: _preferredHospitalCtrl, decoration: const InputDecoration(labelText: 'Hospital de Preferência para Emergência', hintText: 'Hospital Infantil Sabará / Samaritano')),
+            ],
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  // 5. Aba História Contada pelos Pais (Auto-Save Amplo)
+  Widget _buildFamilyHistoryFreeTextTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: const [
+                        Text('✍️', style: TextStyle(fontSize: 18)),
+                        SizedBox(width: 6),
+                        Text('História do Filho Contada pelos Pais', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF166534))),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+                      child: Text(_autoSaveStatus, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Este espaço é livre para você escrever a história da respiração do seu filho, detalhes que os médicos precisam saber, como foram os primeiros sintomas e dicas especiais para quem for cuidar dele.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF166534), height: 1.3),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Relato Livre dos Pais (Salva automaticamente ao digitar):',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _familyNotesCtrl,
+                  maxLines: 15,
+                  maxLength: 5000,
+                  onChanged: _onFamilyHistoryChanged,
+                  style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFF1E293B)),
+                  decoration: const InputDecoration(
+                    hintText: 'Escreva aqui com calma...\nExemplo:\n- "O Arthur começou a chiar com 7 meses durante um resfriado no berçário."\n- "Notamos que quando esfria de repente, a tosse piora à noite."\n- "Ele aceita muito bem o espaçador quando contamos uma historinha."\n- "Em caso de crise, o hospital mais perto de casa é o Sabará."',
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Color(0xFFF8FAFC),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
         ],

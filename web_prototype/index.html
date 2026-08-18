@@ -250,29 +250,36 @@
             <!-- Upload da Foto de Registro -->
             <div class="flex items-center space-x-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
                 <div class="w-14 h-14 bg-teal-100 rounded-2xl flex items-center justify-center text-3xl border-2 border-dashed border-teal-400 cursor-pointer" onclick="alert('Selecione uma foto da galeria ou tire uma foto de registro do seu filho.')">
-                    📸
+                    👦
                 </div>
                 <div>
-                    <span class="text-xs font-bold text-slate-800 block">Foto de Registro da Criança</span>
-                    <span class="text-[11px] text-slate-500">Toque para fazer upload ou tirar foto</span>
+                    <span class="text-xs font-bold text-slate-800 block">Arthur Saccomani (5 anos)</span>
+                    <span class="text-[11px] text-slate-500">Foto de registro e prontuário pediátrico</span>
                 </div>
             </div>
 
-            <!-- Dados da Criança -->
+            <!-- 1. Dados da Criança & Nascimento -->
             <div class="space-y-2">
-                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wide">1. Dados da Criança</h4>
+                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wide">1. Dados da Criança & Nascimento</h4>
                 <input type="text" id="anaName" value="Arthur Saccomani" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2.5">
                 <div class="grid grid-cols-3 gap-2">
                     <input type="text" id="anaBlood" value="A+" placeholder="Sangue" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2 text-center">
                     <input type="number" id="anaWeight" value="19.5" placeholder="Peso kg" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2 text-center">
                     <input type="number" id="anaHeight" value="110" placeholder="Altura cm" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2 text-center">
                 </div>
-                <input type="text" id="anaSus" value="898 0000 1234 5678" placeholder="Cartão SUS" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2.5">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" id="anaGestWeeks" value="39" placeholder="Semanas Gestação (ex: 39)" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                    <input type="number" id="anaBirthWeight" value="3200" placeholder="Peso ao Nascer (g)" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                </div>
+                <label class="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs cursor-pointer">
+                    <input type="checkbox" id="anaNeonatalO2" class="w-4 h-4 text-teal-600 rounded">
+                    <span class="text-slate-700 font-semibold">Precisou de UTI neonatal ou oxigênio ao nascer</span>
+                </label>
             </div>
 
-            <!-- Dados dos Pais -->
+            <!-- 2. Dados dos Pais & Emergência -->
             <div class="space-y-2 pt-2 border-t border-slate-100">
-                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wide">2. Dados dos Pais / Responsáveis</h4>
+                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wide">2. Pais & Contatos de Emergência</h4>
                 <div class="grid grid-cols-2 gap-2">
                     <input type="text" id="anaMother" value="Juliana Saccomani" placeholder="Nome da Mãe" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
                     <input type="text" id="anaMotherPhone" value="(11) 98765-4321" placeholder="WhatsApp Mãe" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
@@ -281,21 +288,61 @@
                     <input type="text" id="anaFather" value="Pai" placeholder="Nome do Pai" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
                     <input type="text" id="anaFatherPhone" value="(11) 91234-5678" placeholder="WhatsApp Pai" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
                 </div>
+                <input type="text" id="anaHospital" value="Hospital Infantil Sabará / Samaritano" placeholder="Hospital de preferência para emergência" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2.5">
             </div>
 
-            <!-- Anamnese Respiratória -->
+            <!-- 3. Triagem de Emergência & Consultório -->
             <div class="space-y-2 pt-2 border-t border-slate-100">
-                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wide">3. Anamnese Respiratória & Alergias</h4>
-                <input type="text" id="anaStartAge" value="Aos 8 meses (bronquiolites de repetição)" placeholder="Início dos sintomas" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2.5">
-                <input type="text" id="anaAllergies" value="Ácaros da poeira, Poeira, Tempo frio" placeholder="Alergias conhecidas" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2.5">
+                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wide">3. Triagem Médica & Padrão de Crises</h4>
                 <div class="grid grid-cols-2 gap-2">
-                    <input type="number" id="anaIge" value="480" placeholder="IgE (UI/mL)" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
-                    <input type="number" id="anaEos" value="550" placeholder="Eosinófilos (cél/µL)" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                    <div>
+                        <label class="text-[10px] text-slate-500 font-bold block mb-0.5">Idas ao PS (Último ano):</label>
+                        <input type="number" id="anaErVisits" value="1" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2 text-center">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-slate-500 font-bold block mb-0.5">Ciclos Prednisolona/ano:</label>
+                        <input type="number" id="anaSteroidCourses" value="2" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2 text-center">
+                    </div>
+                </div>
+                <label class="flex items-center space-x-2 bg-red-50 p-2 rounded-xl border border-red-200 text-xs cursor-pointer">
+                    <input type="checkbox" id="anaHadIcu" class="w-4 h-4 text-red-600 rounded">
+                    <span class="text-red-900 font-bold">Já precisou de UTI por falta de ar</span>
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs cursor-pointer">
+                        <input type="checkbox" id="anaFluVac" checked class="w-4 h-4 text-teal-600 rounded">
+                        <span class="text-slate-700 font-semibold">Vacina Gripe em dia</span>
+                    </label>
+                    <label class="flex items-center space-x-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs cursor-pointer">
+                        <input type="checkbox" id="anaSmokers" class="w-4 h-4 text-red-600 rounded">
+                        <span class="text-slate-700 font-semibold">Fumantes em casa</span>
+                    </label>
+                </div>
+                <input type="text" id="anaTriggers" value="Mudança brusca de tempo, Resfriados, Tempo seco" placeholder="Gatilhos que causam crise" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2.5">
+            </div>
+
+            <!-- 4. Alergias & Comorbidades -->
+            <div class="space-y-2 pt-2 border-t border-slate-100">
+                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wide">4. Alergias & Médico</h4>
+                <input type="text" id="anaAllergies" value="Ácaros da poeira, Poeira, Tempo frio (Nenhuma a remédios)" placeholder="Alergias conhecidas" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2.5">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="anaDoctor" value="Dr. Marco Aurélio Valente" placeholder="Médico Assistente" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                    <input type="text" id="anaDoctorPhone" value="(11) 98888-7777" placeholder="Tel Consultório" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
                 </div>
             </div>
 
+            <!-- 5. História Contada pelos Pais (Espaço Amplo com Auto-Save) -->
+            <div class="space-y-2 pt-2 border-t border-slate-100">
+                <div class="flex items-center justify-between">
+                    <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wide">5. História Livre do Filho (Família) ✍️</h4>
+                    <span id="autoSaveIndicator" class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">🟢 Salvo</span>
+                </div>
+                <p class="text-[11px] text-slate-500">Conte a história do seu filho, detalhes que os médicos precisam saber e dicas para cuidadores. (Salva automaticamente ao digitar):</p>
+                <textarea id="anaFamilyStory" rows="6" maxlength="5000" oninput="handleAutoSaveStory()" placeholder="Escreva aqui a história do seu filho com calma...&#10;- Aos 8 meses teve a primeira bronquiolite...&#10;- Ele aceita muito bem o espaçador quando contamos uma historinha...&#10;- Em caso de crise noturna, responde rápido ao Aerolin..." class="w-full bg-slate-50 border border-slate-200 text-xs font-normal rounded-xl p-3 leading-relaxed text-slate-800 focus:bg-white focus:border-teal-500"></textarea>
+            </div>
+
             <button onclick="saveAnamnesis()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm">
-                Salvar Ficha de Anamnese
+                Salvar Ficha Completa
             </button>
         </div>
     </div>
@@ -667,6 +714,26 @@
             }
         }
 
+        let autoSaveTimer = null;
+        function handleAutoSaveStory() {
+            const ind = document.getElementById('autoSaveIndicator');
+            if (ind) ind.innerHTML = "⏳ Salvando...";
+            clearTimeout(autoSaveTimer);
+            autoSaveTimer = setTimeout(() => {
+                const story = document.getElementById('anaFamilyStory').value;
+                localStorage.setItem('healthcontrol_family_story', story);
+                if (ind) ind.innerHTML = "🟢 Salvo automaticamente";
+            }, 800);
+        }
+
+        // Carrega história salva se houver
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('healthcontrol_family_story');
+            if (saved && document.getElementById('anaFamilyStory')) {
+                document.getElementById('anaFamilyStory').value = saved;
+            }
+        });
+
         function saveAnamnesis() {
             const name = document.getElementById('anaName').value;
             const blood = document.getElementById('anaBlood').value;
@@ -676,7 +743,7 @@
             children[0].weight = weight;
             selectChild(0);
             closeAnamnesisModal();
-            alert('Ficha de Anamnese e dados dos pais salvos com sucesso!');
+            alert('Ficha Completa de Anamnese e dados salvos com sucesso! ✅');
         }
 
         renderTimeline();
