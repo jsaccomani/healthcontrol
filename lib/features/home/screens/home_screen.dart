@@ -160,7 +160,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemBuilder: (ctx, idx) => _buildVersionedEntryCard(_entries[idx]),
                 ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
+
+              // Disclaimer Médico & LGPD Footer
+              _buildLegalDisclaimerFooter(),
+
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -681,6 +686,107 @@ class _HomeScreenState extends State<HomeScreen> {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLegalDisclaimerFooter() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.shield_outlined, size: 16, color: Color(0xFF64748B)),
+              SizedBox(width: 6),
+              Text(
+                'Aviso Médico & Proteção de Dados (LGPD)',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'O Health Control é uma ferramenta de suporte ao autogerenciamento respiratório e NÃO substitui o diagnóstico ou a consulta médica. Em caso de emergência com seu filho, ligue para o SAMU (192) ou vá ao Pronto-Socorro.',
+            style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.3),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: _showLegalTermsModal,
+            child: const Text(
+              '⚖️ Ler Termos de Uso, Privacidade LGPD & Resolução CFM 1.331/89 ➔',
+              style: TextStyle(fontSize: 11, color: AppTheme.primaryTeal, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLegalTermsModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (_, scrollCtrl) => Padding(
+          padding: const EdgeInsets.all(20),
+          child: ListView(
+            controller: scrollCtrl,
+            children: const [
+              Center(
+                child: Text(
+                  '⚖️ Termos de Uso e Privacidade LGPD',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                '1. Finalidade e Disclaimer Médico',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'O Health Control: Asma visa auxiliar pais e cuidadores na rotina de registro respiratório e adesão terapêutica. Não realiza diagnósticos automáticos nem prescreve doses sem supervisão médica.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
+              ),
+              SizedBox(height: 12),
+              Text(
+                '2. Proteção de Dados de Menores (Art. 14 da LGPD)',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'O tratamento dos dados de saúde da criança é realizado exclusivamente com o consentimento do responsável legal e no melhor interesse do menor. Os dados são armazenados sob criptografia local AES-256.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
+              ),
+              SizedBox(height: 12),
+              Text(
+                '3. Guarda e Imutabilidade (CFM nº 1.331/89)',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Cada lançamento gera um hash criptográfico (SHA-256) garantindo que o histórico não sofra adulterações retroativas e tenha garantia de guarda legal de 20 anos.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
+              ),
+              SizedBox(height: 20),
+            ],
+          ),
+        ),
       ),
     );
   }
