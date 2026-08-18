@@ -3,100 +3,152 @@ import 'package:clinical_core/clinical_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
-/// Serviço de Armazenamento Local e Versionamento Clínico (Offline-First).
+/// Serviço de Armazenamento Local, Multi-Perfil e Versionamento Clínico (Offline-First).
 class HealthStorageService {
-  static const String _keyPatientProfile = 'asma_control_patient_profile';
-  static const String _keyHealthEntries = 'asma_control_health_entries';
-  static const String _keyEventLogs = 'asma_control_event_logs';
-  static const String _keyDoctorPairingCode = 'asma_control_doctor_pairing_code';
+  static const String _keyProfilesList = 'health_control_profiles_list';
+  static const String _keySelectedProfileId = 'health_control_selected_profile_id';
+  static const String _keyHealthEntriesPrefix = 'health_control_entries_';
+  static const String _keyEventLogs = 'health_control_event_logs';
+  static const String _keyDoctorPairingCode = 'health_control_doctor_pairing_code';
 
   final Uuid _uuid = const Uuid();
 
-  /// Carrega o perfil do paciente ou retorna perfil padrão (Criança de 5 anos).
-  Future<PatientProfile> getPatientProfile() async {
+  /// Retorna a lista de todos os filhos/perfis cadastrados.
+  Future<List<PatientProfile>> getAllProfiles() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_keyPatientProfile);
-    if (raw != null) {
-      try {
-        final map = jsonDecode(raw) as Map<String, dynamic>;
-        return PatientProfile(
-          id: map['id'] as String? ?? 'paciente-001',
-          name: map['name'] as String? ?? 'Filho',
-          birthDate: DateTime.parse(map['birth_date'] as String? ?? '2021-04-10'),
-          gender: map['gender'] as String? ?? 'Masculino',
-          heightCm: (map['height_cm'] as num?)?.toDouble() ?? 110.0,
-          weightKg: (map['weight_kg'] as num?)?.toDouble() ?? 19.5,
-          personalBestPef: map['personal_best_pef'] as int? ?? 220,
-          susCardNumber: map['sus_card_number'] as String? ?? '700000000000000',
-          healthInsurance: map['health_insurance'] as String? ?? 'Unimed',
-          insuranceCardNumber: map['insurance_card_number'] as String? ?? '123456789',
-          igeLevel: (map['ige_level'] as num?)?.toDouble() ?? 450.0,
-          eosinophilsCount: map['eosinophils_count'] as int? ?? 580,
-          comorbidities: (map['comorbidities'] as List<dynamic>?)
-                  ?.map((e) => e as String)
-                  .toList() ??
-              ['Rinite Alérgica', 'Refluxo Gastroesofágico'],
-        );
-      } catch (_) {}
+    final rawList = prefs.getStringList(_keyProfilesList);
+    if (rawList == null || rawList.isEmpty) {
+      final defaultChild = _generateDefaultArthurProfile();
+      await savePatientProfile(defaultChild);
+      await setSelectedProfileId(defaultChild.id);
+      return [defaultChild];
     }
 
-    // Perfil Padrão Inicial para o Filho de 5 Anos
-    final defaultProfile = PatientProfile(
-      id: 'paciente-filho-01',
-      name: 'Arthur Saccomani',
-      birthDate: DateTime(2021, 5, 15),
-      gender: 'Masculino',
-      heightCm: 110.0,
-      weightKg: 19.5,
-      personalBestPef: 220,
-      susCardNumber: '898 0000 1234 5678',
-      healthInsurance: 'Bradesco Saúde Top',
-      insuranceCardNumber: '987654321000',
-      igeLevel: 480.0,
-      eosinophilsCount: 550,
-      comorbidities: ['Rinite Alérgica', 'Hiper-reatividade Brônquica'],
-    );
-    await savePatientProfile(defaultProfile);
-    return defaultProfile;
+    try {
+      return rawList
+          .map((str) => PatientProfile.fromJson(jsonDecode(str) as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      final defaultChild = _generateDefaultArthurProfile();
+      return [defaultChild];
+    }
   }
 
-  /// Salva ou atualiza o perfil do paciente.
+  /// Retorna o perfil do filho atualmente selecionado.
+  Future<PatientProfile> getPatientProfile() async {
+    final profiles = await getAllProfiles();
+    final prefs = await SharedPreferences.getInstance();
+    final activeId = prefs.getString(_keySelectedProfileId);
+
+    if (activeId != null) {
+      final found = profiles.where((p) => p.id == activeId);
+      if (found.isNotEmpty) return found.first;
+    }
+
+    return profiles.first;
+  }
+
+  /// Define qual filho está selecionado no topo do app.
+  Future<void> setSelectedProfileId(String profileId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keySelectedProfileId, profileId);
+  }
+
+  /// Salva ou atualiza os dados de um perfil de filho.
   Future<void> savePatientProfile(PatientProfile profile) async {
     final prefs = await SharedPreferences.getInstance();
-    final map = {
-      'id': profile.id,
-      'name': profile.name,
-      'birth_date': profile.birthDate.toIso8601String(),
-      'gender': profile.gender,
-      'height_cm': profile.heightCm,
-      'weight_kg': profile.weightKg,
-      'personal_best_pef': profile.personalBestPef,
-      'sus_card_number': profile.susCardNumber,
-      'health_insurance': profile.healthInsurance,
-      'insurance_card_number': profile.insuranceCardNumber,
-      'ige_level': profile.igeLevel,
-      'eosinophils_count': profile.eosinophilsCount,
-      'comorbidities': profile.comorbidities,
-    };
-    await prefs.setString(_keyPatientProfile, jsonEncode(map));
+    final profiles = await getAllProfiles();
+    
+    final existingIdx = profiles.indexWhere((p) => p.id == profile.id);
+    List<PatientProfile> updated;
+    if (existingIdx >= 0) {
+      updated = List.from(profiles)..[existingIdx] = profile;
+    } else {
+      updated = [...profiles, profile];
+    }
+
+    final rawList = updated.map((p) => jsonEncode(p.toJson())).toList();
+    await prefs.setStringList(_keyProfilesList, rawList);
+    await setSelectedProfileId(profile.id);
   }
 
-  /// Retorna todos os lançamentos clínicos em ordem cronológica reversa (mais recente primeiro).
-  Future<List<HealthControlEntry>> getHealthEntries() async {
+  /// Cria um novo perfil para outro filho.
+  Future<PatientProfile> createNewChildProfile({
+    required String name,
+    required DateTime birthDate,
+    required String gender,
+    required double heightCm,
+    required double weightKg,
+    required int personalBestPef,
+    String? photoBase64,
+    String avatarId = 'boy_1',
+    String susCardNumber = '',
+    String healthInsurance = '',
+    String insuranceCardNumber = '',
+  }) async {
+    final active = await getPatientProfile();
+    final newId = 'child_${_uuid.v4().substring(0, 8)}';
+
+    final newProfile = PatientProfile(
+      id: newId,
+      name: name,
+      photoBase64: photoBase64,
+      avatarId: avatarId,
+      birthDate: birthDate,
+      gender: gender,
+      heightCm: heightCm,
+      weightKg: weightKg,
+      personalBestPef: personalBestPef,
+      susCardNumber: susCardNumber,
+      healthInsurance: healthInsurance,
+      insuranceCardNumber: insuranceCardNumber,
+      // Herda contatos dos pais para conveniência
+      motherName: active.motherName,
+      motherPhone: active.motherPhone,
+      motherEmail: active.motherEmail,
+      fatherName: active.fatherName,
+      fatherPhone: active.fatherPhone,
+      emergencyContactName: active.emergencyContactName,
+      emergencyContactPhone: active.emergencyContactPhone,
+      addressCityState: active.addressCityState,
+    );
+
+    await savePatientProfile(newProfile);
+    return newProfile;
+  }
+
+  /// Exclui o perfil de um filho (se houver mais de um cadastrado).
+  Future<bool> deleteChildProfile(String profileId) async {
+    final profiles = await getAllProfiles();
+    if (profiles.length <= 1) return false; // Não permite excluir o único filho
+
+    final updated = profiles.where((p) => p.id != profileId).toList();
     final prefs = await SharedPreferences.getInstance();
-    final rawList = prefs.getStringList(_keyHealthEntries);
+    final rawList = updated.map((p) => jsonEncode(p.toJson())).toList();
+    await prefs.setStringList(_keyProfilesList, rawList);
+
+    await setSelectedProfileId(updated.first.id);
+    return true;
+  }
+
+  /// Retorna lançamentos clínicos do filho ativo.
+  Future<List<HealthControlEntry>> getHealthEntries() async {
+    final profile = await getPatientProfile();
+    final prefs = await SharedPreferences.getInstance();
+    final rawList = prefs.getStringList('$_keyHealthEntriesPrefix${profile.id}');
+
     if (rawList == null || rawList.isEmpty) {
-      // Cria registros semente de exemplo para visualização imediata
-      final seed = _generateSeedEntries();
-      await _saveHealthEntriesList(seed);
+      final seed = _generateSeedEntries(profile.personalBestPef);
+      await _saveHealthEntriesList(profile.id, seed);
       return seed;
     }
+
     return rawList
         .map((str) => HealthControlEntry.fromJson(jsonDecode(str) as Map<String, dynamic>))
         .toList();
   }
 
-  /// Adiciona um novo lançamento clínico com versionamento automático (v1.0.x) e hash SHA-256.
+  /// Adiciona um novo lançamento diário versionado (v1.0.x) com hash SHA-256 para o filho ativo.
   Future<HealthControlEntry> addHealthControlEntry({
     required String authorName,
     required String authorRole,
@@ -113,8 +165,7 @@ class HealthStorageService {
   }) async {
     final profile = await getPatientProfile();
     final entries = await getHealthEntries();
-    
-    // Cálculo do Peak Flow e Regra dos 3 Sopros
+
     int bestPef = 0;
     bool varianceError = false;
     if (peakFlowAttempts.isNotEmpty) {
@@ -125,13 +176,11 @@ class HealthStorageService {
       }
     }
 
-    // Avaliação da Zona GINA
     final zoneEval = ActionZoneEvaluator.evaluate(
       currentPef: bestPef,
       personalBestPef: profile.personalBestPef,
     );
 
-    // Número de sequência e Tag de versão
     final nextSeq = entries.length + 1;
     final versionTag = 'v1.0.$nextSeq';
     final entryId = _uuid.v4();
@@ -164,11 +213,9 @@ class HealthStorageService {
       requiresRescueFollowup: requiresRescueFollowup,
     );
 
-    // Salva na lista
     final updatedList = [newEntry, ...entries];
-    await _saveHealthEntriesList(updatedList);
+    await _saveHealthEntriesList(profile.id, updatedList);
 
-    // Registra no Event Sourcing com Hash de Auditoria
     await _appendEventLog(
       patientId: profile.id,
       version: versionTag,
@@ -181,10 +228,10 @@ class HealthStorageService {
     return newEntry;
   }
 
-  Future<void> _saveHealthEntriesList(List<HealthControlEntry> list) async {
+  Future<void> _saveHealthEntriesList(String profileId, List<HealthControlEntry> list) async {
     final prefs = await SharedPreferences.getInstance();
     final strList = list.map((e) => jsonEncode(e.toJson())).toList();
-    await prefs.setStringList(_keyHealthEntries, strList);
+    await prefs.setStringList('$_keyHealthEntriesPrefix$profileId', strList);
   }
 
   Future<void> _appendEventLog({
@@ -223,26 +270,64 @@ class HealthStorageService {
     await prefs.setStringList(_keyEventLogs, updated);
   }
 
-  /// Retorna a chave de acesso para pareamento com Asma Control Pro (Médicos).
+  /// Retorna ou gera a chave de acesso do paciente para pareamento médico.
   Future<String> getOrGenerateDoctorPairingCode() async {
     final prefs = await SharedPreferences.getInstance();
     String? code = prefs.getString(_keyDoctorPairingCode);
     if (code == null) {
-      // Gera código formatado de 6 caracteres (ex: AC-7842)
       code = 'AC-${(1000 + (DateTime.now().millisecondsSinceEpoch % 8999))}';
       await prefs.setString(_keyDoctorPairingCode, code);
     }
     return code;
   }
 
-  List<HealthControlEntry> _generateSeedEntries() {
+  PatientProfile _generateDefaultArthurProfile() {
+    return PatientProfile(
+      id: 'arthur_saccomani_01',
+      name: 'Arthur Saccomani',
+      avatarId: 'boy_1',
+      birthDate: DateTime(2021, 5, 15),
+      gender: 'Masculino',
+      bloodType: 'A+',
+      heightCm: 110.0,
+      weightKg: 19.5,
+      personalBestPef: 220,
+      susCardNumber: '898 0000 1234 5678',
+      healthInsurance: 'Bradesco Saúde Top',
+      insuranceCardNumber: '987654321000',
+      motherName: 'Juliana Saccomani',
+      motherPhone: '(11) 98765-4321',
+      motherEmail: 'juliana.saccomani@email.com',
+      fatherName: 'Pai',
+      fatherPhone: '(11) 91234-5678',
+      emergencyContactName: 'Mãe (Juliana)',
+      emergencyContactPhone: '(11) 98765-4321',
+      addressCityState: 'São Paulo - SP',
+      symptomsStartAge: 'Aos 8 meses de idade (bronquiolites de repetição)',
+      hadIcuAdmission: false,
+      icuAdmissionsCount: 0,
+      lastHospitalizationInfo: 'Atendimento ambulatorial e pronto-socorro para inalação',
+      familyAsthmaHistory: const ['Mãe (Rinite/Asma)', 'Pai (Rinite)'],
+      drugAllergies: const ['Nenhuma conhecida até o momento'],
+      foodAllergies: const ['Nenhuma alimentar confirmada'],
+      environmentalAllergies: const ['Ácaros da poeira doméstica', 'Pólen', 'Mudança brusca de temperatura'],
+      comorbidities: const ['Rinite Alérgica Perene', 'Hiper-reatividade Brônquica'],
+      continuousMedications: const ['Clenil HFA 250mcg (1 puff 12/12h com espaçador valvulado)'],
+      igeLevel: 480.0,
+      eosinophilsCount: 550,
+      doctorName: 'Dr. Pneumopediatra Especialista',
+      doctorPhone: '(11) 99999-8888',
+    );
+  }
+
+  List<HealthControlEntry> _generateSeedEntries(int personalBest) {
     final now = DateTime.now();
     return [
       HealthControlEntry(
         id: 'seed-01',
         versionTag: 'v1.0.2',
         sequenceNumber: 2,
-        timestamp: now.subtract(const Duration(hours: 4)),
+        timestamp: now.subtract(const Duration(hours: 3)),
         authorName: 'Mãe (Juliana)',
         authorRole: 'Cuidadora Principal',
         peakFlowAttempts: [210, 220, 215],
@@ -252,10 +337,10 @@ class HealthStorageService {
         spo2: 98,
         heartRate: 88,
         respiratoryRate: 22,
-        symptoms: ['Sem sintomas aparentes'],
-        environmentalTriggers: [],
-        medications: [
-          const MedicationUsage(
+        symptoms: const ['Sem sintomas aparentes'],
+        environmentalTriggers: const [],
+        medications: const [
+          MedicationUsage(
             name: 'Clenil HFA 250mcg (com espaçador)',
             dosage: '1 puff',
             type: MedicationType.maintenance,
@@ -269,7 +354,7 @@ class HealthStorageService {
           postSpo2: 99,
           amibApproved: true,
         ),
-        notes: 'Soprou bem, fez bochecho certinho após o Clenil.',
+        notes: 'Soprou com boa vedação, fez bochecho certinho após o spray.',
         requiresRescueFollowup: false,
       ),
       HealthControlEntry(
@@ -286,10 +371,10 @@ class HealthStorageService {
         spo2: 97,
         heartRate: 92,
         respiratoryRate: 24,
-        symptoms: ['Tosse leve ao deitar'],
-        environmentalTriggers: ['Tempo seco'],
-        medications: [
-          const MedicationUsage(
+        symptoms: const ['Tosse seca leve ao deitar'],
+        environmentalTriggers: const ['Tempo seco / Baixa umidade'],
+        medications: const [
+          MedicationUsage(
             name: 'Clenil HFA 250mcg',
             dosage: '1 puff',
             type: MedicationType.maintenance,

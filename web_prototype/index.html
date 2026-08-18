@@ -35,23 +35,36 @@
 
     <main class="max-w-md mx-auto p-4 space-y-4">
 
+        <!-- Seletor de Filhos (Multi-Child) -->
+        <div class="flex items-center space-x-2 overflow-x-auto pb-1">
+            <button onclick="selectChild(0)" id="childBtn0" class="bg-teal-600 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm">
+                <span>👦</span> Arthur (5a)
+            </button>
+            <button onclick="selectChild(1)" id="childBtn1" class="bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition">
+                <span>👧</span> Beatriz (3a)
+            </button>
+            <button onclick="openAnamnesisModal()" class="bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 text-xs font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 transition">
+                <span>➕</span> Novo Filho
+            </button>
+        </div>
+
         <!-- Card Perfil do Filho -->
         <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center text-2xl">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="openAnamnesisModal()">
+                <div class="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center text-2xl" id="childAvatar">
                     👦
                 </div>
                 <div>
                     <div class="flex items-center gap-1.5">
-                        <span class="font-bold text-slate-900 text-sm">Arthur Saccomani</span>
-                        <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.5 rounded">5 anos</span>
+                        <span class="font-bold text-slate-900 text-sm" id="childName">Arthur Saccomani</span>
+                        <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.5 rounded" id="childAge">5 anos</span>
                     </div>
-                    <p class="text-xs text-slate-500 mt-0.5">Melhor PFE: <b class="text-slate-800">220 L/min</b> • 19.5 kg</p>
+                    <p class="text-xs text-slate-500 mt-0.5" id="childMetrics">Melhor PFE: <b class="text-slate-800">220 L/min</b> • 19.5 kg • Sangue A+</p>
                 </div>
             </div>
-            <span class="text-xs text-teal-700 bg-teal-50 font-bold px-2 py-1 rounded-full border border-teal-200">
-                Cartão SUS OK
-            </span>
+            <button onclick="openAnamnesisModal()" class="text-xs text-teal-700 bg-teal-50 font-bold px-2.5 py-1.5 rounded-xl border border-teal-200 hover:bg-teal-100 transition">
+                Anamnese 📝
+            </button>
         </div>
 
         <!-- Card de Status Atual (GINA Zone) -->
@@ -177,7 +190,68 @@
 
     </main>
 
-    <!-- Modal Modo Emergência -->
+    <!-- Modal Anamnese Completa & Dados dos Pais -->
+    <div id="anamnesisModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h3 class="font-bold text-slate-900 text-base flex items-center gap-1.5">
+                    <span>📋</span> Ficha de Anamnese & Pais
+                </h3>
+                <button onclick="closeAnamnesisModal()" class="text-slate-400 hover:text-slate-700 bg-slate-100 w-7 h-7 rounded-full font-bold text-sm flex items-center justify-center">✕</button>
+            </div>
+
+            <!-- Upload da Foto de Registro -->
+            <div class="flex items-center space-x-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                <div class="w-14 h-14 bg-teal-100 rounded-2xl flex items-center justify-center text-3xl border-2 border-dashed border-teal-400 cursor-pointer" onclick="alert('Selecione uma foto da galeria ou tire uma foto de registro do seu filho.')">
+                    📸
+                </div>
+                <div>
+                    <span class="text-xs font-bold text-slate-800 block">Foto de Registro da Criança</span>
+                    <span class="text-[11px] text-slate-500">Toque para fazer upload ou tirar foto</span>
+                </div>
+            </div>
+
+            <!-- Dados da Criança -->
+            <div class="space-y-2">
+                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wide">1. Dados da Criança</h4>
+                <input type="text" id="anaName" value="Arthur Saccomani" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2.5">
+                <div class="grid grid-cols-3 gap-2">
+                    <input type="text" id="anaBlood" value="A+" placeholder="Sangue" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2 text-center">
+                    <input type="number" id="anaWeight" value="19.5" placeholder="Peso kg" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2 text-center">
+                    <input type="number" id="anaHeight" value="110" placeholder="Altura cm" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2 text-center">
+                </div>
+                <input type="text" id="anaSus" value="898 0000 1234 5678" placeholder="Cartão SUS" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2.5">
+            </div>
+
+            <!-- Dados dos Pais -->
+            <div class="space-y-2 pt-2 border-t border-slate-100">
+                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wide">2. Dados dos Pais / Responsáveis</h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="anaMother" value="Juliana Saccomani" placeholder="Nome da Mãe" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                    <input type="text" id="anaMotherPhone" value="(11) 98765-4321" placeholder="WhatsApp Mãe" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="anaFather" value="Pai" placeholder="Nome do Pai" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                    <input type="text" id="anaFatherPhone" value="(11) 91234-5678" placeholder="WhatsApp Pai" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                </div>
+            </div>
+
+            <!-- Anamnese Respiratória -->
+            <div class="space-y-2 pt-2 border-t border-slate-100">
+                <h4 class="font-bold text-xs text-slate-900 uppercase tracking-wide">3. Anamnese Respiratória & Alergias</h4>
+                <input type="text" id="anaStartAge" value="Aos 8 meses (bronquiolites de repetição)" placeholder="Início dos sintomas" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2.5">
+                <input type="text" id="anaAllergies" value="Ácaros da poeira, Poeira, Tempo frio" placeholder="Alergias conhecidas" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2.5">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="number" id="anaIge" value="480" placeholder="IgE (UI/mL)" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                    <input type="number" id="anaEos" value="550" placeholder="Eosinófilos (cél/µL)" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                </div>
+            </div>
+
+            <button onclick="saveAnamnesis()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm">
+                Salvar Ficha de Anamnese
+            </button>
+        </div>
+    </div>
     <div id="emergencyModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-red-700 text-white rounded-3xl max-w-sm w-full p-5 max-h-[90vh] overflow-y-auto space-y-4">
             <div class="flex items-center justify-between border-b border-red-500 pb-3">
@@ -337,10 +411,41 @@
             document.getElementById('flowFeedback').className = "hidden";
         }
 
+        const children = [
+            { name: "Arthur Saccomani", age: "5 anos", pfe: 220, weight: 19.5, blood: "A+", avatar: "👦" },
+            { name: "Beatriz Saccomani", age: "3 anos", pfe: 160, weight: 14.2, blood: "O+", avatar: "👧" }
+        ];
+
+        function selectChild(idx) {
+            const c = children[idx];
+            document.getElementById('childName').innerText = c.name;
+            document.getElementById('childAge').innerText = c.age;
+            document.getElementById('childAvatar').innerText = c.avatar;
+            document.getElementById('childMetrics').innerHTML = `Melhor PFE: <b class="text-slate-800">${c.pfe} L/min</b> • ${c.weight} kg • Sangue ${c.blood}`;
+
+            // Botões de estilo
+            document.getElementById('childBtn0').className = idx === 0 ? "bg-teal-600 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm" : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition";
+            document.getElementById('childBtn1').className = idx === 1 ? "bg-teal-600 text-white text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-sm" : "bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition";
+        }
+
+        function openAnamnesisModal() { document.getElementById('anamnesisModal').classList.remove('hidden'); }
+        function closeAnamnesisModal() { document.getElementById('anamnesisModal').classList.add('hidden'); }
         function openEmergencyModal() { document.getElementById('emergencyModal').classList.remove('hidden'); }
         function closeEmergencyModal() { document.getElementById('emergencyModal').classList.add('hidden'); }
         function openProModal() { document.getElementById('proModal').classList.remove('hidden'); }
         function closeProModal() { document.getElementById('proModal').classList.add('hidden'); }
+
+        function saveAnamnesis() {
+            const name = document.getElementById('anaName').value;
+            const blood = document.getElementById('anaBlood').value;
+            const weight = document.getElementById('anaWeight').value;
+            children[0].name = name;
+            children[0].blood = blood;
+            children[0].weight = weight;
+            selectChild(0);
+            closeAnamnesisModal();
+            alert('Ficha de Anamnese e dados dos pais salvos com sucesso!');
+        }
 
         renderTimeline();
     </script>

@@ -19,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final HealthStorageService _storageService = HealthStorageService();
+  List<PatientProfile> _profiles = [];
   PatientProfile? _profile;
   List<HealthControlEntry> _entries = [];
   bool _isLoading = true;
@@ -31,13 +32,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
+    final allProfiles = await _storageService.getAllProfiles();
     final prof = await _storageService.getPatientProfile();
     final entries = await _storageService.getHealthEntries();
     setState(() {
+      _profiles = allProfiles;
       _profile = prof;
       _entries = entries;
       _isLoading = false;
     });
+  }
+
+  Future<void> _switchChild(PatientProfile target) async {
+    await _storageService.setSelectedProfileId(target.id);
+    _loadData();
   }
 
   @override
@@ -191,69 +199,116 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildChildHeaderCard() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            radius: 26,
-            backgroundColor: AppTheme.primaryLight,
-            child: Icon(Icons.child_care, color: AppTheme.primaryTeal, size: 30),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      children: [
+        if (_profiles.length > 1) ...[
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Text(
-                      _profile!.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0F172A),
-                      ),
+                ..._profiles.map((p) {
+                  final isSel = p.id == _profile!.id;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8, bottom: 8),
+                    child: ChoiceChip(
+                      avatar: Text(p.gender == 'Feminino' ? '👧' : '👦', style: const TextStyle(fontSize: 12)),
+                      label: Text(p.name, style: TextStyle(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+                      selected: isSel,
+                      selectedColor: AppTheme.primaryLight,
+                      onSelected: (_) => _switchChild(p),
                     ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0F2FE),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '${_profile!.ageYears} anos',
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF0369A1), fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Melhor PFE Pessoal: ${_profile!.personalBestPef} L/min • ${_profile!.weightKg} kg',
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  );
+                }),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ActionChip(
+                    avatar: const Icon(Icons.add, size: 14, color: AppTheme.primaryTeal),
+                    label: const Text('Novo Filho', style: TextStyle(fontSize: 11, color: AppTheme.primaryTeal, fontWeight: FontWeight.bold)),
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                      );
+                      _loadData();
+                    },
+                  ),
                 ),
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.edit_note, color: AppTheme.primaryTeal),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-              _loadData();
-            },
-          ),
         ],
-      ),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 26,
+                backgroundColor: AppTheme.primaryLight,
+                child: Text(
+                  _profile!.gender == 'Feminino' ? '👧' : '👦',
+                  style: const TextStyle(fontSize: 26),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _profile!.name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0F2FE),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            _profile!.ageDisplay,
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF0369A1), fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Melhor PFE: ${_profile!.personalBestPef} L/min • ${_profile!.weightKg} kg • Sangue ${_profile!.bloodType}',
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Ficha Completa & Anamnese',
+                icon: const Icon(Icons.edit_note, color: AppTheme.primaryTeal),
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                  _loadData();
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

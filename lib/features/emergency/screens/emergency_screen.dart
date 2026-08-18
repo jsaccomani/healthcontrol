@@ -95,11 +95,29 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
               icon: Icons.person,
               children: [
                 _buildRow('Nome Completo:', _profile!.name, isBold: true),
-                _buildRow('Idade / Nascimento:', '${_profile!.ageYears} anos (${DateFormat('dd/MM/yyyy').format(_profile!.birthDate)})'),
+                _buildRow('Idade / Nascimento:', '${_profile!.ageDisplay} (${DateFormat('dd/MM/yyyy').format(_profile!.birthDate)})'),
                 _buildRow('Peso Atual:', '${_profile!.weightKg} kg (Calculador de Dose Pediátrica)', highlight: true),
-                _buildRow('Altura:', '${_profile!.heightCm} cm'),
-                _buildRow('Cartão SUS:', _profile!.susCardNumber),
-                _buildRow('Convênio:', '${_profile!.healthInsurance} (Nº ${_profile!.insuranceCardNumber})'),
+                _buildRow('Altura:', '${_profile!.heightCm.toStringAsFixed(0)} cm • IMC: ${_profile!.bmi.toStringAsFixed(1)} kg/m²'),
+                _buildRow('Tipo Sanguíneo:', _profile!.bloodType),
+                _buildRow('Cartão SUS:', _profile!.susCardNumber.isNotEmpty ? _profile!.susCardNumber : 'Não informado'),
+                _buildRow('Convênio:', '${_profile!.healthInsurance} (${_profile!.insuranceCardNumber})'),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Card Alergias & Comorbidades
+            _buildEmergencyCard(
+              title: 'ALERGIAS & COMORBIDADES DA CRIANÇA',
+              icon: Icons.warning_amber_rounded,
+              children: [
+                _buildRow(
+                  'Alergias a Remédios:',
+                  _profile!.drugAllergies.isNotEmpty ? _profile!.drugAllergies.join(', ') : 'Nenhuma relatada',
+                  highlight: _profile!.drugAllergies.isNotEmpty,
+                ),
+                _buildRow('Alergias Ambientais:', _profile!.environmentalAllergies.join(', ')),
+                _buildRow('Comorbidades:', _profile!.comorbidities.join(', ')),
               ],
             ),
 
@@ -131,9 +149,8 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
               icon: Icons.medication,
               children: [
                 _buildRow('Broncodilatador de Resgate:', 'Aerolin / Salbutamol Spray 100mcg (com espaçador)'),
-                _buildRow('Uso Contínuo:', 'Clenil HFA 250mcg (1 puff 12/12h com espaçador)'),
+                _buildRow('Uso Contínuo:', _profile!.continuousMedications.isNotEmpty ? _profile!.continuousMedications.join(', ') : 'Clenil HFA 250mcg'),
                 _buildRow('Biomarcadores:', 'IgE: ${_profile!.igeLevel.toStringAsFixed(0)} UI/mL • Eosinófilos: ${_profile!.eosinophilsCount} cél/µL'),
-                _buildRow('Comorbidades:', _profile!.comorbidities.join(', ')),
               ],
             ),
 
@@ -141,12 +158,14 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
 
             // Contatos de Emergência
             _buildEmergencyCard(
-              title: 'CONTATOS DE EMERGÊNCIA',
+              title: 'CONTATOS DE EMERGÊNCIA & MÉDICO',
               icon: Icons.phone,
               children: [
-                _buildRow('Mãe (Juliana):', '(11) 98765-4321'),
-                _buildRow('Pai:', '(11) 91234-5678'),
-                _buildRow('Pneumologista Assistente:', 'Dr. Especialista em Asma Pediátrica'),
+                _buildRow('Mãe (${_profile!.motherName.isNotEmpty ? _profile!.motherName : "Mãe"}):', _profile!.motherPhone.isNotEmpty ? _profile!.motherPhone : '(11) 98765-4321'),
+                if (_profile!.fatherName.isNotEmpty || _profile!.fatherPhone.isNotEmpty)
+                  _buildRow('Pai (${_profile!.fatherName}):', _profile!.fatherPhone),
+                if (_profile!.doctorName.isNotEmpty)
+                  _buildRow('Médico Assistente:', '${_profile!.doctorName} (${_profile!.doctorPhone})'),
               ],
             ),
 
