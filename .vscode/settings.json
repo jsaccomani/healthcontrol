@@ -1,0 +1,22 @@
+{
+  "dart.flutterSdkPath": "/Users/jsaccomani/development/flutter",
+  "editor.formatOnSave": true,
+  "editor.formatOnType": true,
+  "editor.rulers": [80, 120],
+  "editor.selectionHighlight": false,
+  "editor.tabCompletion": "on",
+  "editor.wordBasedSuggestions": "off",
+  "[dart]": {
+    "editor.defaultFormatter": "Dart-Code.dart-code",
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
+    "editor.suggestSelection": "first",
+    "editor.tabCompletion": "onlySnippets",
+    "editor.wordBasedSuggestions": "off"
+  },
+  "dart.previewFlutterUiGuides": true,
+  "dart.debugSdkLibraries": false,
+  "dart.debugExternalPackageLibraries": false,
+  "dart.flutterHotReloadOnSave": "always"
+}

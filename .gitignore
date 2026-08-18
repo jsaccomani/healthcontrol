@@ -17,7 +17,7 @@ migrate_working_dir/
 .idea/
 
 # Visual Studio Code related
-.vscode/
+# .vscode/ (permite versionar extensions.json, settings.json e launch.json)
 
 # Flutter/Dart/Pub related
 **/doc/api/

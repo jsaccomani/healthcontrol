@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "Dart-Code.flutter",
+    "Dart-Code.dart-code",
+    "Firebase.vscode-firestore",
+    "toba.vsfire",
+    "usernamehw.errorlens",
+    "eamodio.gitlens",
+    "bierner.markdown-preview-github-styles",
+    "formulahendry.auto-rename-tag",
+    "esbenp.prettier-vscode"
+  ]
+}
