@@ -9,7 +9,6 @@ import '../../cact/screens/cact_quiz_screen.dart';
 import '../../physio/screens/physio_screen.dart';
 import '../../pro_connect/screens/pro_connect_screen.dart';
 import '../../profile/screens/profile_screen.dart';
-import '../../prescription/screens/prescription_scan_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -57,44 +56,34 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final latestEntry = _entries.isNotEmpty ? _entries.first : null;
-    final currentZone = latestEntry?.peakFlowZone ?? ActionZoneType.green;
+    final latest = _entries.isNotEmpty ? _entries.first : null;
+    final currentZone = latest?.peakFlowZone ?? ActionZoneType.green;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
         title: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: AppTheme.primaryLight,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.air, color: AppTheme.primaryTeal, size: 20),
             ),
             const SizedBox(width: 8),
             const Text(
               'Health Control: Asma',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
             ),
           ],
         ),
         actions: [
           IconButton(
-            tooltip: 'Conectar com Médico (Health Control Pro)',
-            icon: const Icon(Icons.medical_services_outlined, color: AppTheme.primaryTeal),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProConnectScreen()),
-              );
-              _loadData();
-            },
-          ),
-          IconButton(
-            tooltip: 'Perfil Clínico',
+            tooltip: 'Ficha Completa, Remédios & Receitas',
             icon: const Icon(Icons.person_outline, color: Color(0xFF475569)),
             onPressed: () async {
               await Navigator.push(
@@ -107,57 +96,52 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: _loadData,
         color: AppTheme.primaryTeal,
+        onRefresh: _loadData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header com Perfil do Filho
+              // 1. Identificação do Filho (Simples & Acolhedora)
               _buildChildHeaderCard(),
+
+              const SizedBox(height: 12),
+
+              // 2. Card de Estado do Dia (Visual e em Português Claro)
+              _buildCleanDailyStatusCard(latest, currentZone),
 
               const SizedBox(height: 14),
 
-              // Card Dinâmico de Status Atual (Verde / Amarelo / Vermelho)
-              _buildClinicalStatusCard(latestEntry, currentZone),
+              // 3. Ações Rápidas (Apenas o Essencial)
+              _buildEssentialActionButtons(),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
-              // Botões de Ação Rápida
-              _buildActionButtonsGrid(),
-
-              const SizedBox(height: 20),
-
-              // Título da Linha do Tempo
+              // 4. Histórico Recente do Dia
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Linha do Tempo & Versões',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
-                    ),
+                    'Histórico Recente',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      '${_entries.length} registros',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                      '${_entries.length} anotações',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
 
-              // Lista de Lançamentos Versionados
               if (_entries.isEmpty)
                 _buildEmptyState()
               else
@@ -165,20 +149,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _entries.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (ctx, idx) => _buildVersionedEntryCard(_entries[idx]),
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (ctx, idx) => _buildCleanEntryCard(_entries[idx]),
                 ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Disclaimer Médico & LGPD Footer
+              // Rodapé com Termos e Aviso Médico
               _buildLegalDisclaimerFooter(),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 70), // Espaço para o Floating Action Button
             ],
           ),
         ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final result = await Navigator.push(
@@ -192,8 +177,8 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: AppTheme.primaryTeal,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
-          'Novo Lançamento',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          'Anotar Como Ele Está Agora',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
         ),
       ),
     );
@@ -210,36 +195,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 ..._profiles.map((p) {
                   final isSel = p.id == _profile!.id;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 8, bottom: 8),
+                    padding: const EdgeInsets.only(right: 6, bottom: 8),
                     child: ChoiceChip(
                       avatar: Text(p.gender == 'Feminino' ? '👧' : '👦', style: const TextStyle(fontSize: 12)),
-                      label: Text(p.name, style: TextStyle(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+                      label: Text(p.name, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
                       selected: isSel,
                       selectedColor: AppTheme.primaryLight,
                       onSelected: (_) => _switchChild(p),
                     ),
                   );
                 }),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: ActionChip(
-                    avatar: const Icon(Icons.add, size: 14, color: AppTheme.primaryTeal),
-                    label: const Text('Novo Filho', style: TextStyle(fontSize: 11, color: AppTheme.primaryTeal, fontWeight: FontWeight.bold)),
-                    onPressed: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                      );
-                      _loadData();
-                    },
-                  ),
-                ),
               ],
             ),
           ),
         ],
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -248,14 +219,14 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Row(
             children: [
               CircleAvatar(
-                radius: 26,
+                radius: 22,
                 backgroundColor: AppTheme.primaryLight,
                 child: Text(
                   _profile!.gender == 'Feminino' ? '👧' : '👦',
-                  style: const TextStyle(fontSize: 26),
+                  style: const TextStyle(fontSize: 22),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(
                             _profile!.name,
                             style: const TextStyle(
-                              fontSize: 15,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF0F172A),
                             ),
@@ -275,29 +246,29 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
                             color: const Color(0xFFE0F2FE),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             _profile!.ageDisplay,
-                            style: const TextStyle(fontSize: 11, color: Color(0xFF0369A1), fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontSize: 10, color: Color(0xFF0369A1), fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      'Melhor PFE: ${_profile!.personalBestPef} L/min • ${_profile!.weightKg} kg • Sangue ${_profile!.bloodType}',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      'Melhor Sopro: ${_profile!.personalBestPef} L/min • ${_profile!.weightKg} kg',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                tooltip: 'Ficha Completa & Anamnese',
-                icon: const Icon(Icons.edit_note, color: AppTheme.primaryTeal),
+                tooltip: 'Abrir Ficha e Remédios',
+                icon: const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.primaryTeal),
                 onPressed: () async {
                   await Navigator.push(
                     context,
@@ -313,293 +284,255 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildClinicalStatusCard(HealthControlEntry? entry, ActionZoneType zone) {
-    Color zoneColor;
-    Color bgColor;
-    String zoneTitle;
-    String zoneDescription;
-    IconData zoneIcon;
+  Widget _buildCleanDailyStatusCard(HealthControlEntry? latest, ActionZoneType zone) {
+    Color cardColor;
+    Color borderColor;
+    String statusTitle;
+    String statusExplanation;
+    String iconEmoji;
 
     switch (zone) {
       case ActionZoneType.green:
-        zoneColor = AppTheme.zoneGreen;
-        bgColor = AppTheme.zoneGreenBg;
-        zoneTitle = '🟢 ZONA VERDE (Asma Estável)';
-        zoneDescription = 'Respiração livre, sem sintomas agudos. Mantenha a medicação preventiva e a rotina normal.';
-        zoneIcon = Icons.check_circle_outline;
+        cardColor = const Color(0xFFF0FDF4);
+        borderColor = const Color(0xFF86EFAC);
+        statusTitle = 'O ${_profile!.name.split(' ').first} está bem hoje!';
+        statusExplanation = 'Respiração livre e sem chiados. Mantenha a bombinha de todo dia no horário.';
+        iconEmoji = '🟢';
         break;
       case ActionZoneType.yellow:
-        zoneColor = AppTheme.zoneYellow;
-        bgColor = AppTheme.zoneYellowBg;
-        zoneTitle = '🟡 ZONA AMARELA (Início de Descompensação)';
-        zoneDescription = 'PFE entre 50-79% ou tosse/cansaço. Administre o broncodilatador de resgate com espaçador.';
-        zoneIcon = Icons.warning_amber_rounded;
+        cardColor = const Color(0xFFFEFCE8);
+        borderColor = const Color(0xFFFDE047);
+        statusTitle = 'Sinal de Atenção: Início de Sintomas';
+        statusExplanation = 'Sopro abaixo do normal ou tosse. Dê a bombinha de resgate (Aerolin) e acompanhe.';
+        iconEmoji = '🟡';
         break;
       case ActionZoneType.red:
-        zoneColor = AppTheme.zoneRed;
-        bgColor = AppTheme.zoneRedBg;
-        zoneTitle = '🔴 ZONA VERMELHA (Emergência Médica)';
-        zoneDescription = 'PFE < 50% ou tiragem severa. Faça resgate imediato e dirija-se ao Pronto-Socorro.';
-        zoneIcon = Icons.emergency;
+        cardColor = const Color(0xFFFEF2F2);
+        borderColor = const Color(0xFFFCA5A5);
+        statusTitle = 'Crise Aguda: Falta de Ar Forte!';
+        statusExplanation = 'Dê o remédio de resgate imediatamente e procure atendimento médico no Pronto-Socorro.';
+        iconEmoji = '🔴';
         break;
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: zoneColor.withOpacity(0.4), width: 1.5),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: borderColor, width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(zoneIcon, color: zoneColor, size: 24),
-              const SizedBox(width: 8),
+              Text(iconEmoji, style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  zoneTitle,
-                  style: TextStyle(
-                    color: zoneColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                  statusTitle,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
                 ),
               ),
-              if (entry != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    DateFormat('HH:mm').format(entry.timestamp),
-                    style: TextStyle(fontSize: 11, color: zoneColor, fontWeight: FontWeight.bold),
-                  ),
+              if (latest != null)
+                Text(
+                  DateFormat('HH:mm').format(latest.timestamp),
+                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
-            zoneDescription,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF334155), height: 1.3),
+            statusExplanation,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF475569), height: 1.3),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildMiniMetric(
-                'Último PFE',
-                entry != null ? '${entry.peakFlowBest} L/min' : '--',
-                Icons.air,
-                zoneColor,
-              ),
-              const SizedBox(width: 10),
-              _buildMiniMetric(
-                'Saturação (SpO2)',
-                entry != null ? '${entry.spo2}%' : '--',
-                Icons.favorite_outline,
-                entry != null && entry.spo2 < 92 ? AppTheme.zoneRed : AppTheme.primaryTeal,
-              ),
-              const SizedBox(width: 10),
-              _buildMiniMetric(
-                'Higiene Bucal',
-                entry?.mouthRinseCompleted == true ? 'Feita ✅' : 'Pendente ⚠️',
-                Icons.clean_hands_outlined,
-                entry?.mouthRinseCompleted == true ? AppTheme.zoneGreen : AppTheme.zoneYellow,
-              ),
-            ],
+          const SizedBox(height: 10),
+
+          // Painel com 3 Indicadores Fáceis
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildMetricCol(
+                  label: 'Sopro (Pico)',
+                  value: latest != null ? '${latest.peakFlowBest} L/min' : '--',
+                  color: AppTheme.primaryTeal,
+                ),
+                Container(height: 24, width: 1, color: const Color(0xFFE2E8F0)),
+                _buildMetricCol(
+                  label: 'Oxigênio (SpO2)',
+                  value: latest != null ? '${latest.spo2}%' : '--',
+                  color: const Color(0xFF0284C7),
+                ),
+                Container(height: 24, width: 1, color: const Color(0xFFE2E8F0)),
+                _buildMetricCol(
+                  label: 'Bochecho',
+                  value: latest != null ? (latest.mouthRinseCompleted ? 'Feito ✅' : 'Pendente ⚠️') : '--',
+                  color: const Color(0xFF059669),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMiniMetric(String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 13, color: color),
-                const SizedBox(width: 3),
-                Flexible(
-                  child: Text(
-                    label,
-                    style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color),
-            ),
-          ],
-        ),
-      ),
+  Widget _buildMetricCol({required String label, required String value, required Color color}) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 9, color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+      ],
     );
   }
 
-  Widget _buildActionButtonsGrid() {
-    return Column(
+  Widget _buildEssentialActionButtons() {
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                label: '🚨 Modo Emergência',
-                subtitle: 'Mostrar ao Médico do PS',
-                color: AppTheme.zoneRed,
-                bgColor: AppTheme.zoneRedBg,
-                icon: Icons.emergency,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const EmergencyScreen()),
-                  );
-                },
+        // Botão Emergência
+        Expanded(
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const EmergencyScreen()),
+              );
+            },
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: const [
+                      Text('🚨', style: TextStyle(fontSize: 16)),
+                      SizedBox(width: 4),
+                      Text('Emergência', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFFDC2626))),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  const Text('Ficha para mostrar no PS', style: TextStyle(fontSize: 10, color: Color(0xFF991B1B))),
+                ],
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildActionButton(
-                label: '🫁 Fisioterapia',
-                subtitle: 'Voldyne, Shaker & AMIB',
-                color: AppTheme.primaryTeal,
-                bgColor: AppTheme.primaryLight.withOpacity(0.5),
-                icon: Icons.fitness_center,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PhysioScreen()),
-                  );
-                },
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                label: '📝 Teste c-ACT',
-                subtitle: 'Escore Pediátrico Mensal',
-                color: const Color(0xFF6366F1),
-                bgColor: const Color(0xFFEEF2FF),
-                icon: Icons.quiz_outlined,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CactQuizScreen()),
-                  );
-                },
+        const SizedBox(width: 8),
+
+        // Botão Remédios & Receitas
+        Expanded(
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: const [
+                      Text('💊', style: TextStyle(fontSize: 16)),
+                      SizedBox(width: 4),
+                      Text('Remédios', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF15803D))),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  const Text('Bombinhas e Receitas', style: TextStyle(fontSize: 10, color: Color(0xFF166534))),
+                ],
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildActionButton(
-                label: '💊 Receitas & Bombinhas',
-                subtitle: 'Scanner OCR & Validade',
-                color: const Color(0xFF0F766E),
-                bgColor: const Color(0xFFCCFBF1),
-                icon: Icons.document_scanner,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PrescriptionScanScreen(
-                        patientId: _profile!.id,
-                        patientName: _profile!.name,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+          ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                label: '👨‍⚕️ Health Control Pro',
-                subtitle: 'Pareamento com Médico',
-                color: const Color(0xFF0284C7),
-                bgColor: const Color(0xFFE0F2FE),
-                icon: Icons.share_outlined,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ProConnectScreen()),
-                  );
-                },
-              ),
+        const SizedBox(width: 8),
+
+        // Botão Outros Recursos (Fisioterapia / c-ACT)
+        InkWell(
+          onTap: _showMoreOptionsModal,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
-          ],
+            child: const Column(
+              children: [
+                Icon(Icons.more_horiz, color: Color(0xFF64748B), size: 20),
+                SizedBox(height: 2),
+                Text('Mais', style: TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildActionButton({
-    required String label,
-    required String subtitle,
-    required Color color,
-    required Color bgColor,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
+  void _showMoreOptionsModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 18),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+            const Text('Mais Recursos Clínicos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFEEF2FF), child: Text('🫁')),
+              title: const Text('Fisioterapia Respiratória', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: const Text('Voldyne, Shaker e trava de segurança SpO2', style: TextStyle(fontSize: 11)),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const PhysioScreen()));
+              },
             ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFEEF2FF), child: Text('📝')),
+              title: const Text('Questionário c-ACT Mensal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: const Text('Avaliação de controle da asma para levar na consulta', style: TextStyle(fontSize: 11)),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const CactQuizScreen()));
+              },
+            ),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFE0F2FE), child: Text('👨‍⚕️')),
+              title: const Text('Conectar com o Médico (Pro)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: const Text('Chave para seu pediatra ver os dados em tempo real', style: TextStyle(fontSize: 11)),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const ProConnectScreen()));
+              },
             ),
           ],
         ),
@@ -607,24 +540,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildVersionedEntryCard(HealthControlEntry entry) {
-    Color badgeColor;
-    switch (entry.peakFlowZone) {
-      case ActionZoneType.green:
-        badgeColor = AppTheme.zoneGreen;
-        break;
-      case ActionZoneType.yellow:
-        badgeColor = AppTheme.zoneYellow;
-        break;
-      case ActionZoneType.red:
-        badgeColor = AppTheme.zoneRed;
-        break;
-    }
-
-    final dateStr = DateFormat('dd/MM HH:mm').format(entry.timestamp);
-
+  Widget _buildCleanEntryCard(HealthControlEntry entry) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -636,106 +554,50 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      entry.versionTag,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF475569),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    entry.authorName,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                ],
-              ),
               Text(
-                dateStr,
-                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                '${DateFormat('dd/MM').format(entry.timestamp)} às ${DateFormat('HH:mm').format(entry.timestamp)} • ${entry.authorName}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF334155)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: entry.peakFlowZone == ActionZoneType.green ? const Color(0xFFECFDF5) : const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  entry.peakFlowZone == ActionZoneType.green ? 'Estável 🟢' : 'Atenção 🟡',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: entry.peakFlowZone == ActionZoneType.green ? const Color(0xFF059669) : const Color(0xFFB45309),
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Row(
             children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: badgeColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'PFE: ${entry.peakFlowBest} L/min',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: badgeColor,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'SpO2: ${entry.spo2}%',
-                style: const TextStyle(fontSize: 13, color: Color(0xFF475569), fontWeight: FontWeight.w500),
-              ),
-              if (entry.mouthRinseCompleted) ...[
-                const SizedBox(width: 12),
-                const Icon(Icons.clean_hands_outlined, size: 14, color: AppTheme.zoneGreen),
-                const SizedBox(width: 2),
-                const Text('Bochecho OK', style: TextStyle(fontSize: 11, color: AppTheme.zoneGreen)),
-              ],
+              Text('Sopro: ${entry.peakFlowBest} L/min', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.primaryTeal)),
+              const SizedBox(width: 10),
+              Text('SpO2: ${entry.spo2}%', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+              const SizedBox(width: 10),
+              if (entry.mouthRinseCompleted)
+                const Text('💧 Bochecho OK', style: TextStyle(fontSize: 10, color: Color(0xFF059669), fontWeight: FontWeight.bold)),
             ],
           ),
           if (entry.medications.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: entry.medications.map((m) {
-                final isRescue = m.type == MedicationType.rescue;
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: isRescue ? AppTheme.zoneYellowBg : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: isRescue ? AppTheme.zoneYellow.withOpacity(0.5) : const Color(0xFFCBD5E1),
-                    ),
-                  ),
-                  child: Text(
-                    '💊 ${m.name} (${m.dosage})',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: isRescue ? FontWeight.bold : FontWeight.normal,
-                      color: isRescue ? const Color(0xFFB45309) : const Color(0xFF334155),
-                    ),
-                  ),
-                );
-              }).toList(),
+            const SizedBox(height: 4),
+            Text(
+              '💊 Remédio: ${entry.medications.map((m) => m.name).join(", ")}',
+              style: const TextStyle(fontSize: 11, color: Color(0xFF475569)),
             ),
           ],
           if (entry.notes.isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 2),
             Text(
               'Obs: ${entry.notes}',
-              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontStyle: FontStyle.italic),
+              style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontStyle: FontStyle.italic),
             ),
           ],
         ],
@@ -745,7 +607,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildEmptyState() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -754,17 +616,15 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: const Column(
         children: [
-          Icon(Icons.history_toggle_off, color: Color(0xFF94A3B8), size: 40),
-          SizedBox(height: 8),
+          Icon(Icons.history, color: Color(0xFF94A3B8), size: 32),
+          SizedBox(height: 6),
           Text(
-            'Nenhum controle registrado ainda.',
-            style: TextStyle(fontSize: 14, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+            'Nenhuma anotação hoje.',
+            style: TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 4),
           Text(
-            'Clique no botão abaixo para adicionar a primeira medição do seu filho.',
-            style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-            textAlign: TextAlign.center,
+            'Toque no botão abaixo para anotar como seu filho está.',
+            style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
           ),
         ],
       ),
@@ -773,101 +633,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildLegalDisclaimerFooter() {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.shield_outlined, size: 16, color: Color(0xFF64748B)),
-              SizedBox(width: 6),
-              Text(
-                'Aviso Médico & Proteção de Dados (LGPD)',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'O Health Control é uma ferramenta de suporte ao autogerenciamento respiratório e NÃO substitui o diagnóstico ou a consulta médica. Em caso de emergência com seu filho, ligue para o SAMU (192) ou vá ao Pronto-Socorro.',
-            style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.3),
-          ),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: _showLegalTermsModal,
-            child: const Text(
-              '⚖️ Ler Termos de Uso, Privacidade LGPD & Resolução CFM 1.331/89 ➔',
-              style: TextStyle(fontSize: 11, color: AppTheme.primaryTeal, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showLegalTermsModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.75,
-        maxChildSize: 0.95,
-        minChildSize: 0.5,
-        expand: false,
-        builder: (_, scrollCtrl) => Padding(
-          padding: const EdgeInsets.all(20),
-          child: ListView(
-            controller: scrollCtrl,
-            children: const [
-              Center(
-                child: Text(
-                  '⚖️ Termos de Uso e Privacidade LGPD',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                '1. Finalidade e Disclaimer Médico',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'O Health Control: Asma visa auxiliar pais e cuidadores na rotina de registro respiratório e adesão terapêutica. Não realiza diagnósticos automáticos nem prescreve doses sem supervisão médica.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
-              ),
-              SizedBox(height: 12),
-              Text(
-                '2. Proteção de Dados de Menores (Art. 14 da LGPD)',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'O tratamento dos dados de saúde da criança é realizado exclusivamente com o consentimento do responsável legal e no melhor interesse do menor. Os dados são armazenados sob criptografia local AES-256.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
-              ),
-              SizedBox(height: 12),
-              Text(
-                '3. Guarda e Imutabilidade (CFM nº 1.331/89)',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Cada lançamento gera um hash criptográfico (SHA-256) garantindo que o histórico não sofra adulterações retroativas e tenha garantia de guarda legal de 20 anos.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF475569)),
-              ),
-              SizedBox(height: 20),
-            ],
-          ),
-        ),
+      child: const Text(
+        '⚠️ O Health Control é uma ferramenta de apoio ao cuidado e não substitui a consulta com o pediatra. Em caso de falta de ar forte com esforço das costelas, vá imediatamente ao Pronto-Socorro.',
+        style: TextStyle(fontSize: 10, color: Color(0xFF64748B), height: 1.3),
       ),
     );
   }

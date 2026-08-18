@@ -67,24 +67,24 @@
             </button>
         </div>
 
-        <!-- Card de Status Atual (GINA Zone) -->
+        <!-- Card de Status Atual do Dia -->
         <div id="statusCard" class="bg-emerald-50 border border-emerald-300 rounded-2xl p-4 shadow-sm">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <span class="text-xl">🟢</span>
-                    <span class="font-extrabold text-emerald-800 text-sm">ZONA VERDE (Asma Estável)</span>
+                    <span class="font-bold text-emerald-900 text-sm">O Arthur está bem hoje!</span>
                 </div>
                 <span class="text-[11px] bg-white/80 text-emerald-800 font-bold px-2 py-0.5 rounded">Hoje 13:30</span>
             </div>
-            <p class="text-xs text-slate-600 mt-1.5">Respiração livre, sem sintomas agudos. Mantenha a medicação preventiva e a rotina normal.</p>
+            <p class="text-xs text-slate-600 mt-1">Respiração livre e sem chiados. Dê as bombinhas de todo dia no horário correto.</p>
             
             <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-emerald-200/60">
                 <div class="bg-white p-2 rounded-xl text-center border border-slate-100">
-                    <span class="text-[10px] text-slate-400 font-bold uppercase block">Último PFE</span>
+                    <span class="text-[10px] text-slate-400 font-bold uppercase block">Sopro (Pico)</span>
                     <span class="text-sm font-extrabold text-emerald-700">220 L/min</span>
                 </div>
                 <div class="bg-white p-2 rounded-xl text-center border border-slate-100">
-                    <span class="text-[10px] text-slate-400 font-bold uppercase block">SpO2</span>
+                    <span class="text-[10px] text-slate-400 font-bold uppercase block">Oxigênio</span>
                     <span class="text-sm font-extrabold text-teal-700">98%</span>
                 </div>
                 <div class="bg-white p-2 rounded-xl text-center border border-slate-100">
@@ -94,39 +94,28 @@
             </div>
         </div>
 
-        <!-- Botões de Ação Imediata -->
+        <!-- Botões de Ação Imediata (Simples e Diretos) -->
         <div class="grid grid-cols-2 gap-2.5">
             <button onclick="openEmergencyModal()" class="bg-red-50 hover:bg-red-100 border border-red-200 p-3.5 rounded-2xl text-left transition flex flex-col justify-between shadow-sm">
                 <div class="flex items-center justify-between w-full">
                     <span class="text-lg">🚨</span>
-                    <span class="text-[10px] bg-red-600 text-white font-black px-1.5 py-0.5 rounded uppercase">Urgente</span>
+                    <span class="text-[10px] bg-red-600 text-white font-bold px-1.5 py-0.5 rounded">S.O.S.</span>
                 </div>
                 <div class="mt-2">
-                    <span class="font-bold text-red-900 text-xs block">Modo Emergência</span>
-                    <span class="text-[11px] text-red-600">Mostrar ao Médico do PS</span>
+                    <span class="font-bold text-red-900 text-xs block">Emergência</span>
+                    <span class="text-[11px] text-red-600">Mostrar no Pronto-Socorro</span>
                 </div>
             </button>
 
-            <button onclick="openPhysioModal()" class="bg-teal-50 hover:bg-teal-100 border border-teal-200 p-3.5 rounded-2xl text-left transition flex flex-col justify-between shadow-sm">
+            <button onclick="openPrescriptionModal()" class="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 p-3.5 rounded-2xl text-left transition flex flex-col justify-between shadow-sm">
                 <div class="flex items-center justify-between w-full">
-                    <span class="text-lg">🫁</span>
-                    <span class="text-[10px] bg-teal-600 text-white font-black px-1.5 py-0.5 rounded uppercase">AMIB</span>
+                    <span class="text-lg">💊</span>
+                    <span class="text-[10px] bg-emerald-600 text-white font-bold px-1.5 py-0.5 rounded">Receitas</span>
                 </div>
                 <div class="mt-2">
-                    <span class="font-bold text-teal-900 text-xs block">Fisioterapia</span>
-                    <span class="text-[11px] text-teal-700">Voldyne & Trava SpO2</span>
+                    <span class="font-bold text-emerald-900 text-xs block">Remédios do Filho</span>
+                    <span class="text-[11px] text-emerald-700">Bombinhas & Validade</span>
                 </div>
-            </button>
-
-            <button onclick="openPrescriptionModal()" class="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 p-3.5 rounded-2xl text-left transition flex flex-col justify-between shadow-sm col-span-2">
-                <div class="flex items-center justify-between w-full">
-                    <div class="flex items-center gap-1.5">
-                        <span class="text-lg">💊</span>
-                        <span class="font-bold text-emerald-900 text-xs">Receitas Médicas & Bombinhas</span>
-                    </div>
-                    <span class="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded">Scanner OCR</span>
-                </div>
-                <p class="text-[11px] text-emerald-700 mt-1">Clenil 250mcg • Aerolin 100mcg • Singulair 4mg (Válida por mais 160 dias)</p>
             </button>
         </div>
 
