@@ -13,45 +13,101 @@ class NewEntryScreen extends StatefulWidget {
 class _NewEntryScreenState extends State<NewEntryScreen> {
   final HealthStorageService _storageService = HealthStorageService();
 
+  PatientProfile? _patientProfile;
+  List<PrescribedMedication> _childPrescribedMeds = [];
+  bool _isLoading = true;
+
   String _author = 'Mãe';
+
+  // Chaves Modulares (O que o cuidador realizou agora)
+  bool _includePeakFlow = false;
+  bool _includeSpo2 = false;
+  bool _includeMedication = true;
+  bool _includePhysioCpap = false;
+  bool _includeSymptoms = false;
+  bool _includeNotes = false;
+
+  // Controladores
   final TextEditingController _blow1Ctrl = TextEditingController();
   final TextEditingController _blow2Ctrl = TextEditingController();
   final TextEditingController _blow3Ctrl = TextEditingController();
   final TextEditingController _spo2Ctrl = TextEditingController(text: '98');
   final TextEditingController _notesCtrl = TextEditingController();
 
-  bool _mouthRinseDone = false;
+  // Fisioterapia / CPAP
+  String _selectedPhysioDevice = 'Voldyne 2500 (Espirometria)';
+  final TextEditingController _physioDurationCtrl = TextEditingController(text: '10');
+  final List<String> _physioDevices = [
+    'Voldyne 2500 (Espirometria)',
+    'Shaker / Respibar (Oscilação Oral)',
+    'CPAP Pediátrico (Pressão Positiva)',
+    'Inalação com Soro / Berotec',
+    'Máscara PEP / Flutter',
+    'Exercícios de Expansão Torácica',
+  ];
+
+  bool _mouthRinseDone = true;
   final List<String> _selectedSymptoms = [];
-  final List<String> _selectedTriggers = [];
   final List<MedicationUsage> _selectedMedications = [];
 
   final List<String> _commonSymptoms = [
-    'Sem sintomas',
-    'Tosse noturna',
-    'Chiado no peito',
+    'Sem sintomas aparentes',
+    'Tosse seca leve',
+    'Tosse com secreção / carregada',
+    'Chiado no peito (sibilo)',
     'Cansaço aos esforços',
-    'Tiragem intercostal (afundamento das costelas)',
-  ];
-
-  final List<String> _commonTriggers = [
-    'Tempo seco',
-    'Queda de temperatura',
-    'Poeira/Mofo',
-    'Exercício físico',
-    'Fumaça',
-  ];
-
-  final List<MedicationUsage> _availableMedications = [
-    const MedicationUsage(name: 'Clenil HFA 250mcg (Preventivo)', dosage: '1 puff', type: MedicationType.maintenance),
-    const MedicationUsage(name: 'Aerolin / Salbutamol (Resgate)', dosage: '2 puffs', type: MedicationType.rescue),
-    const MedicationUsage(name: 'Budesonida Spray (Preventivo)', dosage: '1 puff', type: MedicationType.maintenance),
-    const MedicationUsage(name: 'Prednisolona Oral (Corticoide)', dosage: '5ml', type: MedicationType.oralSteroid),
-    const MedicationUsage(name: 'Dupixent / Dupilumabe (Biológico)', dosage: '200mg', type: MedicationType.biologic),
+    'Falta de ar ao deitar',
+    'Respiração rápida / ofegante',
   ];
 
   int? _calculatedBest;
   int? _calculatedVariance;
   bool _hasVarianceError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatientAndPrescriptions();
+  }
+
+  Future<void> _loadPatientAndPrescriptions() async {
+    setState(() => _isLoading = true);
+    final profile = await _storageService.getPatientProfile();
+    final prescriptions = await _storageService.getPrescriptions(profile.id);
+
+    final List<PrescribedMedication> allMeds = [];
+    for (final p in prescriptions) {
+      allMeds.addAll(p.medications);
+    }
+
+    // Se não houver prescrição cadastrada, carrega sugestões padrão
+    if (allMeds.isEmpty) {
+      allMeds.addAll([
+        const PrescribedMedication(
+          id: 'def_1',
+          commercialName: 'Clenil HFA 250mcg Spray',
+          activeIngredient: 'Beclometasona',
+          category: MedicationCategory.maintenanceInhaled,
+          dosage: '1 jato',
+          frequency: '12/12h',
+        ),
+        const PrescribedMedication(
+          id: 'def_2',
+          commercialName: 'Aerolin Spray 100mcg',
+          activeIngredient: 'Salbutamol',
+          category: MedicationCategory.rescueInhaled,
+          dosage: '2 jatos',
+          frequency: 'Resgate',
+        ),
+      ]);
+    }
+
+    setState(() {
+      _patientProfile = profile;
+      _childPrescribedMeds = allMeds;
+      _isLoading = false;
+    });
+  }
 
   void _recalculatePeakFlow() {
     final b1 = int.tryParse(_blow1Ctrl.text.trim());
@@ -80,201 +136,324 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
   }
 
   Future<void> _saveEntry() async {
-    final spo2Val = int.tryParse(_spo2Ctrl.text.trim()) ?? 98;
-    final b1 = int.tryParse(_blow1Ctrl.text.trim());
-    final b2 = int.tryParse(_blow2Ctrl.text.trim());
-    final b3 = int.tryParse(_blow3Ctrl.text.trim());
-
-    final attempts = [if (b1 != null) b1, if (b2 != null) b2, if (b3 != null) b3];
-
-    if (attempts.isEmpty && _selectedSymptoms.isEmpty && _selectedMedications.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, informe ao menos os sopros do Peak Flow, sintomas ou medicações.')),
-      );
-      return;
+    final List<int> attempts = [];
+    if (_includePeakFlow) {
+      final b1 = int.tryParse(_blow1Ctrl.text.trim());
+      final b2 = int.tryParse(_blow2Ctrl.text.trim());
+      final b3 = int.tryParse(_blow3Ctrl.text.trim());
+      if (b1 != null) attempts.add(b1);
+      if (b2 != null) attempts.add(b2);
+      if (b3 != null) attempts.add(b3);
     }
 
-    final entry = await _storageService.addHealthControlEntry(
+    final spo2Val = _includeSpo2 ? (int.tryParse(_spo2Ctrl.text.trim()) ?? 98) : 98;
+
+    PhysioSessionRecord? physioRecord;
+    if (_includePhysioCpap) {
+      physioRecord = PhysioSessionRecord(
+        deviceName: _selectedPhysioDevice,
+        durationMinutes: int.tryParse(_physioDurationCtrl.text.trim()) ?? 10,
+        preSpo2: spo2Val,
+        postSpo2: spo2Val,
+        amibApproved: true,
+      );
+    }
+
+    await _storageService.addHealthControlEntry(
       authorName: _author,
-      authorRole: _author == 'Médico' ? 'Pneumologista' : 'Cuidador Principal',
+      authorRole: _author == 'Médico' ? 'Pneumopediatra' : 'Cuidador Principal',
       peakFlowAttempts: attempts,
       spo2: spo2Val,
-      symptoms: _selectedSymptoms,
-      environmentalTriggers: _selectedTriggers,
-      medications: _selectedMedications,
+      symptoms: _includeSymptoms && _selectedSymptoms.isNotEmpty ? _selectedSymptoms : ['Sem queixas registradas'],
+      medications: _includeMedication ? _selectedMedications : [],
       mouthRinseCompleted: _mouthRinseDone,
-      notes: _notesCtrl.text.trim(),
+      physiotherapy: physioRecord,
+      notes: _includeNotes ? _notesCtrl.text.trim() : '',
     );
 
     if (!mounted) return;
-
-    // Diálogo de confirmação com a Zona e Orientações
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(
-              entry.peakFlowZone == ActionZoneType.green
-                  ? Icons.check_circle
-                  : (entry.peakFlowZone == ActionZoneType.yellow ? Icons.warning_amber : Icons.emergency),
-              color: entry.peakFlowZone == ActionZoneType.green
-                  ? AppTheme.zoneGreen
-                  : (entry.peakFlowZone == ActionZoneType.yellow ? AppTheme.zoneYellow : AppTheme.zoneRed),
-            ),
-            const SizedBox(width: 8),
-            Text('Lançamento ${entry.versionTag} Salvo!'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Pico de Fluxo Máximo: ${entry.peakFlowBest} L/min'),
-            Text('Saturação SpO2: ${entry.spo2}%'),
-            const SizedBox(height: 8),
-            if (entry.peakFlowZone == ActionZoneType.yellow) ...[
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.zoneYellowBg,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.zoneYellow),
-                ),
-                child: const Text(
-                  '⚠️ Paciente na Zona Amarela! Administre o resgate e reavalie em 20 minutos.',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
-                ),
-              ),
-            ],
-            if (entry.medications.any((m) => m.type == MedicationType.maintenance) && !_mouthRinseDone) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  '💧 Lembre-se: Faça o bochecho ou escove os dentes da criança para evitar sapinho/candidíase.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF78350F)),
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pop(context, true);
-            },
-            child: const Text('OK'),
-          ),
-        ],
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Anotação de saúde gravada com sucesso! ✅'),
+        backgroundColor: Color(0xFF059669),
       ),
     );
+    Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
+      );
+    }
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Novo Lançamento Diário', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('Novo Lançamento de Saúde', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Quem está registrando
-            _buildAuthorSelector(),
+            // 1. Quem está anotando
+            _buildAuthorCard(),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // Peak Flow (Regra dos 3 Sopros CFF)
-            _buildPeakFlowSection(),
+            // 2. Seletor Modular: O que você realizou agora?
+            _buildActionSelectionHeader(),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
-            // Saturação SpO2
-            _buildVitalsSection(),
+            // 3. Seção Remédios Prescritos na Receita do Filho
+            if (_includeMedication) ...[
+              _buildPrescribedMedicationsSection(),
+              const SizedBox(height: 14),
+            ],
 
-            const SizedBox(height: 16),
+            // 4. Seção Sopro (Peak Flow) - Opcional
+            if (_includePeakFlow) ...[
+              _buildPeakFlowSection(),
+              const SizedBox(height: 14),
+            ],
 
-            // Medicações Usadas
-            _buildMedicationsSection(),
+            // 5. Seção Oxímetro / Saturação (SpO2) - Opcional
+            if (_includeSpo2) ...[
+              _buildSpo2Section(),
+              const SizedBox(height: 14),
+            ],
 
-            const SizedBox(height: 16),
+            // 6. Seção Fisioterapia / CPAP / Inalação - Opcional
+            if (_includePhysioCpap) ...[
+              _buildPhysioCpapSection(),
+              const SizedBox(height: 14),
+            ],
 
-            // Higiene Bucal Anti-Sapinho (Mandatório)
-            _buildMouthRinseSection(),
+            // 7. Seção Sintomas - Opcional
+            if (_includeSymptoms) ...[
+              _buildSymptomsSection(),
+              const SizedBox(height: 14),
+            ],
 
-            const SizedBox(height: 16),
+            // 8. Seção Observações - Opcional
+            if (_includeNotes) ...[
+              _buildNotesSection(),
+              const SizedBox(height: 14),
+            ],
 
-            // Sintomas & Gatilhos
-            _buildSymptomsAndTriggersSection(),
+            const SizedBox(height: 10),
 
-            const SizedBox(height: 16),
-
-            // Observações
-            TextField(
-              controller: _notesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Observações ou queixas da criança',
-                hintText: 'Ex: tossiu mais de madrugada, dormiu bem...',
-              ),
-              maxLines: 2,
-            ),
-
-            const SizedBox(height: 24),
-
-            // Botão Salvar
+            // Botão Salvar Lançamento
             SizedBox(
               width: double.infinity,
               height: 52,
               child: ElevatedButton.icon(
                 onPressed: _saveEntry,
-                icon: const Icon(Icons.check),
-                label: const Text('Salvar Lançamento & Gerar Versão', style: TextStyle(fontSize: 16)),
+                icon: const Icon(Icons.check_circle_outline, size: 20),
+                label: const Text('Gravar Anotação de Saúde', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAuthorSelector() {
+  Widget _buildAuthorCard() {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Icon(Icons.person, color: AppTheme.primaryTeal, size: 20),
-          const SizedBox(width: 8),
-          const Text('Responsável pelo registro:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-          const Spacer(),
-          DropdownButton<String>(
-            value: _author,
-            underline: const SizedBox(),
-            items: const [
-              DropdownMenuItem(value: 'Mãe', child: Text('Mãe')),
-              DropdownMenuItem(value: 'Pai', child: Text('Pai')),
-              DropdownMenuItem(value: 'Cuidador', child: Text('Cuidador/Babá')),
-              DropdownMenuItem(value: 'Médico', child: Text('Médico/Fisioterapeuta')),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: AppTheme.primaryLight,
+                child: Text(_author == 'Pai' ? '👨' : (_author == 'Mãe' ? '👩' : '🩺')),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Quem está cuidando agora?', style: TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+                  Text(_author, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+                ],
+              ),
             ],
-            onChanged: (val) {
-              if (val != null) setState(() => _author = val);
-            },
+          ),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _author,
+              items: const [
+                DropdownMenuItem(value: 'Mãe', child: Text('👩 Mãe')),
+                DropdownMenuItem(value: 'Pai', child: Text('👨 Pai')),
+                DropdownMenuItem(value: 'Avó / Cuidador', child: Text('👵 Cuidador')),
+                DropdownMenuItem(value: 'Médico', child: Text('🩺 Médico')),
+              ],
+              onChanged: (v) {
+                if (v != null) setState(() => _author = v);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionSelectionHeader() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'O que você fez com ele agora? (Selecione para abrir os campos)',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A)),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _buildToggleChip('💊 Dei Remédio / Bombinha', _includeMedication, (v) => setState(() => _includeMedication = v)),
+              _buildToggleChip('💨 Sopro (Peak Flow)', _includePeakFlow, (v) => setState(() => _includePeakFlow = v)),
+              _buildToggleChip('🫁 Oxímetro (SpO2)', _includeSpo2, (v) => setState(() => _includeSpo2 = v)),
+              _buildToggleChip('🫁 Fisioterapia / CPAP', _includePhysioCpap, (v) => setState(() => _includePhysioCpap = v)),
+              _buildToggleChip('🤒 Tossiu / Teve Sintomas', _includeSymptoms, (v) => setState(() => _includeSymptoms = v)),
+              _buildToggleChip('📝 Escrever Observação', _includeNotes, (v) => setState(() => _includeNotes = v)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleChip(String label, bool isSelected, Function(bool) onSelected) {
+    return FilterChip(
+      label: Text(label, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+      selected: isSelected,
+      selectedColor: AppTheme.primaryLight,
+      checkmarkColor: AppTheme.primaryTeal,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      onSelected: onSelected,
+    );
+  }
+
+  Widget _buildPrescribedMedicationsSection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '💊 Remédios da Receita do Filho',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
+                child: const Text('Receita Ativa', style: TextStyle(fontSize: 9, color: Color(0xFF475569), fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Toque na bombinha ou remédio que a criança usou neste momento:',
+            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 10),
+
+          ..._childPrescribedMeds.map((med) {
+            final isSelected = _selectedMedications.any((m) => m.name.contains(med.commercialName));
+            return Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              decoration: BoxDecoration(
+                color: isSelected ? AppTheme.primaryLight.withValues(alpha: 0.3) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: isSelected ? AppTheme.primaryTeal : const Color(0xFFE2E8F0)),
+              ),
+              child: CheckboxListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                value: isSelected,
+                activeColor: AppTheme.primaryTeal,
+                secondary: Text(med.category.iconEmoji, style: const TextStyle(fontSize: 20)),
+                title: Text(
+                  med.commercialName,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A)),
+                ),
+                subtitle: Text(
+                  '${med.dosage} • ${med.frequency}${med.spacerRequired ? " • com espaçador" : ""}',
+                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                ),
+                onChanged: (val) {
+                  setState(() {
+                    if (val == true) {
+                      _selectedMedications.add(
+                        MedicationUsage(
+                          name: med.commercialName,
+                          dosage: med.dosage,
+                          type: med.category == MedicationCategory.rescueInhaled ? MedicationType.rescue : MedicationType.maintenance,
+                        ),
+                      );
+                    } else {
+                      _selectedMedications.removeWhere((m) => m.name.contains(med.commercialName));
+                    }
+                  });
+                },
+              ),
+            );
+          }),
+
+          const SizedBox(height: 8),
+
+          // Lembrete de Bochecho
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: _mouthRinseDone,
+                  activeColor: const Color(0xFF059669),
+                  onChanged: (v) => setState(() => _mouthRinseDone = v ?? false),
+                ),
+                const Expanded(
+                  child: Text(
+                    '💧 Fez bochecho / lavou a boca com água após o spray (Previne sapinho)',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF166534)),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -286,35 +465,24 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.air, color: AppTheme.primaryTeal, size: 20),
-              SizedBox(width: 6),
-              Text(
-                'Pico de Fluxo (PFE) - Regra dos 3 Sopros',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
-              ),
-            ],
-          ),
+          const Text('💨 Pico de Fluxo (Sopro no Peak Flow)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
           const SizedBox(height: 4),
-          const Text(
-            'Peça para o seu filho soprar 3 vezes com força máxima no aparelho. O app selecionará o melhor valor.',
-            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-          ),
-          const SizedBox(height: 12),
+          const Text('Peça para a criança soprar 3 vezes com força máxima:', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _blow1Ctrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: '1º Sopro', hintText: 'ex: 210'),
+                  textAlign: TextAlign.center,
+                  decoration: const InputDecoration(labelText: '1º Sopro', hintText: '210'),
                   onChanged: (_) => _recalculatePeakFlow(),
                 ),
               ),
@@ -323,7 +491,8 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
                 child: TextField(
                   controller: _blow2Ctrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: '2º Sopro', hintText: 'ex: 220'),
+                  textAlign: TextAlign.center,
+                  decoration: const InputDecoration(labelText: '2º Sopro', hintText: '220'),
                   onChanged: (_) => _recalculatePeakFlow(),
                 ),
               ),
@@ -332,7 +501,8 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
                 child: TextField(
                   controller: _blow3Ctrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: '3º Sopro', hintText: 'ex: 215'),
+                  textAlign: TextAlign.center,
+                  decoration: const InputDecoration(labelText: '3º Sopro', hintText: '220'),
                   onChanged: (_) => _recalculatePeakFlow(),
                 ),
               ),
@@ -341,35 +511,20 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
           if (_calculatedBest != null) ...[
             const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _hasVarianceError ? AppTheme.zoneYellowBg : AppTheme.zoneGreenBg,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _hasVarianceError ? AppTheme.zoneYellow : AppTheme.zoneGreen,
-                ),
+                color: _hasVarianceError ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    _hasVarianceError ? Icons.warning_amber : Icons.check_circle,
-                    size: 16,
-                    color: _hasVarianceError ? AppTheme.zoneYellow : AppTheme.zoneGreen,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      _hasVarianceError
-                          ? 'Maior: $_calculatedBest L/min • Variação de $_calculatedVariance L/min (Sopros muito diferentes, oriente o sopro reto!)'
-                          : 'Maior Sopro: $_calculatedBest L/min (Técnica consistente)',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _hasVarianceError ? const Color(0xFF92400E) : const Color(0xFF065F46),
-                      ),
-                    ),
-                  ),
-                ],
+              child: Text(
+                _hasVarianceError
+                    ? '⚠️ Variação de $_calculatedVariance L/min entre os sopros. Repita para garantir a vedação da boquilha.'
+                    : '✅ Melhor sopro registrado: $_calculatedBest L/min',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: _hasVarianceError ? const Color(0xFFDC2626) : const Color(0xFF15803D),
+                ),
               ),
             ),
           ],
@@ -378,150 +533,84 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
     );
   }
 
-  Widget _buildVitalsSection() {
+  Widget _buildSpo2Section() {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.favorite_outline, color: AppTheme.primaryTeal, size: 20),
-              SizedBox(width: 6),
-              Text(
-                'Saturação de Oxigênio (Oxímetro)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
-              ),
-            ],
+          const Text('🫁 Oxímetro de Dedo (Saturação SpO2)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _spo2Ctrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Saturação de Oxigênio (%)', hintText: '98'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhysioCpapSection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('🫁 Fisioterapia Respiratória / CPAP / Inalação', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _selectedPhysioDevice,
+            decoration: const InputDecoration(labelText: 'Aparelho ou Exercício Realizado'),
+            items: _physioDevices.map((d) => DropdownMenuItem(value: d, child: Text(d, style: const TextStyle(fontSize: 12)))).toList(),
+            onChanged: (v) {
+              if (v != null) setState(() => _selectedPhysioDevice = v);
+            },
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _spo2Ctrl,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'SpO2 (%)', hintText: 'ex: 98'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                flex: 2,
-                child: Text(
-                  'Normal em ar ambiente: ≥ 95%.\nAbaixo de 92% requer atenção médica.',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                ),
-              ),
-            ],
+          TextField(
+            controller: _physioDurationCtrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Duração do Exercício (minutos)', hintText: '10'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMedicationsSection() {
+  Widget _buildSymptomsSection() {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.medication_outlined, color: AppTheme.primaryTeal, size: 20),
-              SizedBox(width: 6),
-              Text(
-                'Medicações Utilizadas Nesta Sessão',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
-              ),
-            ],
-          ),
+          const Text('🤒 Sintomas Apresentados', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: _availableMedications.map((med) {
-              final isSelected = _selectedMedications.any((m) => m.name == med.name);
-              return FilterChip(
-                label: Text(med.name, style: const TextStyle(fontSize: 12)),
-                selected: isSelected,
-                selectedColor: AppTheme.primaryLight,
-                checkmarkColor: AppTheme.primaryTeal,
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      _selectedMedications.add(med);
-                    } else {
-                      _selectedMedications.removeWhere((m) => m.name == med.name);
-                    }
-                  });
-                },
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMouthRinseSection() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _mouthRinseDone ? AppTheme.zoneGreenBg : const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: _mouthRinseDone ? AppTheme.zoneGreen.withOpacity(0.5) : AppTheme.zoneYellow,
-          width: 1.5,
-        ),
-      ),
-      child: CheckboxListTile(
-        contentPadding: EdgeInsets.zero,
-        title: const Text(
-          '💧 Higiene Bucal / Bochecho Realizado',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
-        ),
-        subtitle: const Text(
-          'Fundamental após usar corticoide inalatório (Clenil/Budesonida) para evitar sapinho (candidíase oral) e rouquidão.',
-          style: TextStyle(fontSize: 11, color: Color(0xFF475569)),
-        ),
-        value: _mouthRinseDone,
-        activeColor: AppTheme.zoneGreen,
-        onChanged: (val) => setState(() => _mouthRinseDone = val ?? false),
-      ),
-    );
-  }
-
-  Widget _buildSymptomsAndTriggersSection() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Sintomas Notados:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-          const SizedBox(height: 6),
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: _commonSymptoms.map((s) {
               final isSel = _selectedSymptoms.contains(s);
               return FilterChip(
-                label: Text(s, style: const TextStyle(fontSize: 12)),
+                label: Text(s, style: const TextStyle(fontSize: 11)),
                 selected: isSel,
+                selectedColor: const Color(0xFFFEE2E2),
+                checkmarkColor: const Color(0xFFDC2626),
                 onSelected: (sel) {
                   setState(() {
                     if (sel) {
@@ -534,28 +623,31 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
               );
             }).toList(),
           ),
-          const SizedBox(height: 12),
-          const Text('Gatilhos do Ambiente:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: _commonTriggers.map((t) {
-              final isSel = _selectedTriggers.contains(t);
-              return FilterChip(
-                label: Text(t, style: const TextStyle(fontSize: 12)),
-                selected: isSel,
-                onSelected: (sel) {
-                  setState(() {
-                    if (sel) {
-                      _selectedTriggers.add(t);
-                    } else {
-                      _selectedTriggers.remove(t);
-                    }
-                  });
-                },
-              );
-            }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotesSection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('📝 Observações Adicionais', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _notesCtrl,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: 'ex: Dormiu bem, sem tosse durante a noite.',
+              border: OutlineInputBorder(),
+            ),
           ),
         ],
       ),

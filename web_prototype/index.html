@@ -62,8 +62,8 @@
                     <p class="text-xs text-slate-500 mt-0.5" id="childMetrics">Melhor PFE: <b class="text-slate-800">220 L/min</b> • 19.5 kg • Sangue A+</p>
                 </div>
             </div>
-            <button onclick="openAnamnesisModal()" class="text-xs text-teal-700 bg-teal-50 font-bold px-2.5 py-1.5 rounded-xl border border-teal-200 hover:bg-teal-100 transition">
-                Anamnese 📝
+            <button onclick="openAnamnesisModal()" class="text-[10px] text-teal-700 bg-teal-50 font-bold px-2 py-1 rounded-lg border border-teal-200 hover:bg-teal-100 transition">
+                Ficha 📝
             </button>
         </div>
 
@@ -94,85 +94,132 @@
             </div>
         </div>
 
-        <!-- Botões de Ação Imediata (Simples e Diretos) -->
+        <!-- Botões de Ação Imediata (Limpos e Diretos) -->
         <div class="grid grid-cols-2 gap-2.5">
-            <button onclick="openEmergencyModal()" class="bg-red-50 hover:bg-red-100 border border-red-200 p-3.5 rounded-2xl text-left transition flex flex-col justify-between shadow-sm">
-                <div class="flex items-center justify-between w-full">
-                    <span class="text-lg">🚨</span>
-                    <span class="text-[10px] bg-red-600 text-white font-bold px-1.5 py-0.5 rounded">S.O.S.</span>
-                </div>
-                <div class="mt-2">
-                    <span class="font-bold text-red-900 text-xs block">Emergência</span>
-                    <span class="text-[11px] text-red-600">Mostrar no Pronto-Socorro</span>
-                </div>
+            <button onclick="openEmergencyModal()" class="bg-red-50 hover:bg-red-100 border border-red-200 p-3 rounded-2xl text-center transition flex items-center justify-center gap-1.5 shadow-sm">
+                <span class="text-base">🚨</span>
+                <span class="font-bold text-red-900 text-xs">SOS</span>
             </button>
 
-            <button onclick="openPrescriptionModal()" class="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 p-3.5 rounded-2xl text-left transition flex flex-col justify-between shadow-sm">
-                <div class="flex items-center justify-between w-full">
-                    <span class="text-lg">💊</span>
-                    <span class="text-[10px] bg-emerald-600 text-white font-bold px-1.5 py-0.5 rounded">Receitas</span>
-                </div>
-                <div class="mt-2">
-                    <span class="font-bold text-emerald-900 text-xs block">Remédios do Filho</span>
-                    <span class="text-[11px] text-emerald-700">Bombinhas & Validade</span>
-                </div>
+            <button onclick="openPrescriptionModal()" class="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 p-3 rounded-2xl text-center transition flex items-center justify-center gap-1.5 shadow-sm">
+                <span class="text-base">💊</span>
+                <span class="font-bold text-emerald-900 text-xs">Atualizar receita médica</span>
             </button>
         </div>
 
-        <!-- Formulário de Novo Lançamento Rápido -->
+        <!-- Formulário de Novo Lançamento Modular e Prático -->
         <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
             <div class="flex items-center justify-between">
                 <h2 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
                     <span>📝</span> Novo Lançamento de Saúde
                 </h2>
                 <select id="authorSelect" class="text-xs bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-700">
-                    <option value="Mãe (Juliana)">Mãe</option>
-                    <option value="Pai">Pai</option>
-                    <option value="Cuidador">Cuidador</option>
+                    <option value="Mãe (Juliana)">👩 Mãe</option>
+                    <option value="Pai">👨 Pai</option>
+                    <option value="Cuidador">👵 Cuidador</option>
                 </select>
             </div>
 
-            <!-- 3 Sopros Peak Flow -->
+            <!-- Seleção Modular: O que você fez agora? -->
             <div>
-                <label class="text-xs font-bold text-slate-700 block mb-1">
-                    Pico de Fluxo (3 Sopros - Protocolo CFF):
+                <span class="text-[11px] font-bold text-slate-700 block mb-1.5">O que você realizou com ele agora?</span>
+                <div class="flex flex-wrap gap-1.5">
+                    <button type="button" id="toggleMedBtn" onclick="toggleFormSection('med')" class="text-xs font-bold px-2.5 py-1 rounded-lg bg-teal-100 text-teal-800 border border-teal-300">
+                        💊 Dei Remédio
+                    </button>
+                    <button type="button" id="togglePeakBtn" onclick="toggleFormSection('peak')" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                        💨 Sopro (Peak Flow)
+                    </button>
+                    <button type="button" id="toggleSpo2Btn" onclick="toggleFormSection('spo2')" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                        🫁 Oxímetro (SpO2)
+                    </button>
+                    <button type="button" id="togglePhysioBtn" onclick="toggleFormSection('physio')" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                        🫁 Fisioterapia / CPAP
+                    </button>
+                    <button type="button" id="toggleSympBtn" onclick="toggleFormSection('symp')" class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                        🤒 Sintomas
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bloco 1: Remédios Integrados com a Receita -->
+            <div id="sectionMed" class="space-y-2 pt-2 border-t border-slate-100">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-bold text-slate-800">Bombinha / Remédio da Receita:</label>
+                    <span class="text-[10px] text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded">Receita Ativa</span>
+                </div>
+                <div id="medOptionsContainer" class="space-y-1.5">
+                    <label class="flex items-center space-x-2 bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs cursor-pointer">
+                        <input type="checkbox" id="medClenil" checked class="w-4 h-4 text-teal-600 rounded">
+                        <span class="flex-1 font-semibold text-slate-800">🫁 Clenil HFA 250mcg (1 jato c/ espaçador)</span>
+                    </label>
+                    <label class="flex items-center space-x-2 bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs cursor-pointer">
+                        <input type="checkbox" id="medAerolin" class="w-4 h-4 text-teal-600 rounded">
+                        <span class="flex-1 font-semibold text-slate-800">⚡ Aerolin 100mcg (Resgate 2 jatos)</span>
+                    </label>
+                    <label class="flex items-center space-x-2 bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs cursor-pointer">
+                        <input type="checkbox" id="medSingulair" class="w-4 h-4 text-teal-600 rounded">
+                        <span class="flex-1 font-semibold text-slate-800">💊 Singulair Baby 4mg (1 sachê à noite)</span>
+                    </label>
+                </div>
+
+                <!-- Bochecho -->
+                <div class="bg-amber-50 border border-amber-200 p-2.5 rounded-xl flex items-center space-x-2">
+                    <input type="checkbox" id="mouthRinse" checked class="w-4 h-4 text-teal-600 rounded">
+                    <label for="mouthRinse" class="text-xs text-amber-900 font-bold">
+                        💧 Bochecho / lavou a boca com água (Anti-Sapinho)
+                    </label>
+                </div>
+            </div>
+
+            <!-- Bloco 2: 3 Sopros Peak Flow (Opcional) -->
+            <div id="sectionPeak" class="hidden space-y-2 pt-2 border-t border-slate-100">
+                <label class="text-xs font-bold text-slate-700 block">
+                    Pico de Fluxo (3 Sopros):
                 </label>
                 <div class="grid grid-cols-3 gap-2">
                     <input type="number" id="s1" placeholder="1º Sopro" class="bg-slate-50 border border-slate-200 text-sm font-semibold rounded-xl p-2 text-center" oninput="calculateFlow()">
                     <input type="number" id="s2" placeholder="2º Sopro" class="bg-slate-50 border border-slate-200 text-sm font-semibold rounded-xl p-2 text-center" oninput="calculateFlow()">
                     <input type="number" id="s3" placeholder="3º Sopro" class="bg-slate-50 border border-slate-200 text-sm font-semibold rounded-xl p-2 text-center" oninput="calculateFlow()">
                 </div>
-                <div id="flowFeedback" class="hidden text-xs mt-1.5 p-2 rounded-lg font-medium"></div>
+                <div id="flowFeedback" class="hidden text-xs p-2 rounded-lg font-medium"></div>
             </div>
 
-            <!-- Saturação & Medicações -->
-            <div class="grid grid-cols-2 gap-2">
-                <div>
-                    <label class="text-xs font-bold text-slate-700 block mb-1">Saturação SpO2 (%):</label>
-                    <input type="number" id="spo2" value="98" class="w-full bg-slate-50 border border-slate-200 text-sm font-semibold rounded-xl p-2 text-center">
-                </div>
-                <div>
-                    <label class="text-xs font-bold text-slate-700 block mb-1">Medicação Utilizada:</label>
-                    <select id="medSelect" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
-                        <option value="Clenil HFA 250mcg (Preventivo)">Clenil HFA 250</option>
-                        <option value="Aerolin / Salbutamol (Resgate)">Aerolin (Resgate)</option>
-                        <option value="Budesonida Spray">Budesonida Spray</option>
-                        <option value="Prednisolona Oral">Prednisolona Oral</option>
-                    </select>
-                </div>
+            <!-- Bloco 3: Saturação SpO2 (Opcional) -->
+            <div id="sectionSpo2" class="hidden space-y-1.5 pt-2 border-t border-slate-100">
+                <label class="text-xs font-bold text-slate-700 block">Oxímetro - Saturação SpO2 (%):</label>
+                <input type="number" id="spo2" value="98" class="w-full bg-slate-50 border border-slate-200 text-sm font-semibold rounded-xl p-2 text-center">
             </div>
 
-            <!-- Prevenção de Sapinho (Mandatório) -->
-            <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-start space-x-2.5">
-                <input type="checkbox" id="mouthRinse" class="mt-0.5 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500">
-                <label for="mouthRinse" class="text-xs text-amber-900 font-medium">
-                    <b class="font-bold">💧 Bochecho/Higiene Bucal Realizado</b><br>
-                    Prevenção de candidíase (sapinho) e disfonia após corticoide inalatório.
-                </label>
+            <!-- Bloco 4: Fisioterapia / CPAP (Opcional) -->
+            <div id="sectionPhysio" class="hidden space-y-2 pt-2 border-t border-slate-100">
+                <label class="text-xs font-bold text-slate-700 block">Fisioterapia / CPAP Realizado:</label>
+                <select id="physioDeviceSelect" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                    <option value="Voldyne 2500">Voldyne 2500 (Espirometria)</option>
+                    <option value="Shaker / Respibar">Shaker / Respibar (Oscilação)</option>
+                    <option value="CPAP Pediátrico">CPAP Pediátrico</option>
+                    <option value="Inalação com Soro">Inalação com Soro 0.9%</option>
+                </select>
+            </div>
+
+            <!-- Bloco 5: Sintomas (Opcional) -->
+            <div id="sectionSymp" class="hidden space-y-1.5 pt-2 border-t border-slate-100">
+                <label class="text-xs font-bold text-slate-700 block">Sintomas Observados:</label>
+                <div class="flex flex-wrap gap-1.5">
+                    <label class="text-xs bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg flex items-center gap-1 cursor-pointer">
+                        <input type="checkbox" id="sympTosse" class="w-3.5 h-3.5 text-red-600 rounded"> Tosse
+                    </label>
+                    <label class="text-xs bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg flex items-center gap-1 cursor-pointer">
+                        <input type="checkbox" id="sympChiado" class="w-3.5 h-3.5 text-red-600 rounded"> Chiado no peito
+                    </label>
+                    <label class="text-xs bg-slate-50 border border-slate-200 px-2 py-1 rounded-lg flex items-center gap-1 cursor-pointer">
+                        <input type="checkbox" id="sympCansaco" class="w-3.5 h-3.5 text-red-600 rounded"> Cansaço
+                    </label>
+                </div>
             </div>
 
             <button onclick="saveHealthEntry()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-1.5">
-                <span>💾</span> Salvar e Gerar Versão do Prontuário
+                <span>💾</span> Gravar Anotação de Saúde
             </button>
         </div>
 
@@ -439,6 +486,31 @@
             });
         }
 
+        function toggleFormSection(sec) {
+            const map = {
+                'med': { id: 'sectionMed', btn: 'toggleMedBtn', label: '💊 Dei Remédio' },
+                'peak': { id: 'sectionPeak', btn: 'togglePeakBtn', label: '💨 Sopro (Peak Flow)' },
+                'spo2': { id: 'sectionSpo2', btn: 'toggleSpo2Btn', label: '🫁 Oxímetro (SpO2)' },
+                'physio': { id: 'sectionPhysio', btn: 'togglePhysioBtn', label: '🫁 Fisioterapia / CPAP' },
+                'symp': { id: 'sectionSymp', btn: 'toggleSympBtn', label: '🤒 Sintomas' },
+            };
+
+            const item = map[sec];
+            if (!item) return;
+
+            const el = document.getElementById(item.id);
+            const btn = document.getElementById(item.btn);
+            const isHidden = el.classList.contains('hidden');
+
+            if (isHidden) {
+                el.classList.remove('hidden');
+                btn.className = "text-xs font-bold px-2.5 py-1 rounded-lg bg-teal-100 text-teal-800 border border-teal-300";
+            } else {
+                el.classList.add('hidden');
+                btn.className = "text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200";
+            }
+        }
+
         function calculateFlow() {
             const s1 = parseInt(document.getElementById('s1').value) || 0;
             const s2 = parseInt(document.getElementById('s2').value) || 0;
@@ -472,7 +544,14 @@
             const blows = [s1, s2, s3].filter(v => v > 0);
             const best = blows.length > 0 ? Math.max(...blows) : 220;
             const spo2 = parseInt(document.getElementById('spo2').value) || 98;
-            const med = document.getElementById('medSelect').value;
+            
+            // Remédios selecionados da receita
+            const medsList = [];
+            if (document.getElementById('medClenil') && document.getElementById('medClenil').checked) medsList.push('Clenil HFA');
+            if (document.getElementById('medAerolin') && document.getElementById('medAerolin').checked) medsList.push('Aerolin 100mcg');
+            if (document.getElementById('medSingulair') && document.getElementById('medSingulair').checked) medsList.push('Singulair 4mg');
+            const med = medsList.length > 0 ? medsList.join(', ') : 'Nenhum medicamento';
+
             const rinse = document.getElementById('mouthRinse').checked;
             const author = document.getElementById('authorSelect').value;
 
@@ -483,7 +562,7 @@
                 version: newVersion,
                 author: author,
                 time: "Agora mesmo",
-                pef: best,
+                pef: blows.length > 0 ? best : 220,
                 spo2: spo2,
                 zone: best >= 176 ? "green" : (best >= 110 ? "yellow" : "red"),
                 med: med,
@@ -491,7 +570,7 @@
             });
 
             renderTimeline();
-            alert(`Lançamento ${newVersion} gravado com sucesso!`);
+            alert(`Anotação ${newVersion} gravada com sucesso! ✅`);
             
             // Limpa campos
             document.getElementById('s1').value = '';

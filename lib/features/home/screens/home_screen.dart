@@ -266,16 +266,31 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              IconButton(
-                tooltip: 'Abrir Ficha e Remédios',
-                icon: const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.primaryTeal),
-                onPressed: () async {
+              InkWell(
+                onTap: () async {
                   await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const ProfileScreen()),
                   );
                   _loadData();
                 },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryLight,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.primaryTeal.withValues(alpha: 0.3)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Ficha', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal)),
+                      SizedBox(width: 2),
+                      Icon(Icons.arrow_forward_ios, size: 9, color: AppTheme.primaryTeal),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -398,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildEssentialActionButtons() {
     return Row(
       children: [
-        // Botão Emergência
+        // Botão SOS (Sem descrição)
         Expanded(
           child: InkWell(
             onTap: () {
@@ -409,24 +424,18 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
                 color: const Color(0xFFFEF2F2),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: const Color(0xFFFECACA)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    children: const [
-                      Text('🚨', style: TextStyle(fontSize: 16)),
-                      SizedBox(width: 4),
-                      Text('Emergência', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFFDC2626))),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  const Text('Ficha para mostrar no PS', style: TextStyle(fontSize: 10, color: Color(0xFF991B1B))),
+                  Text('🚨', style: TextStyle(fontSize: 16)),
+                  SizedBox(width: 6),
+                  Text('SOS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFFDC2626))),
                 ],
               ),
             ),
@@ -434,7 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(width: 8),
 
-        // Botão Remédios & Receitas
+        // Botão Atualizar receita médica (Sem descrição)
         Expanded(
           child: InkWell(
             onTap: () {
@@ -445,24 +454,24 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
                 color: const Color(0xFFF0FDF4),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: const Color(0xFFBBF7D0)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    children: const [
-                      Text('💊', style: TextStyle(fontSize: 16)),
-                      SizedBox(width: 4),
-                      Text('Remédios', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF15803D))),
-                    ],
+                  Text('💊', style: TextStyle(fontSize: 16)),
+                  SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      'Atualizar receita médica',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF15803D)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  const SizedBox(height: 2),
-                  const Text('Bombinhas e Receitas', style: TextStyle(fontSize: 10, color: Color(0xFF166534))),
                 ],
               ),
             ),
