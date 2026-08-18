@@ -89,8 +89,8 @@ class _PhysioScreenState extends State<PhysioScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppTheme.primaryTeal.withOpacity(0.3)),
               ),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   Icon(Icons.shield_outlined, color: AppTheme.primaryTeal, size: 20),
                   SizedBox(width: 8),
                   Expanded(
@@ -141,7 +141,7 @@ class _PhysioScreenState extends State<PhysioScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _selectedDevice,
+                    initialValue: _selectedDevice,
                     decoration: const InputDecoration(labelText: 'Aparelho Utilizado:'),
                     items: _devices.map((d) => DropdownMenuItem(value: d, child: Text(d, style: const TextStyle(fontSize: 12)))).toList(),
                     onChanged: (val) {

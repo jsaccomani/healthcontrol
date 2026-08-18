@@ -50,8 +50,8 @@ class _CactQuizScreenState extends State<CactQuizScreen> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFC7D2FE)),
               ),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   Icon(Icons.info_outline, color: Color(0xFF4F46E5), size: 20),
                   SizedBox(width: 8),
                   Expanded(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:clinical_core/clinical_core.dart';
 import '../../../core/storage/health_storage_service.dart';
 import '../../../core/theme/app_theme.dart';

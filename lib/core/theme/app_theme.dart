@@ -25,8 +25,7 @@ class AppTheme {
         seedColor: primaryTeal,
         primary: primaryTeal,
         secondary: primaryDark,
-        background: backgroundLight,
-        surface: surfaceWhite,
+        surface: backgroundLight,
       ),
       scaffoldBackgroundColor: backgroundLight,
       appBarTheme: const AppBarTheme(
@@ -36,10 +35,10 @@ class AppTheme {
         centerTitle: true,
         iconTheme: IconThemeData(color: Color(0xFF0F172A)),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surfaceWhite,
         elevation: 1,
-        shadowColor: Colors.black.withOpacity(0.05),
+        shadowColor: Colors.black12,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),

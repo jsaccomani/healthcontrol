@@ -66,8 +66,8 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Column(
-                children: const [
+              child: const Column(
+                children: [
                   Text(
                     'MOSTRAR AO MÉDICO / PLANTONISTA DO PS',
                     style: TextStyle(

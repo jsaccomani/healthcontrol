@@ -195,10 +195,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 26,
             backgroundColor: AppTheme.primaryLight,
-            child: const Icon(Icons.child_care, color: AppTheme.primaryTeal, size: 30),
+            child: Icon(Icons.child_care, color: AppTheme.primaryTeal, size: 30),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -666,8 +666,8 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Column(
-        children: const [
+      child: const Column(
+        children: [
           Icon(Icons.history_toggle_off, color: Color(0xFF94A3B8), size: 40),
           SizedBox(height: 8),
           Text(

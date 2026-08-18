@@ -292,8 +292,8 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(Icons.air, color: AppTheme.primaryTeal, size: 20),
               SizedBox(width: 6),
               Text(
@@ -389,8 +389,8 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(Icons.favorite_outline, color: AppTheme.primaryTeal, size: 20),
               SizedBox(width: 6),
               Text(
@@ -435,8 +435,8 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(Icons.medication_outlined, color: AppTheme.primaryTeal, size: 20),
               SizedBox(width: 6),
               Text(

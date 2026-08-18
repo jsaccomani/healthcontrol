@@ -28,6 +28,9 @@ class CactResult {
   });
 }
 
+/// Alias de conveniência
+typedef CactScoreResult = CactResult;
+
 /// Calculador do Childhood Asthma Control Test (c-ACT).
 class CactCalculator {
   /// Escore de corte clínico (<= 19 indica asma não controlada).
