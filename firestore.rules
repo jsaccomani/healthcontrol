@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function: Usuário autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function: É o próprio paciente ou responsável autorizado
+    function isPatientOwner(patientId) {
+      return isAuthenticated() && (
+        request.auth.uid == patientId ||
+        request.auth.token.role in ['physician', 'physiotherapist', 'admin']
+      );
+    }
+
+    // Coleção Mestra: /patients/{patientId}
+    match /patients/{patientId} {
+      allow read: if isPatientOwner(patientId);
+      allow create: if isAuthenticated();
+      allow update: if isPatientOwner(patientId);
+      allow delete: if false; // Proibido exclusão para conformidade legal CFM
+
+      // Subcoleção Imutável: /patients/{patientId}/event_log/{eventId}
+      // Padrão Event Sourcing para Prontuário CFM nº 1.331/89 (20 anos)
+      match /event_log/{eventId} {
+        // Leitura permitida para o paciente e profissionais de saúde vinculados
+        allow read: if isPatientOwner(patientId);
+        
+        // Apenas CRIAÇÃO é permitida. Eventos são estritamente imutáveis
+        allow create: if isPatientOwner(patientId) &&
+                         request.resource.data.keys().hasAll(['event_type', 'timestamp', 'payload']) &&
+                         request.resource.data.event_type in ['DAILY_CLINICAL_DIARY', 'CACT_SCORE', 'CLINICAL_CRISIS'];
+        
+        // Bloqueio de Edição e Deleção de histórico médico
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+  }
+}
