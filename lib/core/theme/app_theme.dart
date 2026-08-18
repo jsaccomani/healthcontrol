@@ -1,78 +1,78 @@
 import 'package:flutter/material.dart';
+import '../design_system/tokens/hc_colors.dart';
+import '../design_system/tokens/hc_spacing.dart';
+import '../design_system/tokens/hc_typography.dart';
 
-/// Tema visual moderno, acolhedor e com alto contraste clínico para o Asma Control.
+/// Tema visual moderno, acessível e clínico do Health Control (Material 3).
 class AppTheme {
-  // Cores Primárias e Secundárias
-  static const Color primaryTeal = Color(0xFF0D9488); // Verde-azulado respiratório
-  static const Color primaryDark = Color(0xFF115E59);
-  static const Color primaryLight = Color(0xFFCCFBF1);
-  static const Color backgroundLight = Color(0xFFF8FAFC);
-  static const Color surfaceWhite = Colors.white;
+  // Cores de compatibilidade retroativa
+  static const Color primaryTeal = HCColors.primary500;
+  static const Color primaryDark = HCColors.primary700;
+  static const Color primaryLight = HCColors.primary100;
+  static const Color backgroundLight = HCColors.neutral50;
+  static const Color surfaceWhite = HCColors.surfaceWhite;
 
   // Cores Oficiais das Zonas GINA / PCDT
-  static const Color zoneGreen = Color(0xFF10B981); // Estável (>= 80%)
-  static const Color zoneGreenBg = Color(0xFFECFDF5);
-  static const Color zoneYellow = Color(0xFFF59E0B); // Alerta (50% a 79%)
-  static const Color zoneYellowBg = Color(0xFFFFFBEB);
-  static const Color zoneRed = Color(0xFFEF4444); // Emergência (< 50%)
-  static const Color zoneRedBg = Color(0xFFFEF2F2);
+  static const Color zoneGreen = HCColors.greenMain;
+  static const Color zoneGreenBg = HCColors.greenLight;
+  static const Color zoneYellow = HCColors.yellowMain;
+  static const Color zoneYellowBg = HCColors.yellowLight;
+  static const Color zoneRed = HCColors.redMain;
+  static const Color zoneRedBg = HCColors.redLight;
 
-  // Tema Claro
+  // Tema Material 3
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryTeal,
-        primary: primaryTeal,
-        secondary: primaryDark,
-        surface: backgroundLight,
+        seedColor: HCColors.primary500,
+        primary: HCColors.primary500,
+        secondary: HCColors.primary700,
+        surface: HCColors.neutral50,
       ),
-      scaffoldBackgroundColor: backgroundLight,
+      scaffoldBackgroundColor: HCColors.neutral50,
       appBarTheme: const AppBarTheme(
-        backgroundColor: surfaceWhite,
-        foregroundColor: Color(0xFF0F172A),
+        backgroundColor: HCColors.surfaceWhite,
+        foregroundColor: HCColors.neutral900,
         elevation: 0,
-        centerTitle: true,
-        iconTheme: IconThemeData(color: Color(0xFF0F172A)),
+        centerTitle: false,
+        iconTheme: IconThemeData(color: HCColors.neutral800),
+        titleTextStyle: HCTypography.heading,
       ),
       cardTheme: CardThemeData(
-        color: surfaceWhite,
-        elevation: 1,
-        shadowColor: Colors.black12,
+        color: HCColors.surfaceWhite,
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+          borderRadius: HCRadii.radiusLg,
+          side: const BorderSide(color: HCColors.neutral200, width: 1),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryTeal,
+          backgroundColor: HCColors.primary500,
           foregroundColor: Colors.white,
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: HCSpacing.paddingButton,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: HCRadii.radiusMd,
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          textStyle: HCTypography.button,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: HCColors.surfaceWhite,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+          borderRadius: HCRadii.radiusMd,
+          borderSide: const BorderSide(color: HCColors.neutral300),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+          borderRadius: HCRadii.radiusMd,
+          borderSide: const BorderSide(color: HCColors.neutral300),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryTeal, width: 2),
+          borderRadius: HCRadii.radiusMd,
+          borderSide: const BorderSide(color: HCColors.primary500, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
