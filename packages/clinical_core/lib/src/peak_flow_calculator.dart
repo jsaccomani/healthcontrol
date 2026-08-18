@@ -17,27 +17,34 @@ class PeakFlowResult {
   /// Mensagem clínica de orientação técnica.
   final String? warningMessage;
 
+  /// Versão explícita da diretriz clínica aplicada.
+  final String clinicalRuleVersion;
+  final String ruleIdentifier;
+
   const PeakFlowResult({
     required this.recordedMax,
     required this.recordedMin,
     required this.variance,
     required this.isUnstable,
     this.warningMessage,
+    this.clinicalRuleVersion = '1.0.0',
+    this.ruleIdentifier = 'CFF_PEAK_FLOW_PROTOCOL',
   });
 }
 
-/// Processador de Pico de Fluxo Expiratório (PEF) baseado nas diretrizes CFF.
+/// Processador de Pico de Fluxo Expiratório (PEF) baseado nas diretrizes CFF/ATS.
 class PeakFlowCalculator {
   static const int maxAllowedVariance = 20; // L/min
+  static const String currentRuleVersion = '1.0.0';
 
-  /// Processa 3 sopros consecutivos e retorna o resultado conforme protocolo CFF.
+  /// Processa 3 sopros consecutivos e retorna o resultado determinístico conforme protocolo CFF.
   static PeakFlowResult processBlows({
     required int blow1,
     required int blow2,
     required int blow3,
   }) {
     if (blow1 <= 0 || blow2 <= 0 || blow3 <= 0) {
-      throw ArgumentError('Todos os 3 sopros devem ter valores positivos.');
+      throw ArgumentError('Todos os 3 sopros devem ter valores estritamente positivos.');
     }
 
     final blows = [blow1, blow2, blow3];
@@ -51,6 +58,8 @@ class PeakFlowCalculator {
       recordedMin: minVal,
       variance: variance,
       isUnstable: isUnstable,
+      clinicalRuleVersion: currentRuleVersion,
+      ruleIdentifier: 'CFF_PEAK_FLOW_PROTOCOL',
       warningMessage: isUnstable
           ? 'Medição Instável: Variação de $variance L/min entre os sopros (limite máx: 20 L/min). '
               'Verifique vedação da máscara/bocal ou presença de tosse.'

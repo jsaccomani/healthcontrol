@@ -1,5 +1,4 @@
 import 'package:test/test.dart';
-import 'package:clinical_core/clinical_core.dart';
 
 /// Simulador e Avaliador de Regras de Segurança do Firestore (ReBAC Evaluation Engine).
 /// Testa as 11 asserções mandatórias de segurança para o modelo de relacionamentos e imutabilidade CFM.

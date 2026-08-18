@@ -25,15 +25,19 @@ class AmibSafetyResult {
   final bool isClearedForTherapy;
   final List<String> safetyViolations;
   final AmibMobilizationLevel? recommendedLevel;
+  final String clinicalRuleVersion;
+  final String ruleIdentifier;
 
   const AmibSafetyResult({
     required this.isClearedForTherapy,
     required this.safetyViolations,
     this.recommendedLevel,
+    this.clinicalRuleVersion = '1.0.0',
+    this.ruleIdentifier = 'AMIB_PHYSIO_SAFETY_GUIDELINE',
   });
 }
 
-/// Triador de Segurança para Fisioterapia Respiratória e Motora (AMIB).
+/// Triador de Segurança para Fisioterapia Respiratória e Motora Pediátrica (AMIB).
 class AmibSafetyScreener {
   /// Limiares de segurança mandatórios:
   /// - SpO2 mínimo: 88%
@@ -44,6 +48,7 @@ class AmibSafetyScreener {
   static const double maxFio2 = 0.60;
   static const int maxPeep = 10;
   static const int maxRespiratoryRate = 45;
+  static const String currentRuleVersion = '1.0.0';
 
   /// Avalia se o paciente atende aos critérios de segurança para início da sessão.
   static AmibSafetyResult screenVitals({
@@ -53,6 +58,19 @@ class AmibSafetyScreener {
     required int respiratoryRateRpm,
     AmibMobilizationLevel? targetLevel,
   }) {
+    if (spo2Percent < 0 || spo2Percent > 100) {
+      throw RangeError('SpO2 deve estar entre 0% e 100%.');
+    }
+    if (fio2Decimal < 0.21 || fio2Decimal > 1.0) {
+      throw RangeError('FiO2 deve estar entre 0.21 (ar ambiente) e 1.0 (100% O2).');
+    }
+    if (peepCmH2O < 0) {
+      throw RangeError('PEEP não pode ser negativa.');
+    }
+    if (respiratoryRateRpm <= 0) {
+      throw RangeError('Frequência Respiratória deve ser maior que zero.');
+    }
+
     final violations = <String>[];
 
     if (spo2Percent < minSpo2) {
@@ -72,8 +90,10 @@ class AmibSafetyScreener {
 
     return AmibSafetyResult(
       isClearedForTherapy: isCleared,
-      safetyViolations: violations,
+      safetyViolations: List.unmodifiable(violations),
       recommendedLevel: isCleared ? (targetLevel ?? AmibMobilizationLevel.level1) : null,
+      clinicalRuleVersion: currentRuleVersion,
+      ruleIdentifier: 'AMIB_PHYSIO_SAFETY_GUIDELINE',
     );
   }
 }

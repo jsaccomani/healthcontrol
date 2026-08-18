@@ -96,7 +96,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Future<void> _loadAllData() async {
     setState(() => _isLoading = true);
-    final profiles = await _storageService.getAllProfiles();
     final current = await _storageService.getPatientProfile();
     final prescriptions = await _storageService.getPrescriptions(current.id);
 

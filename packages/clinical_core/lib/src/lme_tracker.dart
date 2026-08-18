@@ -13,6 +13,8 @@ class LmeExamCheck {
   final int daysRemaining;
   final LmeDocumentStatus status;
   final String message;
+  final String clinicalRuleVersion;
+  final String ruleIdentifier;
 
   const LmeExamCheck({
     required this.examName,
@@ -21,6 +23,8 @@ class LmeExamCheck {
     required this.daysRemaining,
     required this.status,
     required this.message,
+    this.clinicalRuleVersion = '1.0.0',
+    this.ruleIdentifier = 'SUS_LME_REGULATORY_TRACKER',
   });
 }
 
@@ -37,6 +41,7 @@ class LmeTracker {
   static const int validityTotalIge = 90;
 
   static const int warningThresholdDays = 30; // Alerta 30 dias antes de expirar
+  static const String currentRuleVersion = '1.0.0';
 
   static LmeExamCheck checkExamValidity({
     required String examName,
@@ -44,6 +49,10 @@ class LmeTracker {
     required int validityDays,
     DateTime? currentDate,
   }) {
+    if (validityDays <= 0) {
+      throw ArgumentError('validityDays deve ser estritamente maior que zero.');
+    }
+
     final now = currentDate ?? DateTime.now();
     final expirationDate = examDate.add(Duration(days: validityDays));
     final daysRemaining = expirationDate.difference(now).inDays;
@@ -69,6 +78,8 @@ class LmeTracker {
       daysRemaining: daysRemaining,
       status: status,
       message: message,
+      clinicalRuleVersion: currentRuleVersion,
+      ruleIdentifier: 'SUS_LME_REGULATORY_TRACKER',
     );
   }
 }

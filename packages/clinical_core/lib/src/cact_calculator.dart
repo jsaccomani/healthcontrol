@@ -18,6 +18,10 @@ class CactResult {
   /// Recomendação de conduta médica.
   final String clinicalRecommendation;
 
+  /// Versão explícita da diretriz clínica aplicada.
+  final String clinicalRuleVersion;
+  final String ruleIdentifier;
+
   const CactResult({
     required this.childResponses,
     required this.parentResponses,
@@ -25,19 +29,23 @@ class CactResult {
     required this.isControlled,
     required this.classification,
     required this.clinicalRecommendation,
+    this.clinicalRuleVersion = '1.0.0',
+    this.ruleIdentifier = 'CACT_PEDIATRIC_4_11_GUIDELINE',
   });
 }
 
 /// Alias de conveniência
 typedef CactScoreResult = CactResult;
 
-/// Calculador do Childhood Asthma Control Test (c-ACT).
+/// Calculador do Childhood Asthma Control Test (c-ACT - 4 a 11 anos).
 class CactCalculator {
   /// Escore de corte clínico (<= 19 indica asma não controlada).
   static const int controlledCutoff = 19;
   static const int maxTotalScore = 27;
+  static const int minTotalScore = 0;
+  static const String currentRuleVersion = '1.0.0';
 
-  /// Processa as respostas e calcula o escore c-ACT.
+  /// Processa as respostas e calcula o escore c-ACT determinístico.
   static CactResult calculate({
     required List<int> childResponses,
     required List<int> parentResponses,
@@ -71,6 +79,8 @@ class CactCalculator {
       parentResponses: List.unmodifiable(parentResponses),
       totalScore: total,
       isControlled: isControlled,
+      clinicalRuleVersion: currentRuleVersion,
+      ruleIdentifier: 'CACT_PEDIATRIC_4_11_GUIDELINE',
       classification: isControlled ? 'Asma Bem Controlada' : 'Asma Não Controlada',
       clinicalRecommendation: isControlled
           ? 'Ótimo controle clínico no último mês. Mantenha o plano de ação e acompanhamento regular.'

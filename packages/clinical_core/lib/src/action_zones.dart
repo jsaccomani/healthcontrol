@@ -3,7 +3,7 @@ enum ActionZoneType {
   /// Zona Verde: >= 80% do Melhor PFE Pessoal (Asma Controlada)
   green,
 
-  /// Zona Amarela: 50% a 79% do Melhor PFE Pessoal (Alerta / Início de Crise)
+  /// Zona Amarela: 50% a 79.99% do Melhor PFE Pessoal (Alerta / Início de Crise)
   yellow,
 
   /// Zona Vermelha: < 50% do Melhor PFE Pessoal (Crise Severa / Emergência)
@@ -19,6 +19,8 @@ class ActionZoneEvaluation {
   final String title;
   final String clinicalGuidance;
   final bool requiresEmergencyGps;
+  final String clinicalRuleVersion;
+  final String ruleIdentifier;
 
   const ActionZoneEvaluation({
     required this.zone,
@@ -28,18 +30,24 @@ class ActionZoneEvaluation {
     required this.title,
     required this.clinicalGuidance,
     required this.requiresEmergencyGps,
+    this.clinicalRuleVersion = '1.0.0',
+    this.ruleIdentifier = 'GINA_PCDT_ACTION_ZONES',
   });
 }
 
-/// Avaliador de Zonas do Plano de Ação.
+/// Avaliador de Zonas do Plano de Ação (Determinístico).
 class ActionZoneEvaluator {
+  static const double greenThresholdPercent = 80.0;
+  static const double yellowThresholdPercent = 50.0;
+  static const String currentRuleVersion = '1.0.0';
+
   /// Avalia a zona de ação com base no PFE medido e no melhor PFE pessoal.
   static ActionZoneEvaluation evaluate({
     required int currentPef,
     required int personalBestPef,
   }) {
     if (personalBestPef <= 0) {
-      throw ArgumentError('Melhor PFE Pessoal deve ser maior que zero.');
+      throw ArgumentError('Melhor PFE Pessoal deve ser estritamente maior que zero.');
     }
     if (currentPef < 0) {
       throw ArgumentError('PFE Atual não pode ser negativo.');
@@ -47,7 +55,7 @@ class ActionZoneEvaluator {
 
     final percentage = (currentPef / personalBestPef) * 100;
 
-    if (percentage >= 80.0) {
+    if (percentage >= greenThresholdPercent) {
       return ActionZoneEvaluation(
         zone: ActionZoneType.green,
         percentageOfPersonalBest: percentage,
@@ -57,8 +65,10 @@ class ActionZoneEvaluator {
         clinicalGuidance:
             'Bom controle respiratório. Mantenha as medicações preventivas de rotina e atividades normais.',
         requiresEmergencyGps: false,
+        clinicalRuleVersion: currentRuleVersion,
+        ruleIdentifier: 'GINA_PCDT_ACTION_ZONES',
       );
-    } else if (percentage >= 50.0) {
+    } else if (percentage >= yellowThresholdPercent) {
       return ActionZoneEvaluation(
         zone: ActionZoneType.yellow,
         percentageOfPersonalBest: percentage,
@@ -68,6 +78,8 @@ class ActionZoneEvaluator {
         clinicalGuidance:
             'Atenção: Queda no fluxo respiratório. Inicie o protocolo de resgate com SABA (broncodilatador de curta ação) conforme prescrição médica e reavalie em 20 minutos.',
         requiresEmergencyGps: false,
+        clinicalRuleVersion: currentRuleVersion,
+        ruleIdentifier: 'GINA_PCDT_ACTION_ZONES',
       );
     } else {
       return ActionZoneEvaluation(
@@ -79,6 +91,8 @@ class ActionZoneEvaluator {
         clinicalGuidance:
             'PERIGO: Obstrução brônquica severa. Administre a medicação de resgate imediata e dirija-se com urgência ao Pronto-Socorro ou UPA mais próxima.',
         requiresEmergencyGps: true,
+        clinicalRuleVersion: currentRuleVersion,
+        ruleIdentifier: 'GINA_PCDT_ACTION_ZONES',
       );
     }
   }

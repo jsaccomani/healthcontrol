@@ -1,7 +1,9 @@
 import 'models/prescription.dart';
 
-/// Catálogo de Medicamentos Pediátricos de Referência para Asma (SBP, GINA, PCDT Brasil).
+/// Catálogo e Regras Farmacológicas Pediátricas para Asma (SBP, GINA, PCDT Brasil).
 class PediatricPharmacopeia {
+  static const String currentRuleVersion = '1.0.0';
+
   static const List<Map<String, dynamic>> catalog = [
     // 1. Bombinhas de Manutenção / Profilaxia
     {
@@ -12,6 +14,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': '12/12h (Manhã e Noite)',
       'instructions': 'Agitar a bombinha, usar com espaçador valvulado e máscara facial. Bochechar a boca com água após o uso.',
       'spacer': true,
+      'rinse': true,
       'continuous': true,
     },
     {
@@ -22,6 +25,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': '12/12h (Manhã e Noite)',
       'instructions': 'Usar com espaçador. Bochechar e enxaguar a boca após a aplicação.',
       'spacer': true,
+      'rinse': true,
       'continuous': true,
     },
     {
@@ -32,6 +36,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': '12/12h',
       'instructions': 'Associação corticoide + broncodilatador de longa ação. Higiene oral obrigatória após uso.',
       'spacer': true,
+      'rinse': true,
       'continuous': true,
     },
     {
@@ -42,6 +47,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': '12/12h',
       'instructions': 'Inalação via inalador de pó seco (Aerolizer) ou aerocaps. Enxaguar a cavidade oral.',
       'spacer': false,
+      'rinse': true,
       'continuous': true,
     },
     {
@@ -52,6 +58,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': '12/12h',
       'instructions': 'Corticoide inalatório anti-inflamatório. Bochecho com água obrigatório.',
       'spacer': true,
+      'rinse': true,
       'continuous': true,
     },
     {
@@ -62,6 +69,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': '12/12h',
       'instructions': 'Usar com espaçador valvulado e máscara.',
       'spacer': true,
+      'rinse': true,
       'continuous': true,
     },
 
@@ -74,6 +82,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': 'Se falta de ar / tosse (a cada 20min na crise)',
       'instructions': 'Agitar vigorosamente. Aplicar 1 jato por vez no espaçador, aguardar 6 respirações calmas por jato.',
       'spacer': true,
+      'rinse': false,
       'continuous': false,
     },
     {
@@ -84,6 +93,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': 'Na crise de exacerbação aguda',
       'instructions': 'Diluir em 3 a 5 mL de Soro Fisiológico 0,9%. Não ultrapassar a dose pediátrica prescrita.',
       'spacer': false,
+      'rinse': false,
       'continuous': false,
     },
     {
@@ -94,6 +104,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': 'Associado ao broncodilatador na nebulização',
       'instructions': 'Anticolinérgico coadjuvante no resgate de broncoespasmo.',
       'spacer': false,
+      'rinse': false,
       'continuous': false,
     },
 
@@ -106,6 +117,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': '1x ao dia à noite',
       'instructions': 'Misturar em 1 colher de alimento pastoso (iogurte, papinha) ou administrar diretamente na boca.',
       'spacer': false,
+      'rinse': false,
       'continuous': true,
     },
     {
@@ -116,6 +128,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': '1x ao dia à noite',
       'instructions': 'Mastigar antes de engolir (para crianças de 6 a 14 anos).',
       'spacer': false,
+      'rinse': false,
       'continuous': true,
     },
     {
@@ -126,6 +139,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': '1x ao dia pela manhã por 3 a 5 dias',
       'instructions': 'Corticoide oral de resgate para desinflamar as vias aéreas durante crise com queda de PFE/SpO2.',
       'spacer': false,
+      'rinse': false,
       'continuous': false,
     },
 
@@ -138,6 +152,7 @@ class PediatricPharmacopeia {
       'defaultFrequency': 'A cada 2 semanas ou a cada 4 semanas',
       'instructions': 'Aplicação subcutânea em ambiente clínico/ambulatorial para Asma Grave Eosinofílica tipo T2.',
       'spacer': false,
+      'rinse': false,
       'continuous': true,
     },
     {
@@ -148,21 +163,49 @@ class PediatricPharmacopeia {
       'defaultFrequency': 'A cada 2 a 4 semanas',
       'instructions': 'Aplicação subcutânea para asma alérgica grave com IgE elevada e teste cutâneo positivo.',
       'spacer': false,
+      'rinse': false,
       'continuous': true,
     },
   ];
+
+  /// Busca um medicamento pelo nome ou substância ativa
+  static Map<String, dynamic>? findMedication(String query) {
+    final q = query.toLowerCase().trim();
+    for (final med in catalog) {
+      final name = (med['name'] as String).toLowerCase();
+      final active = (med['active'] as String).toLowerCase();
+      if (name.contains(q) || active.contains(q) || q.contains(name.split(' ').first)) {
+        return med;
+      }
+    }
+    return null;
+  }
+
+  /// Verifica se o medicamento inalatório exige bochecho/higiene bucal após o uso (prevenção de candidíase)
+  static bool requiresMouthRinse(String medicationName) {
+    final med = findMedication(medicationName);
+    return med != null && (med['rinse'] as bool? ?? false);
+  }
+
+  /// Verifica se o medicamento inalatório exige espaçador valvulado
+  static bool requiresValvedSpacer(String medicationName) {
+    final med = findMedication(medicationName);
+    return med != null && (med['spacer'] as bool? ?? false);
+  }
 }
 
-/// Extrator Inteligente de Texto de Receita Médica (OCR & AI Parser)
+/// Extrator Determinístico de Texto de Receita Médica (Regras Puras).
 class PrescriptionOcrParser {
-  /// Analisa o texto bruto extraído de uma receita médica (seja digital, manuscrita ou via OCR)
-  /// e mapeia automaticamente os medicamentos, médico, CRM e datas de prescrição.
+  static const String currentRuleVersion = '1.0.0';
+
+  /// Analisa o texto bruto extraído de uma receita médica e mapeia determinísticamente os medicamentos.
   static PrescriptionRecord parseRawPrescriptionText({
     required String rawText,
     required String patientId,
     String? imageUrl,
+    DateTime? referenceDate,
   }) {
-    final now = DateTime.now();
+    final now = referenceDate ?? DateTime.now();
 
     // 1. Extração do Nome do Médico e CRM
     String doctorName = 'Dr. Pneumopediatra Assistente';
@@ -192,19 +235,22 @@ class PrescriptionOcrParser {
       } catch (_) {}
     }
 
-    // 3. Mapeamento de Medicamentos Reconhecidos
+    // 3. Mapeamento de Medicamentos Reconhecidos (Sem duplicatas por princípio ativo)
     final List<PrescribedMedication> foundMeds = [];
     final textLower = rawText.toLowerCase();
+    final Set<String> matchedActives = {};
 
     for (final item in PediatricPharmacopeia.catalog) {
       final name = (item['name'] as String).toLowerCase();
       final active = (item['active'] as String).toLowerCase();
+      final activeKey = active.split(' ').first;
       final firstName = name.split(' ').first;
 
-      if (textLower.contains(firstName) || textLower.contains(active.split(' ').first)) {
+      if ((textLower.contains(firstName) || textLower.contains(activeKey)) && !matchedActives.contains(activeKey)) {
+        matchedActives.add(activeKey);
         foundMeds.add(
           PrescribedMedication(
-            id: 'med_${DateTime.now().millisecondsSinceEpoch}_${foundMeds.length}',
+            id: 'med_${foundMeds.length + 1}',
             commercialName: item['name'] as String,
             activeIngredient: item['active'] as String,
             category: item['category'] as MedicationCategory,
@@ -218,7 +264,7 @@ class PrescriptionOcrParser {
       }
     }
 
-    // Se nenhum match específico for encontrado pelo texto bruto, providencia a profilaxia padrão
+    // Se nenhum match for encontrado, providencia a profilaxia padrão
     if (foundMeds.isEmpty) {
       foundMeds.addAll([
         const PrescribedMedication(
@@ -247,13 +293,13 @@ class PrescriptionOcrParser {
     }
 
     return PrescriptionRecord(
-      id: 'presc_${DateTime.now().millisecondsSinceEpoch}',
+      id: 'presc_${prescriptionDate.millisecondsSinceEpoch}',
       patientId: patientId,
       doctorName: doctorName,
       doctorCrm: doctorCrm,
       clinicName: clinicName,
       prescriptionDate: prescriptionDate,
-      validityMonths: 6, // 6 meses para contínuos
+      validityMonths: 6,
       scannedImageUrl: imageUrl,
       medications: foundMeds,
       notes: 'Prescrição digitalizada e validada pelo copiloto clínico.',
