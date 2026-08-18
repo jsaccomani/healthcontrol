@@ -3,33 +3,61 @@ import 'package:clinical_core/clinical_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
-/// Serviço de Armazenamento Local, Multi-Perfil e Versionamento Clínico (Offline-First).
+/// Serviço de Armazenamento Local, Multi-Perfil e Versionamento Clínico (Offline-First de Alta Performance).
 class HealthStorageService {
   static const String _keyProfilesList = 'health_control_profiles_list';
   static const String _keySelectedProfileId = 'health_control_selected_profile_id';
   static const String _keyHealthEntriesPrefix = 'health_control_entries_';
   static const String _keyEventLogs = 'health_control_event_logs';
   static const String _keyDoctorPairingCode = 'health_control_doctor_pairing_code';
+  static const String _keyPrescriptionsPrefix = 'health_control_prescriptions_';
+
+  static final HealthStorageService _instance = HealthStorageService._internal();
+  factory HealthStorageService() => _instance;
+  HealthStorageService._internal();
 
   final Uuid _uuid = const Uuid();
 
+  // ---------------------------------------------------------------------------
+  // Cache em Memória para Performance Instantânea (< 1ms)
+  // ---------------------------------------------------------------------------
+  SharedPreferences? _cachedPrefs;
+  List<PatientProfile>? _cachedProfiles;
+  String? _cachedSelectedProfileId;
+  final Map<String, List<HealthControlEntry>> _cachedEntries = {};
+  final Map<String, List<PrescriptionRecord>> _cachedPrescriptions = {};
+
+  Future<SharedPreferences> _getPrefs() async {
+    _cachedPrefs ??= await SharedPreferences.getInstance();
+    return _cachedPrefs!;
+  }
+
   /// Retorna a lista de todos os filhos/perfis cadastrados.
   Future<List<PatientProfile>> getAllProfiles() async {
-    final prefs = await SharedPreferences.getInstance();
+    if (_cachedProfiles != null && _cachedProfiles!.isNotEmpty) {
+      return List.unmodifiable(_cachedProfiles!);
+    }
+
+    final prefs = await _getPrefs();
     final rawList = prefs.getStringList(_keyProfilesList);
     if (rawList == null || rawList.isEmpty) {
       final defaultChild = _generateDefaultArthurProfile();
+      _cachedProfiles = [defaultChild];
+      _cachedSelectedProfileId = defaultChild.id;
       await savePatientProfile(defaultChild);
       await setSelectedProfileId(defaultChild.id);
       return [defaultChild];
     }
 
     try {
-      return rawList
+      final loaded = rawList
           .map((str) => PatientProfile.fromJson(jsonDecode(str) as Map<String, dynamic>))
           .toList();
+      _cachedProfiles = loaded;
+      return List.unmodifiable(loaded);
     } catch (_) {
       final defaultChild = _generateDefaultArthurProfile();
+      _cachedProfiles = [defaultChild];
       return [defaultChild];
     }
   }
@@ -37,11 +65,11 @@ class HealthStorageService {
   /// Retorna o perfil do filho atualmente selecionado.
   Future<PatientProfile> getPatientProfile() async {
     final profiles = await getAllProfiles();
-    final prefs = await SharedPreferences.getInstance();
-    final activeId = prefs.getString(_keySelectedProfileId);
+    final prefs = await _getPrefs();
+    _cachedSelectedProfileId ??= prefs.getString(_keySelectedProfileId);
 
-    if (activeId != null) {
-      final found = profiles.where((p) => p.id == activeId);
+    if (_cachedSelectedProfileId != null) {
+      final found = profiles.where((p) => p.id == _cachedSelectedProfileId);
       if (found.isNotEmpty) return found.first;
     }
 
@@ -50,13 +78,13 @@ class HealthStorageService {
 
   /// Define qual filho está selecionado no topo do app.
   Future<void> setSelectedProfileId(String profileId) async {
-    final prefs = await SharedPreferences.getInstance();
+    _cachedSelectedProfileId = profileId;
+    final prefs = await _getPrefs();
     await prefs.setString(_keySelectedProfileId, profileId);
   }
 
   /// Salva ou atualiza os dados de um perfil de filho.
   Future<void> savePatientProfile(PatientProfile profile) async {
-    final prefs = await SharedPreferences.getInstance();
     final profiles = await getAllProfiles();
     
     final existingIdx = profiles.indexWhere((p) => p.id == profile.id);
@@ -67,9 +95,13 @@ class HealthStorageService {
       updated = [...profiles, profile];
     }
 
+    _cachedProfiles = updated;
+    _cachedSelectedProfileId = profile.id;
+
+    final prefs = await _getPrefs();
     final rawList = updated.map((p) => jsonEncode(p.toJson())).toList();
     await prefs.setStringList(_keyProfilesList, rawList);
-    await setSelectedProfileId(profile.id);
+    await prefs.setString(_keySelectedProfileId, profile.id);
   }
 
   /// Cria um novo perfil para outro filho.
@@ -120,13 +152,15 @@ class HealthStorageService {
   /// Exclui o perfil de um filho (se houver mais de um cadastrado).
   Future<bool> deleteChildProfile(String profileId) async {
     final profiles = await getAllProfiles();
-    if (profiles.length <= 1) return false; // Não permite excluir o único filho
+    if (profiles.length <= 1) return false;
 
     final updated = profiles.where((p) => p.id != profileId).toList();
-    final prefs = await SharedPreferences.getInstance();
+    _cachedProfiles = updated;
+    _cachedSelectedProfileId = updated.first.id;
+
+    final prefs = await _getPrefs();
     final rawList = updated.map((p) => jsonEncode(p.toJson())).toList();
     await prefs.setStringList(_keyProfilesList, rawList);
-
     await setSelectedProfileId(updated.first.id);
     return true;
   }
@@ -134,18 +168,25 @@ class HealthStorageService {
   /// Retorna lançamentos clínicos do filho ativo.
   Future<List<HealthControlEntry>> getHealthEntries() async {
     final profile = await getPatientProfile();
-    final prefs = await SharedPreferences.getInstance();
+    if (_cachedEntries.containsKey(profile.id)) {
+      return List.unmodifiable(_cachedEntries[profile.id]!);
+    }
+
+    final prefs = await _getPrefs();
     final rawList = prefs.getStringList('$_keyHealthEntriesPrefix${profile.id}');
 
     if (rawList == null || rawList.isEmpty) {
       final seed = _generateSeedEntries(profile.personalBestPef);
+      _cachedEntries[profile.id] = seed;
       await _saveHealthEntriesList(profile.id, seed);
       return seed;
     }
 
-    return rawList
+    final entries = rawList
         .map((str) => HealthControlEntry.fromJson(jsonDecode(str) as Map<String, dynamic>))
         .toList();
+    _cachedEntries[profile.id] = entries;
+    return List.unmodifiable(entries);
   }
 
   /// Adiciona um novo lançamento diário versionado (v1.0.x) com hash SHA-256 para o filho ativo.
@@ -214,6 +255,7 @@ class HealthStorageService {
     );
 
     final updatedList = [newEntry, ...entries];
+    _cachedEntries[profile.id] = updatedList;
     await _saveHealthEntriesList(profile.id, updatedList);
 
     await _appendEventLog(
@@ -229,7 +271,7 @@ class HealthStorageService {
   }
 
   Future<void> _saveHealthEntriesList(String profileId, List<HealthControlEntry> list) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _getPrefs();
     final strList = list.map((e) => jsonEncode(e.toJson())).toList();
     await prefs.setStringList('$_keyHealthEntriesPrefix$profileId', strList);
   }
@@ -242,7 +284,7 @@ class HealthStorageService {
     required String authorRole,
     required Map<String, dynamic> payload,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _getPrefs();
     final rawLogs = prefs.getStringList(_keyEventLogs) ?? [];
 
     String prevHash = 'GENESIS_BLOCK_0000000000000000';
@@ -272,13 +314,68 @@ class HealthStorageService {
 
   /// Retorna ou gera a chave de acesso do paciente para pareamento médico.
   Future<String> getOrGenerateDoctorPairingCode() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _getPrefs();
     String? code = prefs.getString(_keyDoctorPairingCode);
     if (code == null) {
       code = 'AC-${(1000 + (DateTime.now().millisecondsSinceEpoch % 8999))}';
       await prefs.setString(_keyDoctorPairingCode, code);
     }
     return code;
+  }
+
+  /// Retorna a lista de prescrições médicas ativas do paciente.
+  Future<List<PrescriptionRecord>> getPrescriptions(String patientId) async {
+    if (_cachedPrescriptions.containsKey(patientId)) {
+      return List.unmodifiable(_cachedPrescriptions[patientId]!);
+    }
+
+    final prefs = await _getPrefs();
+    final rawList = prefs.getStringList('$_keyPrescriptionsPrefix$patientId');
+
+    if (rawList == null || rawList.isEmpty) {
+      final seed = [_generateDefaultArthurPrescription(patientId)];
+      _cachedPrescriptions[patientId] = seed;
+      await _savePrescriptionsList(patientId, seed);
+      return seed;
+    }
+
+    try {
+      final loaded = rawList
+          .map((str) => PrescriptionRecord.fromJson(jsonDecode(str) as Map<String, dynamic>))
+          .toList();
+      _cachedPrescriptions[patientId] = loaded;
+      return List.unmodifiable(loaded);
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Salva ou atualiza uma prescrição médica escaneada/inserida.
+  Future<void> savePrescription(PrescriptionRecord prescription) async {
+    final list = await getPrescriptions(prescription.patientId);
+    final idx = list.indexWhere((p) => p.id == prescription.id);
+    List<PrescriptionRecord> updated;
+    if (idx >= 0) {
+      updated = List.from(list)..[idx] = prescription;
+    } else {
+      updated = [prescription, ...list];
+    }
+    _cachedPrescriptions[prescription.patientId] = updated;
+    await _savePrescriptionsList(prescription.patientId, updated);
+  }
+
+  /// Remove uma prescrição médica.
+  Future<void> deletePrescription(String patientId, String prescriptionId) async {
+    final list = await getPrescriptions(patientId);
+    final updated = list.where((p) => p.id != prescriptionId).toList();
+    _cachedPrescriptions[patientId] = updated;
+    await _savePrescriptionsList(patientId, updated);
+  }
+
+  Future<void> _savePrescriptionsList(String patientId, List<PrescriptionRecord> list) async {
+    final prefs = await _getPrefs();
+    final raw = list.map((p) => jsonEncode(p.toJson())).toList();
+    await prefs.setStringList('$_keyPrescriptionsPrefix$patientId', raw);
   }
 
   PatientProfile _generateDefaultArthurProfile() {
@@ -385,54 +482,6 @@ class HealthStorageService {
         requiresRescueFollowup: false,
       ),
     ];
-  }
-
-  static const String _keyPrescriptionsPrefix = 'health_control_prescriptions_';
-
-  /// Retorna a lista de prescrições médicas ativas do paciente.
-  Future<List<PrescriptionRecord>> getPrescriptions(String patientId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final rawList = prefs.getStringList('$_keyPrescriptionsPrefix$patientId');
-
-    if (rawList == null || rawList.isEmpty) {
-      final seed = [_generateDefaultArthurPrescription(patientId)];
-      await _savePrescriptionsList(patientId, seed);
-      return seed;
-    }
-
-    try {
-      return rawList
-          .map((str) => PrescriptionRecord.fromJson(jsonDecode(str) as Map<String, dynamic>))
-          .toList();
-    } catch (_) {
-      return [];
-    }
-  }
-
-  /// Salva ou atualiza uma prescrição médica escaneada/inserida.
-  Future<void> savePrescription(PrescriptionRecord prescription) async {
-    final list = await getPrescriptions(prescription.patientId);
-    final idx = list.indexWhere((p) => p.id == prescription.id);
-    List<PrescriptionRecord> updated;
-    if (idx >= 0) {
-      updated = List.from(list)..[idx] = prescription;
-    } else {
-      updated = [prescription, ...list];
-    }
-    await _savePrescriptionsList(prescription.patientId, updated);
-  }
-
-  /// Remove uma prescrição médica.
-  Future<void> deletePrescription(String patientId, String prescriptionId) async {
-    final list = await getPrescriptions(patientId);
-    final updated = list.where((p) => p.id != prescriptionId).toList();
-    await _savePrescriptionsList(patientId, updated);
-  }
-
-  Future<void> _savePrescriptionsList(String patientId, List<PrescriptionRecord> list) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = list.map((p) => jsonEncode(p.toJson())).toList();
-    await prefs.setStringList('$_keyPrescriptionsPrefix$patientId', raw);
   }
 
   PrescriptionRecord _generateDefaultArthurPrescription(String patientId) {

@@ -27,13 +27,15 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
 
   Future<void> _loadEmergencyData() async {
     final p = await _storageService.getPatientProfile();
-    final e = await _storageService.getHealthEntries();
-    final presc = await _storageService.getPrescriptions(p.id);
+    final results = await Future.wait([
+      _storageService.getHealthEntries(),
+      _storageService.getPrescriptions(p.id),
+    ]);
     if (!mounted) return;
     setState(() {
       _profile = p;
-      _entries = e;
-      _prescriptions = presc;
+      _entries = results[0] as List<HealthControlEntry>;
+      _prescriptions = results[1] as List<PrescriptionRecord>;
       _isLoading = false;
     });
   }

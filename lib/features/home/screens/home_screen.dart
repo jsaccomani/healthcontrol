@@ -38,14 +38,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final allProfiles = await _storageService.getAllProfiles();
-    final prof = await _storageService.getPatientProfile();
-    final entries = await _storageService.getHealthEntries();
+    final results = await Future.wait([
+      _storageService.getAllProfiles(),
+      _storageService.getPatientProfile(),
+      _storageService.getHealthEntries(),
+    ]);
     if (!mounted) return;
     setState(() {
-      _profiles = allProfiles;
-      _profile = prof;
-      _entries = entries;
+      _profiles = results[0] as List<PatientProfile>;
+      _profile = results[1] as PatientProfile;
+      _entries = results[2] as List<HealthControlEntry>;
       _isLoading = false;
     });
   }
@@ -225,8 +227,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
-                  child: Column(
-                    children: const [
+                  child: const Column(
+                    children: [
                       Icon(Icons.edit_calendar_outlined, color: Color(0xFF94A3B8), size: 36),
                       SizedBox(height: 8),
                       Text('Nenhuma anotação gravada ainda.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF334155))),
