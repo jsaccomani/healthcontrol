@@ -70,6 +70,7 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
   int? _calculatedBest;
   int? _calculatedVariance;
   bool _hasVarianceError = false;
+  int _personalBestPef = 300;
 
   @override
   void initState() {
@@ -122,6 +123,7 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
     if (!mounted) return;
     setState(() {
       _childPrescribedMeds = allMeds;
+      _personalBestPef = profile.personalBestPef;
       _isLoading = false;
     });
   }
@@ -282,6 +284,7 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
                 calculatedBest: _calculatedBest,
                 calculatedVariance: _calculatedVariance,
                 hasVarianceError: _hasVarianceError,
+                personalBestPef: _personalBestPef,
                 onRecalculate: _recalculatePeakFlow,
               ),
               const SizedBox(height: 12),

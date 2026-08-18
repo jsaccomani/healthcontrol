@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
+import 'package:clinical_core/clinical_core.dart';
+import '../../../core/design_system/design_system.dart';
 
-/// Card para Registro dos 3 Sopros de Pico de Fluxo (Peak Flow - CFF) e Detecção de Variância.
+/// Card para Registro dos 3 Sopros de Pico de Fluxo (Peak Flow - CFF) e Cálculo Instantâneo de Zona GINA.
 class PeakFlowInputCard extends StatelessWidget {
   final TextEditingController blow1Ctrl;
   final TextEditingController blow2Ctrl;
@@ -9,6 +10,7 @@ class PeakFlowInputCard extends StatelessWidget {
   final int? calculatedBest;
   final int? calculatedVariance;
   final bool hasVarianceError;
+  final int personalBestPef;
   final VoidCallback onRecalculate;
 
   const PeakFlowInputCard({
@@ -19,17 +21,27 @@ class PeakFlowInputCard extends StatelessWidget {
     required this.calculatedBest,
     required this.calculatedVariance,
     required this.hasVarianceError,
+    this.personalBestPef = 300,
     required this.onRecalculate,
   });
 
   @override
   Widget build(BuildContext context) {
+    ActionZoneEvaluation? zoneEval;
+    if (calculatedBest != null && calculatedBest! > 0 && personalBestPef > 0) {
+      zoneEval = ActionZoneEvaluator.evaluate(
+        currentPef: calculatedBest!,
+        personalBestPef: personalBestPef,
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: HCSpacing.paddingCard,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: HCRadii.radiusLg,
+        border: Border.all(color: HCColors.neutral200),
+        boxShadow: HCShadows.subtle,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,53 +51,107 @@ class PeakFlowInputCard extends StatelessWidget {
             children: [
               Row(
                 children: const [
-                  Text('🫁', style: TextStyle(fontSize: 16)),
-                  SizedBox(width: 6),
-                  Text('2. Sopro da Criança (Peak Flow)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
+                  Text('🫁', style: TextStyle(fontSize: 18)),
+                  SizedBox(width: HCSpacing.xs),
+                  Text('Sopro da Criança (Peak Flow)', style: HCTypography.subHeading),
                 ],
               ),
               if (calculatedBest != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: AppTheme.primaryLight, borderRadius: BorderRadius.circular(6)),
-                  child: Text('Melhor: $calculatedBest L/min', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: AppTheme.primaryTeal)),
+                  padding: HCSpacing.paddingBadge,
+                  decoration: BoxDecoration(
+                    color: HCColors.primary100,
+                    borderRadius: HCRadii.radiusSm,
+                  ),
+                  child: Text(
+                    'Maior: $calculatedBest L/min',
+                    style: HCTypography.labelBold.copyWith(color: HCColors.primary700),
+                  ),
                 ),
             ],
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Peça para a criança soprar com força 3 vezes no aparelhinho:',
-            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+          const SizedBox(height: HCSpacing.xs),
+          Text(
+            'Peça para a criança soprar 3 vezes com força máxima no aparelho:',
+            style: HCTypography.bodySmall,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: HCSpacing.md),
 
+          // 3 Inputs de Sopros
           Row(
             children: [
               Expanded(child: _buildBlowField('1º Sopro', blow1Ctrl)),
-              const SizedBox(width: 8),
+              const SizedBox(width: HCSpacing.sm),
               Expanded(child: _buildBlowField('2º Sopro', blow2Ctrl)),
-              const SizedBox(width: 8),
+              const SizedBox(width: HCSpacing.sm),
               Expanded(child: _buildBlowField('3º Sopro', blow3Ctrl)),
             ],
           ),
 
-          if (hasVarianceError && calculatedVariance != null) ...[
-            const SizedBox(height: 8),
+          // Retorno Imediato da Zona e Percentual (Zero Cognitive Load)
+          if (zoneEval != null) ...[
+            const SizedBox(height: HCSpacing.md),
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: HCSpacing.paddingCard,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFFBEB),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFDE68A)),
+                color: zoneEval.zone == ActionZoneType.green
+                    ? HCColors.greenLight
+                    : (zoneEval.zone == ActionZoneType.yellow ? HCColors.yellowLight : HCColors.redLight),
+                borderRadius: HCRadii.radiusMd,
+                border: Border.all(
+                  color: zoneEval.zone == ActionZoneType.green
+                      ? HCColors.greenBorder
+                      : (zoneEval.zone == ActionZoneType.yellow ? HCColors.yellowBorder : HCColors.redBorder),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      HCActionZoneBadge(zone: zoneEval.zone),
+                      const Spacer(),
+                      Text(
+                        '${zoneEval.percentageOfPersonalBest.toStringAsFixed(0)}% do melhor ($personalBestPef L/min)',
+                        style: HCTypography.labelBold.copyWith(
+                          color: zoneEval.zone == ActionZoneType.green
+                              ? HCColors.greenText
+                              : (zoneEval.zone == ActionZoneType.yellow ? HCColors.yellowText : HCColors.redText),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: HCSpacing.xs),
+                  Text(
+                    zoneEval.clinicalGuidance,
+                    style: HCTypography.bodySmall.copyWith(
+                      color: HCColors.neutral800,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // Alerta de Técnica Instável (> 20 L/min)
+          if (hasVarianceError && calculatedVariance != null) ...[
+            const SizedBox(height: HCSpacing.sm),
+            Container(
+              padding: HCSpacing.paddingCompact,
+              decoration: BoxDecoration(
+                color: HCColors.yellowLight,
+                borderRadius: HCRadii.radiusSm,
+                border: Border.all(color: HCColors.yellowBorder),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, color: Color(0xFFD97706), size: 16),
-                  const SizedBox(width: 6),
+                  const Icon(Icons.info_outline, color: HCColors.yellowMain, size: 16),
+                  const SizedBox(width: HCSpacing.xs),
                   Expanded(
                     child: Text(
-                      'Atenção: Os sopros variaram $calculatedVariance L/min (diferença maior que 20 L/min). Pode ter ocorrido tosse ou bocal mal vedado.',
-                      style: const TextStyle(fontSize: 10, color: Color(0xFF92400E)),
+                      'Atenção: Os sopros variaram $calculatedVariance L/min (diferença > 20 L/min). Pode ter ocorrido tosse ou bocal mal vedado.',
+                      style: HCTypography.bodySmall.copyWith(color: HCColors.yellowText),
                     ),
                   ),
                 ],
@@ -101,19 +167,19 @@ class PeakFlowInputCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-        const SizedBox(height: 4),
+        Text(label, style: HCTypography.labelBold),
+        const SizedBox(height: HCSpacing.xs),
         TextField(
           controller: ctrl,
           keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+          style: HCTypography.heading,
           decoration: InputDecoration(
             hintText: 'L/min',
-            contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+            border: OutlineInputBorder(borderRadius: HCRadii.radiusMd),
             filled: true,
-            fillColor: const Color(0xFFF8FAFC),
+            fillColor: HCColors.neutral50,
           ),
           onChanged: (_) => onRecalculate(),
         ),
