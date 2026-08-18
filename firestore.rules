@@ -2,41 +2,231 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function: Usuário autenticado
+    // =========================================================================
+    // 0. FUNÇÕES AUXILIARES DE AUTENTICAÇÃO E AUTORIZAÇÃO (ReBAC - Relationship)
+    // =========================================================================
+    
+    // Verifica se a requisição possui usuário autenticado
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.uid != null;
     }
     
-    // Helper function: É o próprio paciente ou responsável autorizado
+    // Verifica se o usuário é o proprietário primário do registro (Responsável/Paciente)
     function isPatientOwner(patientId) {
       return isAuthenticated() && (
         request.auth.uid == patientId ||
-        request.auth.token.role in ['physician', 'physiotherapist', 'admin']
+        (resource != null && resource.data.owner_id == request.auth.uid) ||
+        (exists(/databases/$(database)/documents/patients/$(patientId)) &&
+         get(/databases/$(database)/documents/patients/$(patientId)).data.owner_id == request.auth.uid)
       );
     }
 
-    // Coleção Mestra: /patients/{patientId}
-    match /patients/{patientId} {
-      allow read: if isPatientOwner(patientId);
-      allow create: if isAuthenticated();
-      allow update: if isPatientOwner(patientId);
-      allow delete: if false; // Proibido exclusão para conformidade legal CFM
+    // Verifica relacionamento ativo na subcoleção: /patients/{patientId}/relationships/{userId}
+    function hasActiveSubcollectionRelationship(patientId) {
+      let relPath = /databases/$(database)/documents/patients/$(patientId)/relationships/$(request.auth.uid);
+      return exists(relPath) &&
+             get(relPath).data.status == 'ACTIVE' &&
+             (get(relPath).data.revoked_at == null || get(relPath).data.revoked_at > request.time);
+    }
 
-      // Subcoleção Imutável: /patients/{patientId}/event_log/{eventId}
-      // Padrão Event Sourcing para Prontuário CFM nº 1.331/89 (20 anos)
-      match /event_log/{eventId} {
-        // Leitura permitida para o paciente e profissionais de saúde vinculados
-        allow read: if isPatientOwner(patientId);
-        
-        // Apenas CRIAÇÃO é permitida. Eventos são estritamente imutáveis
+    // Verifica relacionamento ativo na coleção raiz: /relationships/{patientId}_{userId}
+    function hasActiveTopLevelRelationship(patientId) {
+      let relTopPath = /databases/$(database)/documents/relationships/$(patientId + '_' + request.auth.uid);
+      return exists(relTopPath) &&
+             get(relTopPath).data.status == 'ACTIVE' &&
+             (get(relTopPath).data.revoked_at == null || get(relTopPath).data.revoked_at > request.time);
+    }
+
+    // Verifica se o usuário possui qualquer vínculo relacional ativo com o paciente
+    function hasActiveRelationship(patientId) {
+      return isAuthenticated() && (
+        hasActiveSubcollectionRelationship(patientId) ||
+        hasActiveTopLevelRelationship(patientId)
+      );
+    }
+
+    // Autorização do Paciente: Dono Primário OU Relacionamento Ativo Explícito
+    // CRÍTICO: NUNCA depende apenas de request.auth.token.role
+    function isAuthorizedForPatient(patientId) {
+      return isPatientOwner(patientId) || hasActiveRelationship(patientId);
+    }
+
+    // Verifica se é médico vinculado ativamente
+    function isLinkedPhysician(patientId) {
+      let relPath = /databases/$(database)/documents/patients/$(patientId)/relationships/$(request.auth.uid);
+      return isAuthenticated() &&
+             exists(relPath) &&
+             get(relPath).data.status == 'ACTIVE' &&
+             get(relPath).data.relationship_type == 'PHYSICIAN';
+    }
+
+    // =========================================================================
+    // 1. COLEÇÃO MESTRA: /patients/{patientId}
+    // =========================================================================
+    match /patients/{patientId} {
+      // Leitura permitida apenas para Dono ou Profissional/Familiar com vínculo ativo
+      allow read: if isAuthorizedForPatient(patientId);
+
+      // Criação permitida apenas vinculando o próprio criador como owner_id
+      allow create: if isAuthenticated() &&
+                       request.resource.data.owner_id == request.auth.uid &&
+                       request.resource.data.keys().hasAll(['owner_id', 'name', 'created_at']);
+
+      // Atualização permitida apenas para o Dono (não pode transferir owner_id nem alterar created_at)
+      allow update: if isPatientOwner(patientId) &&
+                       request.resource.data.owner_id == resource.data.owner_id &&
+                       request.resource.data.created_at == resource.data.created_at;
+
+      // Proibido exclusão para conformidade legal CFM nº 1.331/89 e LGPD
+      allow delete: if false;
+
+      // =========================================================================
+      // 2. SUBCOLEÇÃO DE RELACIONAMENTOS: /patients/{patientId}/relationships/{userId}
+      // =========================================================================
+      match /relationships/{userId} {
+        // Leitura: Dono do paciente ou o próprio usuário vinculado
+        allow read: if isPatientOwner(patientId) || (isAuthenticated() && request.auth.uid == userId);
+
+        // Criação: Apenas o Dono do paciente pode conceder vínculo direto
         allow create: if isPatientOwner(patientId) &&
-                         request.resource.data.keys().hasAll(['event_type', 'timestamp', 'payload']) &&
-                         request.resource.data.event_type in ['DAILY_CLINICAL_DIARY', 'CACT_SCORE', 'CLINICAL_CRISIS'];
-        
-        // Bloqueio de Edição e Deleção de histórico médico
+                         request.resource.data.patient_id == patientId &&
+                         request.resource.data.user_id == userId &&
+                         request.resource.data.status in ['ACTIVE', 'PENDING'] &&
+                         request.resource.data.relationship_type in ['PARENT', 'CAREGIVER', 'PHYSICIAN', 'PHYSIOTHERAPIST'] &&
+                         request.resource.data.granted_by == request.auth.uid;
+
+        // Atualização (Revogação / Alteração): Dono pode alterar/revogar; o próprio usuário pode auto-revogar
+        allow update: if (isPatientOwner(patientId) || (isAuthenticated() && request.auth.uid == userId)) &&
+                         request.resource.data.patient_id == resource.data.patient_id &&
+                         request.resource.data.user_id == resource.data.user_id &&
+                         request.resource.data.granted_at == resource.data.granted_at &&
+                         request.resource.data.granted_by == resource.data.granted_by &&
+                         (
+                           // Se for revogação, deve gravar status REVOKED e revoked_by
+                           request.resource.data.status != 'REVOKED' ||
+                           (request.resource.data.status == 'REVOKED' && request.resource.data.revoked_by == request.auth.uid)
+                         );
+
+        // Proibida deleção direta (revogações mantêm rastro de auditoria)
+        allow delete: if false;
+      }
+
+      // =========================================================================
+      // 3. SUBCOLEÇÃO IMUTÁVEL DE AUDITORIA: /patients/{patientId}/event_log/{eventId}
+      // =========================================================================
+      match /event_log/{eventId} {
+        // Leitura: Apenas usuários com acesso ativo ao paciente
+        allow read: if isAuthorizedForPatient(patientId);
+
+        // Criação: Apenas usuários autorizados, com integridade e validação estrita de schema
+        allow create: if isAuthorizedForPatient(patientId) &&
+                         // Validação de chaves obrigatórias
+                         request.resource.data.keys().hasAll([
+                           'event_id', 'patient_id', 'event_type', 'author_id',
+                           'timestamp', 'payload', 'hash', 'sequence_number'
+                         ]) &&
+                         // Consistência de identidade (não permite forjar autor ou outro paciente)
+                         request.resource.data.patient_id == patientId &&
+                         request.resource.data.author_id == request.auth.uid &&
+                         // Validação de tipos clínicos permitidos
+                         request.resource.data.event_type in [
+                           'HEALTH_CONTROL_ENTRY', 'DAILY_CLINICAL_DIARY',
+                           'CACT_SCORE', 'PHYSIO_SESSION', 'CLINICAL_CRISIS',
+                           'DOCTOR_PAIRING', 'PRESCRIPTION_ADDED', 'ANAMNESIS_UPDATE'
+                         ] &&
+                         // Validação de hash criptográfico SHA-256 (exatamente 64 caracteres hex)
+                         request.resource.data.hash is string &&
+                         request.resource.data.hash.size() == 64 &&
+                         // Validação de sequência cronológica
+                         request.resource.data.sequence_number is int &&
+                         request.resource.data.sequence_number >= 1 &&
+                         // Validação de payload
+                         request.resource.data.payload is map &&
+                         request.resource.data.payload.keys().size() <= 50;
+
+        // Imutabilidade estrita: Bloqueio total de edição e deleção de histórico médico
         allow update: if false;
         allow delete: if false;
       }
+
+      // =========================================================================
+      // 4. SUBCOLEÇÕES CLÍNICAS (Prescrições, Questionários c-ACT, Fisioterapia)
+      // =========================================================================
+      match /prescriptions/{prescriptionId} {
+        allow read: if isAuthorizedForPatient(patientId);
+        allow create: if isPatientOwner(patientId) || isLinkedPhysician(patientId);
+        allow update: if (isPatientOwner(patientId) || isLinkedPhysician(patientId)) &&
+                         request.resource.data.patient_id == patientId;
+        allow delete: if false;
+      }
+
+      match /cact_quizzes/{quizId} {
+        allow read: if isAuthorizedForPatient(patientId);
+        allow create: if isAuthorizedForPatient(patientId) &&
+                         request.resource.data.patient_id == patientId &&
+                         request.resource.data.author_id == request.auth.uid;
+        allow update: if false;
+        allow delete: if false;
+      }
+
+      match /physio_sessions/{sessionId} {
+        allow read: if isAuthorizedForPatient(patientId);
+        allow create: if isAuthorizedForPatient(patientId) &&
+                         request.resource.data.patient_id == patientId &&
+                         request.resource.data.author_id == request.auth.uid;
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    // =========================================================================
+    // 5. COLEÇÃO TOP-LEVEL DE RELACIONAMENTOS: /relationships/{relationshipId}
+    // =========================================================================
+    match /relationships/{relationshipId} {
+      allow read: if isAuthenticated() && (
+        resource.data.user_id == request.auth.uid ||
+        isPatientOwner(resource.data.patient_id)
+      );
+
+      allow create: if isAuthenticated() &&
+                       isPatientOwner(request.resource.data.patient_id) &&
+                       request.resource.data.granted_by == request.auth.uid &&
+                       request.resource.data.status in ['ACTIVE', 'PENDING'];
+
+      allow update: if isAuthenticated() && (
+        (isPatientOwner(resource.data.patient_id) || resource.data.user_id == request.auth.uid) &&
+        request.resource.data.patient_id == resource.data.patient_id &&
+        request.resource.data.user_id == resource.data.user_id &&
+        (
+          request.resource.data.status != 'REVOKED' ||
+          (request.resource.data.status == 'REVOKED' && request.resource.data.revoked_by == request.auth.uid)
+        )
+      );
+
+      allow delete: if false;
+    }
+
+    // =========================================================================
+    // 6. CÓDIGOS DE PAREAMENTO / CONVITES: /pairing_invitations/{invitationCode}
+    // =========================================================================
+    match /pairing_invitations/{invitationCode} {
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated() &&
+                       isPatientOwner(request.resource.data.patient_id) &&
+                       request.resource.data.created_by == request.auth.uid &&
+                       request.resource.data.status == 'PENDING' &&
+                       request.resource.data.expires_at > request.time;
+
+      allow update: if isAuthenticated() &&
+                       resource.data.status == 'PENDING' &&
+                       resource.data.expires_at > request.time &&
+                       request.resource.data.status == 'ACCEPTED' &&
+                       request.resource.data.accepted_by == request.auth.uid &&
+                       request.resource.data.patient_id == resource.data.patient_id &&
+                       request.resource.data.created_by == resource.data.created_by;
+
+      allow delete: if isPatientOwner(resource.data.patient_id);
     }
   }
 }
