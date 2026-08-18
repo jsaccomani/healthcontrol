@@ -4,319 +4,345 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>AsmaControl Pro (PWA Offline)</title>
+    <title>Asma Control - Copiloto Pediátrico de Asma Grave</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #007aff;
-            --success: #34c759;
-            --warning: #ff9500;
-            --danger: #ff3b30;
-            --card-bg: #ffffff;
-            --bg: #f2f2f7;
-            --text: #1c1c1e;
-            --subtext: #8e8e93;
-            --border: #e5e5ea;
-        }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            padding: 16px;
-            margin: 0;
-            padding-bottom: 40px;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding-top: 10px;
-        }
-        header h1 {
-            font-size: 22px;
-            margin: 0;
-            color: #000;
-            font-weight: 700;
-        }
-        header p {
-            font-size: 13px;
-            color: var(--subtext);
-            margin-top: 4px;
-        }
-        .card {
-            background: var(--card-bg);
-            border-radius: 14px;
-            padding: 18px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            border: 1px solid var(--border);
-        }
-        h2 {
-            font-size: 16px;
-            color: #000;
-            margin-top: 0;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        label {
-            display: block;
-            margin-top: 10px;
-            font-weight: 600;
-            font-size: 13px;
-            color: #3a3a3c;
-        }
-        input[type="number"], select {
-            width: 100%;
-            padding: 12px;
-            margin-top: 4px;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            font-size: 16px;
-            background: #fafafa;
-        }
-        .input-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-        }
-        .checkbox-container {
-            display: flex;
-            align-items: flex-start;
-            margin-top: 12px;
-            gap: 10px;
-        }
-        .checkbox-container input {
-            width: 22px;
-            height: 22px;
-            accent-color: var(--primary);
-            flex-shrink: 0;
-            margin-top: 2px;
-        }
-        .checkbox-container label {
-            margin: 0;
-            font-size: 14px;
-            font-weight: normal;
-            line-height: 1.3;
-        }
-        button.btn-primary {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 16px;
-            width: 100%;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 700;
-            margin-top: 10px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
-        }
-        button.btn-primary:active {
-            opacity: 0.8;
-            transform: scale(0.99);
-        }
-        .alert-box {
-            padding: 12px 14px;
-            border-radius: 10px;
-            margin-top: 12px;
-            font-size: 13px;
-            line-height: 1.4;
-            display: none;
-            font-weight: 500;
-        }
-        .alert-warning {
-            background-color: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeeba;
-        }
-        .alert-danger {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        #resultCard {
-            display: none;
-            border-radius: 14px;
-            padding: 18px;
-            margin-top: 16px;
-            color: white;
-            font-size: 15px;
-            line-height: 1.5;
-        }
-        .zone-green { background: linear-gradient(135deg, #34c759, #28a745); }
-        .zone-yellow { background: linear-gradient(135deg, #ffcc00, #ff9500); color: #1c1c1e !important; }
-        .zone-red { background: linear-gradient(135deg, #ff3b30, #d32f2f); }
-        .btn-gps {
-            display: inline-block;
-            margin-top: 12px;
-            background: white;
-            color: #d32f2f;
-            text-decoration: none;
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 14px;
-            text-align: center;
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
 </head>
-<body>
+<body class="bg-slate-50 text-slate-800 antialiased pb-20">
 
-    <header>
-        <h1>🫁 AsmaControl Pro</h1>
-        <p>Diário Clínico Respiratório Pediátrico (Offline)</p>
+    <!-- Top Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 px-4 py-3 shadow-sm">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-9 h-9 bg-teal-500 rounded-xl flex items-center justify-center text-white shadow-sm font-bold text-lg">
+                    🫁
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-slate-900 text-base leading-tight">Asma Control</h1>
+                    <p class="text-xs text-teal-600 font-semibold">Versão Família (Gratuita)</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="openProModal()" class="text-xs bg-sky-50 text-sky-700 font-bold px-2.5 py-1.5 rounded-lg border border-sky-200 flex items-center gap-1 hover:bg-sky-100 transition">
+                    <span>👨‍⚕️</span> Pro Connect
+                </button>
+            </div>
+        </div>
     </header>
 
-    <div class="card">
-        <h2>👤 Parâmetros do Paciente</h2>
-        <label for="bestPef">Melhor PFE Pessoal (Personal Best - L/min):</label>
-        <input type="number" id="bestPef" value="280" inputmode="numeric">
+    <main class="max-w-md mx-auto p-4 space-y-4">
+
+        <!-- Card Perfil do Filho -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center text-2xl">
+                    👦
+                </div>
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-bold text-slate-900 text-sm">Arthur Saccomani</span>
+                        <span class="text-[10px] bg-slate-100 text-slate-600 font-bold px-1.5 py-0.5 rounded">5 anos</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5">Melhor PFE: <b class="text-slate-800">220 L/min</b> • 19.5 kg</p>
+                </div>
+            </div>
+            <span class="text-xs text-teal-700 bg-teal-50 font-bold px-2 py-1 rounded-full border border-teal-200">
+                Cartão SUS OK
+            </span>
+        </div>
+
+        <!-- Card de Status Atual (GINA Zone) -->
+        <div id="statusCard" class="bg-emerald-50 border border-emerald-300 rounded-2xl p-4 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xl">🟢</span>
+                    <span class="font-extrabold text-emerald-800 text-sm">ZONA VERDE (Asma Estável)</span>
+                </div>
+                <span class="text-[11px] bg-white/80 text-emerald-800 font-bold px-2 py-0.5 rounded">Hoje 13:30</span>
+            </div>
+            <p class="text-xs text-slate-600 mt-1.5">Respiração livre, sem sintomas agudos. Mantenha a medicação preventiva e a rotina normal.</p>
+            
+            <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-emerald-200/60">
+                <div class="bg-white p-2 rounded-xl text-center border border-slate-100">
+                    <span class="text-[10px] text-slate-400 font-bold uppercase block">Último PFE</span>
+                    <span class="text-sm font-extrabold text-emerald-700">220 L/min</span>
+                </div>
+                <div class="bg-white p-2 rounded-xl text-center border border-slate-100">
+                    <span class="text-[10px] text-slate-400 font-bold uppercase block">SpO2</span>
+                    <span class="text-sm font-extrabold text-teal-700">98%</span>
+                </div>
+                <div class="bg-white p-2 rounded-xl text-center border border-slate-100">
+                    <span class="text-[10px] text-slate-400 font-bold uppercase block">Bochecho</span>
+                    <span class="text-sm font-extrabold text-emerald-700">Feito ✅</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botões de Ação Imediata -->
+        <div class="grid grid-cols-2 gap-2.5">
+            <button onclick="openEmergencyModal()" class="bg-red-50 hover:bg-red-100 border border-red-200 p-3.5 rounded-2xl text-left transition flex flex-col justify-between shadow-sm">
+                <div class="flex items-center justify-between w-full">
+                    <span class="text-lg">🚨</span>
+                    <span class="text-[10px] bg-red-600 text-white font-black px-1.5 py-0.5 rounded uppercase">Urgente</span>
+                </div>
+                <div class="mt-2">
+                    <span class="font-bold text-red-900 text-xs block">Modo Emergência</span>
+                    <span class="text-[11px] text-red-600">Mostrar ao Médico do PS</span>
+                </div>
+            </button>
+
+            <button onclick="openPhysioModal()" class="bg-teal-50 hover:bg-teal-100 border border-teal-200 p-3.5 rounded-2xl text-left transition flex flex-col justify-between shadow-sm">
+                <div class="flex items-center justify-between w-full">
+                    <span class="text-lg">🫁</span>
+                    <span class="text-[10px] bg-teal-600 text-white font-black px-1.5 py-0.5 rounded uppercase">AMIB</span>
+                </div>
+                <div class="mt-2">
+                    <span class="font-bold text-teal-900 text-xs block">Fisioterapia</span>
+                    <span class="text-[11px] text-teal-700">Voldyne, Shaker & Trava</span>
+                </div>
+            </button>
+        </div>
+
+        <!-- Formulário de Novo Lançamento Rápido -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+                <h2 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                    <span>📝</span> Novo Lançamento de Saúde
+                </h2>
+                <select id="authorSelect" class="text-xs bg-slate-100 border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-700">
+                    <option value="Mãe (Juliana)">Mãe</option>
+                    <option value="Pai">Pai</option>
+                    <option value="Cuidador">Cuidador</option>
+                </select>
+            </div>
+
+            <!-- 3 Sopros Peak Flow -->
+            <div>
+                <label class="text-xs font-bold text-slate-700 block mb-1">
+                    Pico de Fluxo (3 Sopros - Protocolo CFF):
+                </label>
+                <div class="grid grid-cols-3 gap-2">
+                    <input type="number" id="s1" placeholder="1º Sopro" class="bg-slate-50 border border-slate-200 text-sm font-semibold rounded-xl p-2 text-center" oninput="calculateFlow()">
+                    <input type="number" id="s2" placeholder="2º Sopro" class="bg-slate-50 border border-slate-200 text-sm font-semibold rounded-xl p-2 text-center" oninput="calculateFlow()">
+                    <input type="number" id="s3" placeholder="3º Sopro" class="bg-slate-50 border border-slate-200 text-sm font-semibold rounded-xl p-2 text-center" oninput="calculateFlow()">
+                </div>
+                <div id="flowFeedback" class="hidden text-xs mt-1.5 p-2 rounded-lg font-medium"></div>
+            </div>
+
+            <!-- Saturação & Medicações -->
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="text-xs font-bold text-slate-700 block mb-1">Saturação SpO2 (%):</label>
+                    <input type="number" id="spo2" value="98" class="w-full bg-slate-50 border border-slate-200 text-sm font-semibold rounded-xl p-2 text-center">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-700 block mb-1">Medicação Utilizada:</label>
+                    <select id="medSelect" class="w-full bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl p-2">
+                        <option value="Clenil HFA 250mcg (Preventivo)">Clenil HFA 250</option>
+                        <option value="Aerolin / Salbutamol (Resgate)">Aerolin (Resgate)</option>
+                        <option value="Budesonida Spray">Budesonida Spray</option>
+                        <option value="Prednisolona Oral">Prednisolona Oral</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Prevenção de Sapinho (Mandatório) -->
+            <div class="bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-start space-x-2.5">
+                <input type="checkbox" id="mouthRinse" class="mt-0.5 w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500">
+                <label for="mouthRinse" class="text-xs text-amber-900 font-medium">
+                    <b class="font-bold">💧 Bochecho/Higiene Bucal Realizado</b><br>
+                    Prevenção de candidíase (sapinho) e disfonia após corticoide inalatório.
+                </label>
+            </div>
+
+            <button onclick="saveHealthEntry()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm flex items-center justify-center gap-1.5">
+                <span>💾</span> Salvar e Gerar Versão do Prontuário
+            </button>
+        </div>
+
+        <!-- Linha do Tempo de Versões Clínicas -->
+        <div class="space-y-2">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-900 text-sm">Linha do Tempo de Versões</h3>
+                <span class="text-[11px] text-slate-500 font-semibold bg-slate-100 px-2 py-0.5 rounded-full" id="versionCounter">2 versões</span>
+            </div>
+
+            <div id="timelineContainer" class="space-y-2">
+                <!-- Inserido dinamicamente via JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Modo Emergência -->
+    <div id="emergencyModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-red-700 text-white rounded-3xl max-w-sm w-full p-5 max-h-[90vh] overflow-y-auto space-y-4">
+            <div class="flex items-center justify-between border-b border-red-500 pb-3">
+                <h3 class="font-black text-base flex items-center gap-1.5">
+                    <span>🚨</span> FICHA DO PRONTO-SOCORRO
+                </h3>
+                <button onclick="closeEmergencyModal()" class="text-white bg-red-800 w-7 h-7 rounded-full font-bold text-sm flex items-center justify-center">✕</button>
+            </div>
+
+            <div class="bg-white text-slate-900 p-3.5 rounded-2xl text-xs space-y-1.5">
+                <p><b>Paciente:</b> Arthur Saccomani (5 anos)</p>
+                <p><b>Peso Atual:</b> 19.5 kg (Para cálculo de dose)</p>
+                <p><b>Cartão SUS:</b> 898 0000 1234 5678</p>
+                <p><b>Convênio:</b> Bradesco Saúde Top (987654321000)</p>
+                <p><b>Diagnóstico:</b> Asma Grave T2-High / Rinite</p>
+                <p><b>Resgate Usual:</b> Aerolin 100mcg (com espaçador)</p>
+            </div>
+
+            <div class="bg-red-800/80 p-3 rounded-2xl text-xs space-y-1">
+                <p class="font-bold text-red-200">CONTATOS DE EMERGÊNCIA:</p>
+                <p>Mãe: (11) 98765-4321 • Pai: (11) 91234-5678</p>
+            </div>
+        </div>
     </div>
 
-    <div class="card">
-        <h2>💨 Pico de Fluxo Expiratório (Protocolo CFF)</h2>
-        <p style="font-size: 12px; color: var(--subtext); margin: 0 0 8px 0;">Coleta obrigatória de 3 sopros. Variação máxima permitida: 20 L/min.</p>
-        <div class="input-row">
-            <div>
-                <label>Sopro 1:</label>
-                <input type="number" id="pef1" placeholder="L/min" inputmode="numeric">
+    <!-- Modal Pro Connect (Médicos) -->
+    <div id="proModal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 text-white rounded-3xl max-w-sm w-full p-5 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-base flex items-center gap-1.5 text-sky-400">
+                    <span>👨‍⚕️</span> Asma Control Pro
+                </h3>
+                <button onclick="closeProModal()" class="text-slate-400 hover:text-white bg-slate-800 w-7 h-7 rounded-full font-bold text-sm flex items-center justify-center">✕</button>
             </div>
-            <div>
-                <label>Sopro 2:</label>
-                <input type="number" id="pef2" placeholder="L/min" inputmode="numeric">
+
+            <div class="bg-slate-800 p-4 rounded-2xl text-center space-y-2">
+                <span class="text-[11px] font-bold text-slate-400 tracking-wider uppercase">Chave de Pareamento com o Médico</span>
+                <div class="text-3xl font-black text-sky-400 tracking-widest font-mono">AC-7842</div>
+                <p class="text-xs text-slate-300">Compartilhe este código com seu pneumologista ou clínica para liberar o acesso ao prontuário.</p>
             </div>
-            <div>
-                <label>Sopro 3:</label>
-                <input type="number" id="pef3" placeholder="L/min" inputmode="numeric">
-            </div>
-        </div>
-        <div id="pefAlert" class="alert-box alert-warning">
-            ⚠️ <strong>Técnica Instável:</strong> Variação entre sopros > 20 L/min. Verifique a vedação da máscara/bocal ou tosse precoce.
+
+            <button onclick="alert('Chave AC-7842 copiada para a área de transferência!')" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                Copiar Chave para Enviar no WhatsApp
+            </button>
         </div>
     </div>
-
-    <div class="card">
-        <h2>🩺 Triagem de Segurança AMIB (Fisioterapia)</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <div>
-                <label>SpO2 (%):</label>
-                <input type="number" id="spo2" value="96" inputmode="numeric">
-            </div>
-            <div>
-                <label>FiO2 (ex: 0.21):</label>
-                <input type="number" id="fio2" value="0.21" step="0.01" inputmode="decimal">
-            </div>
-            <div>
-                <label>PEEP (cmH2O):</label>
-                <input type="number" id="peep" value="5" inputmode="numeric">
-            </div>
-            <div>
-                <label>Freq. Resp (rpm):</label>
-                <input type="number" id="fr" value="22" inputmode="numeric">
-            </div>
-        </div>
-        <div id="amibAlert" class="alert-box alert-danger">
-            🚨 <strong>Terapia Bloqueada:</strong> Critérios de Segurança AMIB violados (SpO2 < 88%, FiO2 > 0.6, PEEP > 10 ou FR > 45).
-        </div>
-    </div>
-
-    <div class="card">
-        <h2>💊 Medicação Inalatória e Profilaxia (GINA)</h2>
-        <div class="checkbox-container">
-            <input type="checkbox" id="chkSpacer" onchange="onSpacerChanged()">
-            <label for="chkSpacer">Uso de Inalador Dosimetrado (pMDI) com Espaçador</label>
-        </div>
-        <div class="checkbox-container">
-            <input type="checkbox" id="chkIcs" onchange="onIcsChanged()">
-            <label for="chkIcs">Uso de Corticoide Inalatório (ICS - Budesonida / Fluticasona)</label>
-        </div>
-    </div>
-
-    <button class="btn-primary" onclick="processarDiario()">Gravar no Prontuário</button>
-
-    <div id="resultCard"></div>
 
     <script>
-        function onSpacerChanged() {
-            if (document.getElementById('chkSpacer').checked) {
-                alert("🔔 CHECKLIST DE TÉCNICA GINA 2026:\n\n1. Agite o inalador em suspensão vigorosamente antes do disparo.\n2. Garanta a vedação hermética da máscara ou bocal para não perder deposição pulmonar.");
+        let entries = [
+            {
+                version: "v1.0.2",
+                author: "Mãe (Juliana)",
+                time: "Hoje 13:30",
+                pef: 220,
+                spo2: 98,
+                zone: "green",
+                med: "Clenil HFA 250mcg",
+                rinse: true
+            },
+            {
+                version: "v1.0.1",
+                author: "Pai",
+                time: "Ontem 20:15",
+                pef: 205,
+                spo2: 97,
+                zone: "green",
+                med: "Clenil HFA 250mcg",
+                rinse: true
             }
+        ];
+
+        function renderTimeline() {
+            const container = document.getElementById('timelineContainer');
+            container.innerHTML = '';
+            document.getElementById('versionCounter').innerText = `${entries.length} versões`;
+
+            entries.forEach(e => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-3 rounded-2xl border border-slate-200 shadow-sm text-xs space-y-1.5";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-1.5">
+                            <span class="bg-slate-100 text-slate-700 font-bold px-1.5 py-0.5 rounded text-[10px]">${e.version}</span>
+                            <span class="font-bold text-slate-800">${e.author}</span>
+                        </div>
+                        <span class="text-slate-400 text-[11px]">${e.time}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold text-emerald-700">PFE: ${e.pef} L/min</span>
+                        <span class="text-slate-600">SpO2: ${e.spo2}%</span>
+                        <span class="text-slate-600">💊 ${e.med}</span>
+                        ${e.rinse ? '<span class="text-teal-600 font-bold">💧 Bochecho OK</span>' : '<span class="text-amber-600 font-bold">⚠️ Sem bochecho</span>'}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
         }
 
-        function onIcsChanged() {
-            if (document.getElementById('chkIcs').checked) {
-                alert("🧼 PREVENÇÃO DE CANDIDÍASE OROFARÍNGEA:\n\nApós o uso do corticoide inalatório, realize o enxágue bucal com água ou escove os dentes da criança imediatamente para prevenir disfonia e sapinho.");
-            }
-        }
+        function calculateFlow() {
+            const s1 = parseInt(document.getElementById('s1').value) || 0;
+            const s2 = parseInt(document.getElementById('s2').value) || 0;
+            const s3 = parseInt(document.getElementById('s3').value) || 0;
+            const fb = document.getElementById('flowFeedback');
 
-        function processarDiario() {
-            document.getElementById('pefAlert').style.display = 'none';
-            document.getElementById('amibAlert').style.display = 'none';
-            const resultCard = document.getElementById('resultCard');
-            resultCard.style.display = 'none';
-            resultCard.className = '';
-
-            // 1. Triagem AMIB
-            const spo2 = parseFloat(document.getElementById('spo2').value) || 0;
-            const fio2 = parseFloat(document.getElementById('fio2').value) || 0;
-            const peep = parseFloat(document.getElementById('peep').value) || 0;
-            const fr = parseFloat(document.getElementById('fr').value) || 0;
-
-            if (spo2 < 88 || fio2 > 0.60 || peep > 10 || fr > 45) {
-                document.getElementById('amibAlert').style.display = 'block';
+            const blows = [s1, s2, s3].filter(v => v > 0);
+            if (blows.length === 0) {
+                fb.className = "hidden";
                 return;
             }
 
-            // 2. Protocolo CFF (Peak Flow)
-            const bestPef = parseInt(document.getElementById('bestPef').value) || 1;
-            const p1 = parseInt(document.getElementById('pef1').value) || 0;
-            const p2 = parseInt(document.getElementById('pef2').value) || 0;
-            const p3 = parseInt(document.getElementById('pef3').value) || 0;
+            const max = Math.max(...blows);
+            const min = Math.min(...blows);
+            const variance = max - min;
 
-            if (p1 === 0 && p2 === 0 && p3 === 0) {
-                alert("Por favor, preencha os 3 sopros do Pico de Fluxo Expiratório.");
-                return;
-            }
-
-            const blows = [p1, p2, p3].filter(v => v > 0);
-            const maxPef = Math.max(...blows);
-            const minPef = Math.min(...blows);
-            const variance = maxPef - minPef;
-
-            if (variance > 20 && blows.length > 1) {
-                document.getElementById('pefAlert').style.display = 'block';
-            }
-
-            // 3. Zonas GINA / PCDT
-            const percentage = (maxPef / bestPef) * 100;
-            resultCard.style.display = 'block';
-
-            if (percentage >= 80) {
-                resultCard.className = 'zone-green';
-                resultCard.innerHTML = `
-                    <strong>🟢 ZONA VERDE (${percentage.toFixed(1)}%)</strong><br>
-                    <strong>PFE Medido:</strong> ${maxPef} L/min (Melhor Pessoal: ${bestPef} L/min)<br>
-                    <span>Asma sob controle. Mantenha as medicações preventivas prescritas.</span>
-                `;
-            } else if (percentage >= 50) {
-                resultCard.className = 'zone-yellow';
-                resultCard.innerHTML = `
-                    <strong>🟡 ZONA AMARELA (${percentage.toFixed(1)}%)</strong><br>
-                    <strong>PFE Medido:</strong> ${maxPef} L/min (Melhor Pessoal: ${bestPef} L/min)<br>
-                    <span>Alerta de início de crise. Administrar SABA (resgate) conforme orientação médica e reavaliar.</span>
-                `;
+            fb.classList.remove('hidden');
+            if (blows.length >= 2 && variance > 20) {
+                fb.className = "text-xs mt-1.5 p-2 rounded-lg font-medium bg-amber-50 text-amber-800 border border-amber-200";
+                fb.innerHTML = `⚠️ Maior: <b>${max} L/min</b> (Variação de ${variance} L/min - sopro irregular)`;
             } else {
-                resultCard.className = 'zone-red';
-                resultCard.innerHTML = `
-                    <strong>🔴 ZONA VERMELHA (${percentage.toFixed(1)}%)</strong><br>
-                    <strong>PFE Medido:</strong> ${maxPef} L/min (Melhor Pessoal: ${bestPef} L/min)<br>
-                    <span>CRISE SEVERA / EMERGÊNCIA. Administre resgate e procure assistência imediata!</span><br>
-                    <a href="https://maps.apple.com/?q=Pronto+Socorro+Infantil" class="btn-gps">📍 Abrir GPS para Emergência Mais Próxima</a>
-                `;
+                fb.className = "text-xs mt-1.5 p-2 rounded-lg font-medium bg-emerald-50 text-emerald-800 border border-emerald-200";
+                fb.innerHTML = `✅ Maior Sopro: <b>${max} L/min</b> (Técnica consistente)`;
             }
         }
+
+        function saveHealthEntry() {
+            const s1 = parseInt(document.getElementById('s1').value) || 0;
+            const s2 = parseInt(document.getElementById('s2').value) || 0;
+            const s3 = parseInt(document.getElementById('s3').value) || 0;
+            const blows = [s1, s2, s3].filter(v => v > 0);
+            const best = blows.length > 0 ? Math.max(...blows) : 220;
+            const spo2 = parseInt(document.getElementById('spo2').value) || 98;
+            const med = document.getElementById('medSelect').value;
+            const rinse = document.getElementById('mouthRinse').checked;
+            const author = document.getElementById('authorSelect').value;
+
+            const nextNum = entries.length + 1;
+            const newVersion = `v1.0.${nextNum}`;
+
+            entries.unshift({
+                version: newVersion,
+                author: author,
+                time: "Agora mesmo",
+                pef: best,
+                spo2: spo2,
+                zone: best >= 176 ? "green" : (best >= 110 ? "yellow" : "red"),
+                med: med,
+                rinse: rinse
+            });
+
+            renderTimeline();
+            alert(`Lançamento ${newVersion} gravado com sucesso!`);
+            
+            // Limpa campos
+            document.getElementById('s1').value = '';
+            document.getElementById('s2').value = '';
+            document.getElementById('s3').value = '';
+            document.getElementById('flowFeedback').className = "hidden";
+        }
+
+        function openEmergencyModal() { document.getElementById('emergencyModal').classList.remove('hidden'); }
+        function closeEmergencyModal() { document.getElementById('emergencyModal').classList.add('hidden'); }
+        function openProModal() { document.getElementById('proModal').classList.remove('hidden'); }
+        function closeProModal() { document.getElementById('proModal').classList.add('hidden'); }
+
+        renderTimeline();
     </script>
 </body>
 </html>

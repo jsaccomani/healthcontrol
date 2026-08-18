@@ -1,0 +1,25 @@
+name: asma_control
+description: "Asma Control - Copiloto Pediátrico de Asma Grave e Fisioterapia Respiratória (Mães & Famílias) e Asma Control Pro (Médicos & Clínicas)."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  clinical_core:
+    path: packages/clinical_core
+  intl: ^0.19.0
+  shared_preferences: ^2.3.2
+  crypto: ^3.0.3
+  uuid: ^4.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

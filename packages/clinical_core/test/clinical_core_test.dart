@@ -141,4 +141,70 @@ void main() {
       expect(check.message, contains('VENCIDO'));
     });
   });
+
+  group('ClinicalEventLog (Auditoria & Integridade Imutável SHA-256)', () {
+    test('Gera hash consistente e valida integridade do registro versionado', () {
+      final event = ClinicalEventLog(
+        eventId: 'evt-001',
+        patientId: 'pat-123',
+        version: 'v1.0.1',
+        sequenceNumber: 1,
+        eventType: ClinicalEventType.healthControlEntry,
+        authorName: 'Mãe',
+        authorRole: 'Cuidadora Principal',
+        timestamp: DateTime(2026, 8, 18, 17, 30),
+        payload: {
+          'peak_flow_best': 250,
+          'spo2': 98,
+          'mouth_rinse_done': true,
+        },
+        previousHash: 'GENESIS_BLOCK_0000000000000000',
+      );
+
+      expect(event.hash, isNotEmpty);
+      expect(event.verifyIntegrity(), isTrue);
+
+      final json = event.toJson();
+      final recovered = ClinicalEventLog.fromJson(json);
+      expect(recovered.verifyIntegrity(), isTrue);
+      expect(recovered.hash, equals(event.hash));
+    });
+  });
+
+  group('HealthControlEntry (Versionamento do Controle Diário)', () {
+    test('Serializa e desserializa lançamento clínico completo', () {
+      final entry = HealthControlEntry(
+        id: 'entry-001',
+        versionTag: 'v1.0.1',
+        sequenceNumber: 1,
+        timestamp: DateTime(2026, 8, 18, 17, 35),
+        authorName: 'Mãe',
+        authorRole: 'Cuidadora Principal',
+        peakFlowAttempts: [240, 255, 250],
+        peakFlowBest: 255,
+        peakFlowZone: ActionZoneType.green,
+        peakFlowVarianceError: false,
+        spo2: 98,
+        symptoms: ['Sem sintomas'],
+        medications: [
+          const MedicationUsage(
+            name: 'Clenil HFA 250',
+            dosage: '1 puff',
+            type: MedicationType.maintenance,
+          ),
+        ],
+        mouthRinseCompleted: true,
+        requiresRescueFollowup: false,
+      );
+
+      final json = entry.toJson();
+      final restored = HealthControlEntry.fromJson(json);
+
+      expect(restored.id, equals('entry-001'));
+      expect(restored.versionTag, equals('v1.0.1'));
+      expect(restored.peakFlowBest, equals(255));
+      expect(restored.mouthRinseCompleted, isTrue);
+      expect(restored.medications.length, equals(1));
+    });
+  });
 }

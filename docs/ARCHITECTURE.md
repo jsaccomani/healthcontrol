@@ -1,164 +1,76 @@
-# 🏗️ Arquitetura de Software e Dados - AsmaControl Pro
+# 🏗️ Arquitetura de Software e Dados - Asma Control & Asma Control Pro
 
-O **AsmaControl Pro** foi concebido com arquitetura **Offline-First** orientada a eventos (**Event Sourcing**), garantindo resiliência em locais com baixa ou nula conectividade (subsolos hospitalares, pronto-socorros, áreas rurais).
+> **Ecossistema Clínico Digital Pediátrico: Asma Control (Mães & Famílias) e Asma Control Pro (Médicos & Clínicas).**
 
 ---
 
-## 1. Visão Geral da Arquitetura
+## 1. Visão Geral do Ecossistema
 
 ```
-+-------------------------------------------------------------+
-|                      FLUTTER CLIENT                         |
-|                                                             |
-|   +-----------------------+     +-----------------------+   |
-|   |  Presentation Layer   | <-> |  Clinical Domain Core |   |
-|   | (UI / BLoC / Screens) |     |  (Pure Dart Library)  |   |
-|   +-----------------------+     +-----------------------+   |
-|               |                             |               |
-|   +-----------------------------------------------------+   |
-|   |         Local Storage Layer (Offline-First)         |   |
-|   |   - Firestore Persistent SQLite Cache (Unlimited)   |   |
-|   |   - Local Key-Value / Hive (Instant Configs)        |   |
-|   +-----------------------------------------------------+   |
-+-------------------------------------------------------------+
-                              |
-                     (Sync via WebSockets)
-                              |
-+-------------------------------------------------------------+
-|               FIREBASE CLOUD FIRESTORE NOSQL                |
-|                                                             |
-|   /patients/{patientId} (Coleção Mestra)                    |
-|          |                                                  |
-|          +---> /event_log/{eventId} (Subcoleção Imutável)   |
-|                (Append-only: create=true, update/del=false) |
-+-------------------------------------------------------------+
++---------------------------------------------------------------------------------+
+|                       ASMA CONTROL (APLICATIVO GRATUITO DAS MÃES)               |
+|                                                                                 |
+|   +-----------------------+     +-----------------------+     +---------------+ |
+|   |  Diário & 3 Sopros    | <-> |  Fisioterapia AMIB    | <-> | Modo Emergência| |
+|   |  (PFE, SpO2, Bochecho)|     |  (Voldyne, Shaker)    |     | (Pronto-Soc)  | |
+|   +-----------------------+     +-----------------------+     +---------------+ |
+|                                             |                                   |
+|   +---------------------------------------------------------------------------+ |
+|   |          MOTOR DE VERSIONAMENTO CLÍNICO & AUDITORIA SHA-256               | |
+|   |  - Cada controle gera uma versão imutável (v1.0.1, v1.0.2, v1.0.3...)     | |
+|   |  - Encadeamento criptográfico: previous_hash -> hash (CFM 1.331/89)       | |
+|   +---------------------------------------------------------------------------+ |
++---------------------------------------------------------------------------------+
+                                       │
+                              (Chave de Acesso / Token)
+                                       ▼
++---------------------------------------------------------------------------------+
+|                  ASMA CONTROL PRO (PAINEL SAAS DOS MÉDICOS & CLÍNICAS)          |
+|                                                                                 |
+|   - Assinatura Mensal B2B para Pneumopediatras, Pediatras e Fisioterapeutas     |
+|   - Pareamento instantâneo via Chave de Compartilhamento (ex: AC-7842)          |
+|   - Monitoramento longitudinal em tempo real de crises e descompensações        |
+|   - Rastreamento de laudos LME de Alto Custo (Dupixent, Nucala, Fasenra, Xolair)|
++---------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 2. Padrão Event Sourcing no Firestore
+## 2. Mecanismo de Versionamento Clínico dos Lançamentos de Saúde
 
-Ao invés de atualizar o documento do paciente a cada nova medição, todos os registros clínicos geram um novo evento imutável na subcoleção `/patients/{id}/event_log/{id}`.
+Cada registro de saúde realizado pela mãe, pai ou cuidador é tratado como uma **versão imutável do prontuário**:
 
-### Vantagens:
-1. **Conformidade Legal CFM (20 Anos):** Histórico inalterável com carimbo de tempo (*timestamp* ISO 8601 UTC).
-2. **Sincronismo Bidirecional sem Conflitos:** Evita *race conditions* em modo offline.
-3. **Auditabilidade e Real-World Data (RWD):** Permite reconstruir o estado de saúde do paciente em qualquer ponto da linha do tempo.
+### 2.1. Estrutura do Lançamento Versionado (`HealthControlEntry`):
+- `version_tag`: `v1.0.1`, `v1.0.2`, `v1.0.3` (incremental a cada nova medição).
+- `sequence_number`: Inteiro sequencial para ordenação precisa.
+- `author_name` & `author_role`: Quem registrou (ex: "Mãe (Juliana) - Cuidadora Principal").
+- `timestamp`: Data/hora exata em ISO 8601 UTC.
+- `peak_flow`: 3 tentativas de sopro (`peak_flow_attempts`), maior valor registrado (`peak_flow_best`) e zona calculada.
+- `spo2`: Saturação de oxigênio com alerta caso `< 92%`.
+- `medications`: Medicamentos utilizados (Resgate, Manutenção, Corticoide Oral, Biológico).
+- `mouth_rinse_completed`: Confirmação obrigatória de higiene bucal para prevenção de sapinho.
+- `physiotherapy`: Dados da sessão respiratória (Voldyne, Shaker, POWERbreathe) com trava AMIB.
+- `requires_rescue_followup`: Ativação do alarme de reavaliação de 20 minutos.
 
----
-
-## 3. Estrutura dos Documentos NoSQL
-
-### Documento Mestre: `/patients/{id}`
-```json
-{
-  "id": "pat_12345",
-  "full_name": "Lucas Gabriel da Silva",
-  "birth_date": "2018-05-14",
-  "gender": "M",
-  "sus_card_number": "898000123456789",
-  "health_insurance": "Unimed BH",
-  "insurance_card_number": "00548962",
-  "weight_kg": 24.5,
-  "height_cm": 122.0,
-  "best_pef_personal": 280,
-  "comorbidities": [
-    "rinite_alergica",
-    "refluxo_gastroesofagico"
-  ],
-  "current_medications": [
-    {
-      "name": "Budesonida + Formoterol",
-      "dosage": "160/4.5 mcg",
-      "frequency_hours": 12,
-      "device_type": "pMDI_with_spacer"
-    }
-  ],
-  "lme_records": {
-    "spirometry_date": "2026-03-10",
-    "chest_xray_date": "2025-11-20",
-    "eosinophils_date": "2026-06-01",
-    "total_ige_date": "2026-06-01"
-  },
-  "created_at": "2026-01-10T10:00:00Z",
-  "updated_at": "2026-06-01T14:30:00Z"
+### 2.2. Encadeamento Criptográfico SHA-256 (`ClinicalEventLog`):
+```dart
+String computeHash(...) {
+  final raw = '$previousHash|$eventId|$patientId|$version|$sequenceNumber|'
+      '${eventType.code}|${timestamp.toIso8601String()}|${jsonEncode(payload)}';
+  return sha256.convert(utf8.encode(raw)).toString();
 }
 ```
-
-### Subcoleção de Eventos: `/patients/{id}/event_log/{id}`
-
-#### Evento 1: `DAILY_CLINICAL_DIARY`
-```json
-{
-  "event_id": "evt_987654",
-  "patient_id": "pat_12345",
-  "event_type": "DAILY_CLINICAL_DIARY",
-  "timestamp": "2026-08-18T19:30:00Z",
-  "payload": {
-    "pef": {
-      "blow_1": 250,
-      "blow_2": 260,
-      "blow_3": 255,
-      "recorded_max": 260,
-      "technique_unstable": false,
-      "action_zone": "GREEN",
-      "percentage_best": 92.8
-    },
-    "vitals": {
-      "spo2": 97,
-      "heart_rate_bpm": 88,
-      "respiratory_rate_rpm": 22,
-      "temperature_celsius": 36.6
-    },
-    "symptoms": {
-      "cough": "mild",
-      "wheezing": false,
-      "night_awakening": false,
-      "activity_limitation": false
-    },
-    "medication_taken": {
-      "ics_used": true,
-      "saba_used": false,
-      "spacer_used": true,
-      "inhaler_shaken": true,
-      "mask_sealed": true,
-      "oral_hygiene_confirmed": true
-    },
-    "physio_session": {
-      "performed": true,
-      "amib_level": 4,
-      "duration_minutes": 20,
-      "safety_cleared": true
-    }
-  }
-}
-```
-
-#### Evento 2: `CACT_SCORE`
-```json
-{
-  "event_id": "evt_987655",
-  "patient_id": "pat_12345",
-  "event_type": "CACT_SCORE",
-  "timestamp": "2026-08-18T20:00:00Z",
-  "payload": {
-    "child_responses": [3, 2, 3, 2],
-    "parent_responses": [4, 4, 3],
-    "total_score": 21,
-    "is_controlled": true,
-    "classification": "Asma Controlada"
-  }
-}
-```
+Isso garante **integridade absoluta**, atendendo ao Artigo 69 do Código de Ética Médica e à Resolução CFM nº 1.331/89 (guarda de prontuário inalterável por 20 anos).
 
 ---
 
-## 4. Regras de Isolamento e Segurança (Trade Secrets)
+## 3. Modelo de Negócio e Segurança de Acesso
 
-Para resguardar os diferenciais competitivos e propriedades intelectuais:
-1. **Core de Regras em Pacote Privado:** O diretório `packages/clinical_core` não possui acoplamento com o Flutter SDK de UI. Pode ser compilado e testado de maneira 100% autônoma.
-2. **Ofuscação em Builds de Produção:**
-   ```bash
-   flutter build apk --obfuscate --split-debug-info=./build/app/outputs/symbols
-   flutter build ipa --obfuscate --split-debug-info=./build/ios/archive/symbols
-   ```
+1. **Asma Control (Mães & Cuidadores):**
+   - 100% Gratuito.
+   - Offline-First (funciona sem sinal de celular).
+   - Dados criptografados no aparelho.
+2. **Asma Control Pro (Médicos & Clínicas):**
+   - Assinatura mensal recorrente (SaaS).
+   - O médico fornece chaves de pareamento aos seus pacientes.
+   - Visão agregada de população de risco e alertas de exacerbação.
