@@ -67,14 +67,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(width: 8),
             const Text(
-              'Asma Control',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              'Health Control: Asma',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
             ),
           ],
         ),
         actions: [
           IconButton(
-            tooltip: 'Conectar com Médico (Asma Control Pro)',
+            tooltip: 'Conectar com Médico (Health Control Pro)',
             icon: const Icon(Icons.medical_services_outlined, color: AppTheme.primaryTeal),
             onPressed: () async {
               await Navigator.push(
@@ -451,7 +451,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: _buildActionButton(
-                label: '👨‍⚕️ Asma Control Pro',
+                label: '👨‍⚕️ Health Control Pro',
                 subtitle: 'Pareamento com Médico',
                 color: const Color(0xFF0284C7),
                 bgColor: const Color(0xFFE0F2FE),

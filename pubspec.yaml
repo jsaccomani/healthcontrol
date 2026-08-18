@@ -1,5 +1,5 @@
-name: asma_control
-description: "Asma Control - Copiloto Pediátrico de Asma Grave e Fisioterapia Respiratória (Mães & Famílias) e Asma Control Pro (Médicos & Clínicas)."
+name: health_control
+description: "Health Control: Asma - Copiloto Pediátrico de Asma Grave e Reabilitação Respiratória (Famílias) e Health Control Pro (Médicos)."
 publish_to: 'none'
 version: 1.0.0+1
 

@@ -4,16 +4,16 @@ import 'features/home/screens/home_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const AsmaControlApp());
+  runApp(const HealthControlApp());
 }
 
-class AsmaControlApp extends StatelessWidget {
-  const AsmaControlApp({super.key});
+class HealthControlApp extends StatelessWidget {
+  const HealthControlApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Asma Control',
+      title: 'Health Control: Asma',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const HomeScreen(),

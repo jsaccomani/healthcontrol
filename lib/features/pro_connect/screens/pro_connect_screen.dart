@@ -59,7 +59,7 @@ class _ProConnectScreenState extends State<ProConnectScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Conexão Asma Control Pro', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+        title: const Text('Conexão Health Control Pro', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -92,7 +92,7 @@ class _ProConnectScreenState extends State<ProConnectScreen> {
                       ),
                       const SizedBox(width: 8),
                       const Text(
-                        'Asma Control Pro (Médicos)',
+                        'Health Control Pro (Médicos)',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ],
