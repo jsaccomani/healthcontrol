@@ -26,7 +26,8 @@ service cloud.firestore {
       let relPath = /databases/$(database)/documents/patients/$(patientId)/relationships/$(request.auth.uid);
       return exists(relPath) &&
              get(relPath).data.status == 'ACTIVE' &&
-             (get(relPath).data.revoked_at == null || get(relPath).data.revoked_at > request.time);
+             (get(relPath).data.revoked_at == null || get(relPath).data.revoked_at > request.time) &&
+             (get(relPath).data.expires_at == null || get(relPath).data.expires_at > request.time);
     }
 
     // Verifica relacionamento ativo na coleção raiz: /relationships/{patientId}_{userId}
@@ -34,7 +35,8 @@ service cloud.firestore {
       let relTopPath = /databases/$(database)/documents/relationships/$(patientId + '_' + request.auth.uid);
       return exists(relTopPath) &&
              get(relTopPath).data.status == 'ACTIVE' &&
-             (get(relTopPath).data.revoked_at == null || get(relTopPath).data.revoked_at > request.time);
+             (get(relTopPath).data.revoked_at == null || get(relTopPath).data.revoked_at > request.time) &&
+             (get(relTopPath).data.expires_at == null || get(relTopPath).data.expires_at > request.time);
     }
 
     // Verifica se o usuário possui qualquer vínculo relacional ativo com o paciente
