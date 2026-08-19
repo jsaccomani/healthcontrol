@@ -55,7 +55,6 @@ class PrescribedMedsChecklist extends StatelessWidget {
 
             return Material(
               color: isChecked ? (isRescue ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4)) : const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
                 side: BorderSide(

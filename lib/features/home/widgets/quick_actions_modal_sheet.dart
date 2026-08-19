@@ -408,7 +408,6 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
             padding: const EdgeInsets.only(bottom: 8),
             child: Material(
               color: isSel ? HCColors.primary50 : Colors.white,
-              borderRadius: HCRadii.radiusMd,
               shape: RoundedRectangleBorder(
                 borderRadius: HCRadii.radiusMd,
                 side: BorderSide(

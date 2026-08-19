@@ -939,7 +939,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget _buildCardSection({required String title, required List<Widget> children}) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: Color(0xFFE2E8F0)),
