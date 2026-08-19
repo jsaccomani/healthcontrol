@@ -24,13 +24,17 @@ class HCMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: HCSpacing.paddingCard,
       decoration: BoxDecoration(
-        color: HCColors.surfaceWhite,
+        color: isDark ? HCColors.darkSurface : HCColors.surfaceWhite,
         borderRadius: HCRadii.radiusLg,
-        border: Border.all(color: HCColors.neutral200),
-        boxShadow: HCShadows.subtle,
+        border: Border.all(
+          color: isDark ? HCColors.darkBorder : HCColors.neutral200,
+        ),
+        boxShadow: isDark ? null : HCShadows.subtle,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,7 +42,12 @@ class HCMetricCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: HCTypography.bodySmall),
+              Text(
+                label,
+                style: HCTypography.bodySmall.copyWith(
+                  color: isDark ? HCColors.darkTextSecondary : HCColors.neutral600,
+                ),
+              ),
               Icon(icon, color: statusColor, size: 18),
             ],
           ),

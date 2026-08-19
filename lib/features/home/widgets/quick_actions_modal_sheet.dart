@@ -8,17 +8,20 @@ import '../../../core/design_system/design_system.dart';
 class HCQuickActionsModalSheet extends StatefulWidget {
   final PatientProfile profile;
   final VoidCallback onEntrySaved;
+  final String initialView;
 
   const HCQuickActionsModalSheet({
     super.key,
     required this.profile,
     required this.onEntrySaved,
+    this.initialView = 'MENU',
   });
 
   static Future<void> show({
     required BuildContext context,
     required PatientProfile profile,
     required VoidCallback onEntrySaved,
+    String initialView = 'MENU',
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -27,6 +30,7 @@ class HCQuickActionsModalSheet extends StatefulWidget {
       builder: (ctx) => HCQuickActionsModalSheet(
         profile: profile,
         onEntrySaved: onEntrySaved,
+        initialView: initialView,
       ),
     );
   }
@@ -38,7 +42,7 @@ class HCQuickActionsModalSheet extends StatefulWidget {
 class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
   final HealthStorageService _storageService = HealthStorageService();
 
-  String _currentView = 'MENU'; // 'MENU', 'MEDICATION', 'PEAK_FLOW', 'SYMPTOMS', 'SPO2', 'NOTE'
+  late String _currentView;
   bool _isLoading = false;
 
   // Medicações
@@ -77,6 +81,7 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
   @override
   void initState() {
     super.initState();
+    _currentView = widget.initialView;
     _loadPrescriptions();
   }
 
@@ -399,17 +404,19 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
           final isSel = _selectedMeds.any((m) => m.name == med.commercialName);
           final isRescue = med.category == MedicationCategory.rescueInhaled;
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            decoration: BoxDecoration(
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Material(
               color: isSel ? HCColors.primary50 : Colors.white,
               borderRadius: HCRadii.radiusMd,
-              border: Border.all(
-                color: isSel ? HCColors.primary500 : HCColors.neutral200,
-                width: isSel ? 1.5 : 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: HCRadii.radiusMd,
+                side: BorderSide(
+                  color: isSel ? HCColors.primary500 : HCColors.neutral200,
+                  width: isSel ? 1.5 : 1,
+                ),
               ),
-            ),
-            child: CheckboxListTile(
+              child: CheckboxListTile(
               value: isSel,
               activeColor: HCColors.primary500,
               title: Text(
@@ -438,8 +445,9 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
                 });
               },
             ),
-          );
-        }),
+          ),
+        );
+      }),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(12),

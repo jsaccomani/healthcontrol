@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:clinical_core/clinical_core.dart';
 import '../../../core/storage/health_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/design_system/design_system.dart';
 
 class PrescriptionScanScreen extends StatefulWidget {
   final String patientId;
@@ -243,8 +244,8 @@ Paciente: ${widget.patientName}
                       if (!mounted) return;
                       messenger.showSnackBar(
                         SnackBar(
-                          content: Text('Receita de ${parsed.doctorName} importada com ${parsed.medications.length} medicações! ✅'),
-                          backgroundColor: const Color(0xFF059669),
+                          content: Text('Receita de ${parsed.doctorName} importada com ${parsed.medications.length} medicações!'),
+                          backgroundColor: HCColors.greenMain,
                         ),
                       );
                     },
@@ -371,7 +372,10 @@ Paciente: ${widget.patientName}
 
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${newMed.commercialName} adicionado ao plano de tratamento! ✅')),
+                        SnackBar(
+                          content: Text('${newMed.commercialName} adicionado ao plano de tratamento!'),
+                          backgroundColor: HCColors.greenMain,
+                        ),
                       );
                     },
                   ),

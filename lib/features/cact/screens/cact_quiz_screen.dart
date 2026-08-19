@@ -215,7 +215,7 @@ class _CactQuizScreenState extends State<CactQuizScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            _result!.isControlled ? 'Asma Controlada ✅' : 'Asma Não Controlada ⚠️',
+                            _result!.isControlled ? 'Asma Controlada' : 'Asma Não Controlada',
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                           ),
                         ),

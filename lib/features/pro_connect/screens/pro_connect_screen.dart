@@ -159,7 +159,7 @@ class _ProConnectScreenState extends State<ProConnectScreen> {
               child: Column(
                 children: [
                   Text(
-                    '🔑 CHAVE DE ACESSO EXCLUSIVA: ${_profile!.name.toUpperCase()}',
+                    'CHAVE DE ACESSO EXCLUSIVA: ${_profile!.name.toUpperCase()}',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.5),
                     textAlign: TextAlign.center,
                   ),
@@ -194,7 +194,7 @@ class _ProConnectScreenState extends State<ProConnectScreen> {
 
             // Resumo Clínico para a Próxima Consulta
             const Text(
-              '📊 Resumo para a Próxima Consulta Médica',
+              'Resumo para a Próxima Consulta Médica',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
             ),
             const SizedBox(height: 10),

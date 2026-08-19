@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:clinical_core/clinical_core.dart';
-import '../../../core/theme/app_theme.dart';
 import '../tokens/hc_colors.dart';
 import '../tokens/hc_spacing.dart';
 import '../tokens/hc_typography.dart';
@@ -49,10 +48,12 @@ class HCChildSelectorSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: isDark ? HCColors.darkSurface : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: SafeArea(
@@ -66,7 +67,7 @@ class HCChildSelectorSheet extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: HCColors.neutral300,
+                  color: isDark ? HCColors.darkBorder : HCColors.neutral300,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -74,23 +75,29 @@ class HCChildSelectorSheet extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Icon(Icons.family_restroom, color: AppTheme.primaryTeal, size: 22),
+                const Icon(Icons.family_restroom, color: HCColors.primary500, size: 22),
                 const SizedBox(width: 8),
                 Text(
                   'Meus Filhos',
-                  style: HCTypography.heading.copyWith(color: HCColors.neutral900),
+                  style: HCTypography.heading.copyWith(
+                    color: isDark ? HCColors.darkTextPrimary : HCColors.neutral900,
+                  ),
                 ),
                 const Spacer(),
                 Text(
                   '${profiles.length} cadastrado(s)',
-                  style: HCTypography.bodySmall.copyWith(color: HCColors.neutral500),
+                  style: HCTypography.bodySmall.copyWith(
+                    color: isDark ? HCColors.darkTextSecondary : HCColors.neutral500,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 6),
             Text(
               'Selecione a criança para visualizar ou registrar dados clínicos:',
-              style: HCTypography.bodySmall.copyWith(color: HCColors.neutral600),
+              style: HCTypography.bodySmall.copyWith(
+                color: isDark ? HCColors.darkTextSecondary : HCColors.neutral600,
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -107,8 +114,15 @@ class HCChildSelectorSheet extends StatelessWidget {
                       ? p.name.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
                       : 'HC';
 
+                  final tileBg = isSelected
+                      ? (isDark ? const Color(0xFF0F2922) : HCColors.primary50)
+                      : (isDark ? HCColors.darkSurfaceElevated : Colors.white);
+                  final tileBorder = isSelected
+                      ? HCColors.primary500
+                      : (isDark ? HCColors.darkBorder : HCColors.neutral200);
+
                   return Material(
-                    color: isSelected ? HCColors.primary50 : Colors.white,
+                    color: tileBg,
                     borderRadius: HCRadii.radiusMd,
                     child: InkWell(
                       onTap: () => onSelect(p),
@@ -118,7 +132,7 @@ class HCChildSelectorSheet extends StatelessWidget {
                         decoration: BoxDecoration(
                           borderRadius: HCRadii.radiusMd,
                           border: Border.all(
-                            color: isSelected ? HCColors.primary500 : HCColors.neutral200,
+                            color: tileBorder,
                             width: isSelected ? 2 : 1,
                           ),
                         ),
@@ -126,13 +140,17 @@ class HCChildSelectorSheet extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 20,
-                              backgroundColor: isSelected ? HCColors.primary500 : HCColors.neutral200,
+                              backgroundColor: isSelected
+                                  ? HCColors.primary500
+                                  : (isDark ? HCColors.darkSurface : HCColors.neutral200),
                               child: Text(
                                 initials,
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: isSelected ? Colors.white : HCColors.neutral700,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : (isDark ? HCColors.darkTextPrimary : HCColors.neutral700),
                                 ),
                               ),
                             ),
@@ -148,7 +166,7 @@ class HCChildSelectorSheet extends StatelessWidget {
                                           p.name,
                                           style: HCTypography.subHeading.copyWith(
                                             fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                            color: isSelected ? HCColors.primary900 : HCColors.neutral900,
+                                            color: isDark ? HCColors.darkTextPrimary : HCColors.neutral900,
                                           ),
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -157,7 +175,9 @@ class HCChildSelectorSheet extends StatelessWidget {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: isSelected ? HCColors.primary100 : HCColors.neutral100,
+                                          color: isSelected
+                                              ? (isDark ? HCColors.darkSurface : HCColors.primary100)
+                                              : (isDark ? HCColors.darkSurface : HCColors.neutral100),
                                           borderRadius: HCRadii.radiusSm,
                                         ),
                                         child: Text(
@@ -165,7 +185,9 @@ class HCChildSelectorSheet extends StatelessWidget {
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
-                                            color: isSelected ? HCColors.primary700 : HCColors.neutral700,
+                                            color: isSelected
+                                                ? (isDark ? HCColors.primary300 : HCColors.primary700)
+                                                : (isDark ? HCColors.darkTextSecondary : HCColors.neutral700),
                                           ),
                                         ),
                                       ),
@@ -174,15 +196,21 @@ class HCChildSelectorSheet extends StatelessWidget {
                                   const SizedBox(height: 2),
                                   Text(
                                     'PFE Recorde: ${p.personalBestPef} L/min • ${p.weightKg} kg • ${p.bloodType}',
-                                    style: HCTypography.bodySmall.copyWith(color: HCColors.neutral500),
+                                    style: HCTypography.bodySmall.copyWith(
+                                      color: isDark ? HCColors.darkTextSecondary : HCColors.neutral500,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                             if (isSelected)
-                              const Icon(Icons.check_circle, color: HCColors.primary600, size: 22)
+                              const Icon(Icons.check_circle, color: HCColors.primary500, size: 22)
                             else
-                              const Icon(Icons.chevron_right, color: HCColors.neutral400, size: 20),
+                              Icon(
+                                Icons.chevron_right,
+                                color: isDark ? HCColors.darkTextMuted : HCColors.neutral400,
+                                size: 20,
+                              ),
                           ],
                         ),
                       ),
@@ -193,7 +221,7 @@ class HCChildSelectorSheet extends StatelessWidget {
             ),
 
             const SizedBox(height: 16),
-            const Divider(color: HCColors.neutral200),
+            Divider(color: isDark ? HCColors.darkBorder : HCColors.neutral200),
             const SizedBox(height: 8),
 
             // Botão Adicionar Filho

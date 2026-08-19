@@ -75,13 +75,15 @@ class HCSecondaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SizedBox(
       width: width,
       height: 48,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: HCColors.neutral100,
-          foregroundColor: HCColors.neutral800,
+          backgroundColor: isDark ? HCColors.darkSurfaceElevated : HCColors.neutral100,
+          foregroundColor: isDark ? HCColors.darkTextPrimary : HCColors.neutral800,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
           padding: HCSpacing.paddingButton,
@@ -92,10 +94,15 @@ class HCSecondaryButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 18, color: HCColors.neutral700),
+              Icon(icon, size: 18, color: isDark ? HCColors.darkTextSecondary : HCColors.neutral700),
               const SizedBox(width: HCSpacing.sm),
             ],
-            Text(label, style: HCTypography.button.copyWith(color: HCColors.neutral800)),
+            Text(
+              label,
+              style: HCTypography.button.copyWith(
+                color: isDark ? HCColors.darkTextPrimary : HCColors.neutral800,
+              ),
+            ),
           ],
         ),
       ),
@@ -118,12 +125,17 @@ class HCEmergencyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final button = ElevatedButton.icon(
       style: ElevatedButton.styleFrom(
-        backgroundColor: HCColors.redLight,
+        backgroundColor: isDark ? const Color(0xFF350A0A) : HCColors.redLight,
         foregroundColor: HCColors.redMain,
         elevation: 0,
-        side: const BorderSide(color: HCColors.redBorder, width: 1.2),
+        side: BorderSide(
+          color: isDark ? const Color(0xFF991B1B) : HCColors.redBorder,
+          width: 1.2,
+        ),
         shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
@@ -159,14 +171,18 @@ class HCOutlineButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return SizedBox(
       width: width,
-      height: 44,
+      height: 48,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
-          foregroundColor: HCColors.primary600,
-          side: const BorderSide(color: HCColors.primary200),
-          backgroundColor: HCColors.primary50,
+          foregroundColor: isDark ? HCColors.primary300 : HCColors.primary600,
+          side: BorderSide(
+            color: isDark ? HCColors.darkBorder : HCColors.primary200,
+          ),
+          backgroundColor: isDark ? HCColors.darkSurface : HCColors.primary50,
           shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         ),
@@ -176,12 +192,14 @@ class HCOutlineButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 16, color: HCColors.primary600),
+              Icon(icon, size: 16, color: isDark ? HCColors.primary300 : HCColors.primary600),
               const SizedBox(width: HCSpacing.xs),
             ],
             Text(
               label,
-              style: HCTypography.labelBold.copyWith(color: HCColors.primary600),
+              style: HCTypography.labelBold.copyWith(
+                color: isDark ? HCColors.primary300 : HCColors.primary600,
+              ),
             ),
           ],
         ),

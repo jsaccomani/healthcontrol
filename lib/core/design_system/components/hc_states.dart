@@ -50,22 +50,42 @@ class HCEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       width: double.infinity,
       padding: HCSpacing.paddingCard * 1.5,
       decoration: BoxDecoration(
-        color: HCColors.surfaceWhite,
+        color: isDark ? HCColors.darkSurface : HCColors.surfaceWhite,
         borderRadius: HCRadii.radiusLg,
-        border: Border.all(color: HCColors.neutral200),
+        border: Border.all(
+          color: isDark ? HCColors.darkBorder : HCColors.neutral200,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: HCColors.neutral400, size: 40),
+          Icon(
+            icon,
+            color: isDark ? HCColors.darkTextMuted : HCColors.neutral400,
+            size: 40,
+          ),
           const SizedBox(height: HCSpacing.sm),
-          Text(title, style: HCTypography.subHeading, textAlign: TextAlign.center),
+          Text(
+            title,
+            style: HCTypography.subHeading.copyWith(
+              color: isDark ? HCColors.darkTextPrimary : HCColors.neutral900,
+            ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: HCSpacing.xs),
-          Text(message, style: HCTypography.bodySmall, textAlign: TextAlign.center),
+          Text(
+            message,
+            style: HCTypography.bodySmall.copyWith(
+              color: isDark ? HCColors.darkTextSecondary : HCColors.neutral500,
+            ),
+            textAlign: TextAlign.center,
+          ),
           if (actionLabel != null && onActionPressed != null) ...[
             const SizedBox(height: HCSpacing.md),
             HCPrimaryButton(label: actionLabel!, onPressed: onActionPressed),

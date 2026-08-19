@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:clinical_core/clinical_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -13,6 +14,7 @@ class HealthStorageService {
   static const String _keyDoctorPairingCodePrefix = 'health_control_pairing_code_';
   static const String _keyLegacyDoctorPairingCode = 'health_control_doctor_pairing_code';
   static const String _keyPrescriptionsPrefix = 'health_control_prescriptions_';
+  static const String _keyThemeMode = 'health_control_theme_mode';
 
   static final HealthStorageService _instance = HealthStorageService._internal();
   factory HealthStorageService() => _instance;
@@ -154,6 +156,7 @@ class HealthStorageService {
 
     final newProfile = PatientProfile(
       id: newId,
+      schemaVersion: 2,
       name: name,
       photoBase64: photoBase64,
       avatarId: avatarId,
@@ -165,7 +168,11 @@ class HealthStorageService {
       susCardNumber: susCardNumber,
       healthInsurance: healthInsurance,
       insuranceCardNumber: insuranceCardNumber,
-      // Herda contatos dos pais para conveniência
+      // Herda contatos e profissionais dos pais para conveniência
+      legalGuardians: active.legalGuardians,
+      caregivers: active.caregivers,
+      emergencyContacts: active.emergencyContacts,
+      healthcareProfessionals: active.healthcareProfessionals,
       motherName: active.motherName,
       motherPhone: active.motherPhone,
       motherEmail: active.motherEmail,
@@ -463,8 +470,98 @@ class HealthStorageService {
   }
 
   PatientProfile _generateDefaultArthurProfile() {
+    const childId = 'arthur_saccomani_01';
+    final guardians = [
+      const LegalGuardian(
+        id: 'guardian_juliana_01',
+        fullName: 'Juliana Saccomani',
+        relationshipType: LegalGuardianRelationshipType.mother,
+        phone: '(11) 98765-4321',
+        email: 'juliana.saccomani@email.com',
+        hasLegalCustody: true,
+        isPrimaryContact: true,
+      ),
+      const LegalGuardian(
+        id: 'guardian_pai_01',
+        fullName: 'Pai',
+        relationshipType: LegalGuardianRelationshipType.father,
+        phone: '(11) 91234-5678',
+        hasLegalCustody: true,
+        isPrimaryContact: false,
+      ),
+    ];
+
+    final caregivers = [
+      const Caregiver(
+        id: 'caregiver_juliana_01',
+        fullName: 'Juliana Saccomani',
+        relationshipType: CaregiverRelationshipType.mother,
+        phone: '(11) 98765-4321',
+        email: 'juliana.saccomani@email.com',
+        accessLevel: CaregiverAccessLevel.primaryGuardian,
+        isPrimary: true,
+      ),
+      const Caregiver(
+        id: 'caregiver_pai_01',
+        fullName: 'Pai',
+        relationshipType: CaregiverRelationshipType.father,
+        phone: '(11) 91234-5678',
+        accessLevel: CaregiverAccessLevel.guardian,
+        isPrimary: false,
+      ),
+    ];
+
+    final emergencyContacts = [
+      const EmergencyContact(
+        id: 'em_contact_juliana_01',
+        fullName: 'Juliana Saccomani (Mãe)',
+        relationship: 'Mãe',
+        phone: '(11) 98765-4321',
+        priority: 1,
+      ),
+      const EmergencyContact(
+        id: 'em_contact_pai_01',
+        fullName: 'Pai',
+        relationship: 'Pai',
+        phone: '(11) 91234-5678',
+        priority: 2,
+      ),
+    ];
+
+    final doctors = [
+      const HealthcareProfessional(
+        id: 'doc_valente_01',
+        fullName: 'Dr. Marco Aurélio Valente',
+        specialty: HealthcareSpecialty.pediatricPulmonologist,
+        primaryPhone: '(11) 98888-7777',
+        clinicOrHospital: 'Instituto Pediátrico de Pneumologia / Sabará',
+        licenseNumber: 'CRM/SP 129.840',
+        rqeNumber: 'RQE 48.211',
+        isPrimaryAttending: true,
+        isActiveRelationship: true,
+      ),
+    ];
+
+    final conditions = [
+      const SpecialCondition(
+        id: 'cond_arthur_01',
+        name: 'Asma Grave Pediátrica',
+        category: ConditionCategory.respiratory,
+        clinicalCode: 'J45.5',
+        isConfirmed: true,
+      ),
+      const SpecialCondition(
+        id: 'cond_arthur_02',
+        name: 'Rinite Alérgica Perene',
+        category: ConditionCategory.respiratory,
+        clinicalCode: 'J30.1',
+        isConfirmed: true,
+      ),
+    ];
+
     return PatientProfile(
-      id: 'arthur_saccomani_01',
+      id: childId,
+      schemaVersion: 2,
       name: 'Arthur Saccomani',
       avatarId: 'boy_1',
       birthDate: DateTime(2021, 5, 15),
@@ -476,6 +573,11 @@ class HealthStorageService {
       susCardNumber: '898 0000 1234 5678',
       healthInsurance: 'Bradesco Saúde Top',
       insuranceCardNumber: '987654321000',
+      legalGuardians: guardians,
+      caregivers: caregivers,
+      emergencyContacts: emergencyContacts,
+      healthcareProfessionals: doctors,
+      specialConditions: conditions,
       motherName: 'Juliana Saccomani',
       motherPhone: '(11) 98765-4321',
       motherEmail: 'juliana.saccomani@email.com',
@@ -496,8 +598,9 @@ class HealthStorageService {
       continuousMedications: const ['Clenil HFA 250mcg (1 puff 12/12h com espaçador valvulado)'],
       igeLevel: 480.0,
       eosinophilsCount: 550,
-      doctorName: 'Dr. Pneumopediatra Especialista',
-      doctorPhone: '(11) 99999-8888',
+      doctorName: 'Dr. Marco Aurélio Valente',
+      doctorPhone: '(11) 98888-7777',
+      preferredHospital: 'Hospital Infantil Sabará / Samaritano',
     );
   }
 
@@ -615,5 +718,37 @@ class HealthStorageService {
       notes: 'Plano terapêutico de manutenção para Asma Grave Pediátrica. Retorno programado em 6 meses com diário e medições de Peak Flow.',
       isLmeAltoCusto: false,
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Preferência de Tema (System / Light / Dark)
+  // ---------------------------------------------------------------------------
+  Future<ThemeMode> getThemeMode() async {
+    final prefs = await _getPrefs();
+    final modeStr = prefs.getString(_keyThemeMode);
+    switch (modeStr) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      case 'system':
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    final prefs = await _getPrefs();
+    switch (mode) {
+      case ThemeMode.light:
+        await prefs.setString(_keyThemeMode, 'light');
+        break;
+      case ThemeMode.dark:
+        await prefs.setString(_keyThemeMode, 'dark');
+        break;
+      case ThemeMode.system:
+        await prefs.setString(_keyThemeMode, 'system');
+        break;
+    }
   }
 }

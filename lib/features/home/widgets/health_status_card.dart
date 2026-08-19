@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:clinical_core/clinical_core.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/design_system/design_system.dart';
 
 /// Card de Estado de Saúde Diário com Alta Clareza e Baixa Carga Cognitiva.
+/// Responde imediatamente: "Como está meu filho agora?" e "O que devo fazer?".
 class HealthStatusCard extends StatelessWidget {
   final HealthControlEntry? latestEntry;
   final ActionZoneType currentZone;
   final PatientProfile profile;
   final VoidCallback onSosPressed;
+  final VoidCallback? onOpenActionPlan;
 
   const HealthStatusCard({
     super.key,
@@ -16,41 +17,44 @@ class HealthStatusCard extends StatelessWidget {
     required this.currentZone,
     required this.profile,
     required this.onSosPressed,
+    this.onOpenActionPlan,
   });
 
   @override
   Widget build(BuildContext context) {
-    final (cardBg, borderColor, iconData, titleText, descText, tagBg, tagText) = switch (currentZone) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final (cardBg, borderColor, iconData, titleText, whyText, actionGuideText, tagColor) = switch (currentZone) {
       ActionZoneType.green => (
-          HCColors.greenLight,
-          HCColors.greenBorder,
+          isDark ? const Color(0xFF06281E) : HCColors.greenLight,
+          isDark ? const Color(0xFF0F5132) : HCColors.greenBorder,
           Icons.check_circle_outline,
           'Respiração Estável (Zona Verde)',
-          'O fluxo respiratório está normal e as atividades habituais podem seguir com as medicações de rotina.',
-          const Color(0xFFDCFCE7),
-          HCColors.greenText,
+          'Fluxo respiratório adequado e sem sintomas de crise.',
+          'Mantenha as medicações de manutenção prescritas no plano médico.',
+          HCColors.greenMain,
         ),
       ActionZoneType.yellow => (
-          HCColors.yellowLight,
-          HCColors.yellowBorder,
+          isDark ? const Color(0xFF2E1A03) : HCColors.yellowLight,
+          isDark ? const Color(0xFF78350F) : HCColors.yellowBorder,
           Icons.warning_amber_rounded,
           'Alerta: Início de Crise (Zona Amarela)',
-          'Queda no fluxo respiratório. Administre o medicamento de alívio rápido (resgate) prescrito e reavalie em 20 minutos.',
-          const Color(0xFFFEF9C3),
-          HCColors.yellowText,
+          'Queda no fluxo respiratório ou presença de sintomas.',
+          'Consulte o plano de ação médica para medicações de alívio e reavalie.',
+          HCColors.yellowMain,
         ),
       ActionZoneType.red => (
-          HCColors.redLight,
-          HCColors.redBorder,
-          Icons.dangerous_outlined,
+          isDark ? const Color(0xFF350A0A) : HCColors.redLight,
+          isDark ? const Color(0xFF991B1B) : HCColors.redBorder,
+          Icons.emergency,
           'Emergência: Crise Severa (Zona Vermelha)',
-          'Obstrução respiratória crítica. Aplique a medicação de resgate de ataque e busque atendimento médico imediato.',
-          const Color(0xFFFEE2E2),
-          HCColors.redText,
+          'Obstrução respiratória crítica.',
+          'Inicie o plano de emergência médica e busque atendimento imediatamente.',
+          HCColors.redMain,
         ),
     };
 
-    final percentage = (latestEntry != null && profile.personalBestPef > 0)
+    final percentage = (latestEntry != null && profile.personalBestPef > 0 && latestEntry!.peakFlowBest > 0)
         ? ((latestEntry!.peakFlowBest / profile.personalBestPef) * 100).toStringAsFixed(0)
         : null;
 
@@ -60,62 +64,96 @@ class HealthStatusCard extends StatelessWidget {
         color: cardBg,
         borderRadius: HCRadii.radiusLg,
         border: Border.all(color: borderColor, width: 1.2),
-        boxShadow: HCShadows.subtle,
+        boxShadow: isDark ? null : HCShadows.subtle,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Cabeçalho de Estado
           Row(
             children: [
-              Icon(iconData, color: tagText, size: 22),
+              Icon(iconData, color: tagColor, size: 22),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   titleText,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: tagText),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : HCColors.neutral900,
+                  ),
                 ),
               ),
               if (percentage != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: tagBg, borderRadius: HCRadii.radiusSm),
+                  decoration: BoxDecoration(
+                    color: isDark ? HCColors.darkSurfaceElevated : Colors.white,
+                    borderRadius: HCRadii.radiusSm,
+                    border: Border.all(color: borderColor),
+                  ),
                   child: Text(
                     '$percentage% do recorde',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tagText),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: tagColor,
+                    ),
                   ),
                 ),
             ],
           ),
           const SizedBox(height: 8),
+
+          // Texto de motivo & conduta
           Text(
-            descText,
-            style: const TextStyle(fontSize: 12, color: HCColors.neutral700, height: 1.4),
+            whyText,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: isDark ? HCColors.darkTextPrimary : HCColors.neutral800,
+            ),
           ),
+          const SizedBox(height: 2),
+          Text(
+            actionGuideText,
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? HCColors.darkTextSecondary : HCColors.neutral600,
+              height: 1.35,
+            ),
+          ),
+
+          // Badges de Métricas Fisiológicas
           if (latestEntry != null) ...[
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
-                if (latestEntry!.peakFlowBest > 0) ...[
+                if (latestEntry!.peakFlowBest > 0)
                   _buildMetricBadge(
-                    'Sopro Atual',
-                    '${latestEntry!.peakFlowBest} L/min',
-                    AppTheme.primaryTeal,
+                    context: context,
+                    label: 'Sopro Atual',
+                    value: '${latestEntry!.peakFlowBest} L/min',
+                    valueColor: tagColor,
                   ),
-                  const SizedBox(width: 8),
-                ],
                 _buildMetricBadge(
-                  'Saturação (SpO2)',
-                  '${latestEntry!.spo2}%',
-                  latestEntry!.spo2 < 92 ? HCColors.redMain : HCColors.greenMain,
+                  context: context,
+                  label: 'Saturação (SpO2)',
+                  value: '${latestEntry!.spo2}%',
+                  valueColor: latestEntry!.spo2 < 92 ? HCColors.redMain : HCColors.greenMain,
                 ),
               ],
             ),
           ],
+
+          // Ação Crítica em Zona Vermelha ou Amarela
           if (currentZone == ActionZoneType.red) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,
-              height: 44,
+              height: 48,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: HCColors.redMain,
@@ -124,8 +162,11 @@ class HealthStatusCard extends StatelessWidget {
                   elevation: 0,
                 ),
                 onPressed: onSosPressed,
-                icon: const Icon(Icons.emergency, size: 18),
-                label: const Text('Abrir Modo Crise / Ligar SAMU 192', style: TextStyle(fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.emergency, size: 20),
+                label: const Text(
+                  'Abrir Modo Crise / Ligar 192 (SAMU)',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
               ),
             ),
           ],
@@ -134,19 +175,38 @@ class HealthStatusCard extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricBadge(String label, String value, Color color) {
+  Widget _buildMetricBadge({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required Color valueColor,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? HCColors.darkSurface : Colors.white,
         borderRadius: HCRadii.radiusSm,
-        border: Border.all(color: HCColors.neutral200),
+        border: Border.all(color: isDark ? HCColors.darkBorder : HCColors.neutral200),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('$label: ', style: const TextStyle(fontSize: 11, color: HCColors.neutral500)),
-          Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? HCColors.darkTextMuted : HCColors.neutral500,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: valueColor,
+            ),
+          ),
         ],
       ),
     );

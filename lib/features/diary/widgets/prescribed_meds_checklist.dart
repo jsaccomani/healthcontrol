@@ -53,12 +53,12 @@ class PrescribedMedsChecklist extends StatelessWidget {
             final isRescue = med.category == MedicationCategory.rescueInhaled;
             final isSteroid = med.category == MedicationCategory.maintenanceInhaled;
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              decoration: BoxDecoration(
-                color: isChecked ? (isRescue ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4)) : const Color(0xFFF8FAFC),
+            return Material(
+              color: isChecked ? (isRescue ? const Color(0xFFFEF2F2) : const Color(0xFFF0FDF4)) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
+                side: BorderSide(
                   color: isChecked ? (isRescue ? const Color(0xFFFCA5A5) : const Color(0xFF86EFAC)) : const Color(0xFFE2E8F0),
                 ),
               ),

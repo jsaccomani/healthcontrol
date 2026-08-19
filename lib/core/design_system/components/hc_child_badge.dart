@@ -22,6 +22,7 @@ class HCChildContextBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final initials = profile.name.trim().isNotEmpty
         ? profile.name.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
         : 'HC';
@@ -31,21 +32,23 @@ class HCChildContextBadge extends StatelessWidget {
         onTap: onSwitchTap,
         borderRadius: HCRadii.radiusPill,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
-            color: HCColors.primary50,
+            color: isDark ? HCColors.darkSurfaceElevated : HCColors.primary50,
             borderRadius: HCRadii.radiusPill,
-            border: Border.all(color: HCColors.primary200),
+            border: Border.all(
+              color: isDark ? HCColors.darkBorder : HCColors.primary200,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               CircleAvatar(
-                radius: 9,
+                radius: 10,
                 backgroundColor: HCColors.primary500,
                 child: Text(
                   initials.isNotEmpty ? initials[0] : 'P',
-                  style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 6),
@@ -53,14 +56,18 @@ class HCChildContextBadge extends StatelessWidget {
                 child: Text(
                   profile.name,
                   style: HCTypography.labelBold.copyWith(
-                    color: HCColors.primary700,
+                    color: isDark ? HCColors.darkTextPrimary : HCColors.primary700,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (showSwitchAction && onSwitchTap != null) ...[
                 const SizedBox(width: 4),
-                const Icon(Icons.keyboard_arrow_down, size: 16, color: HCColors.primary700),
+                Icon(
+                  Icons.keyboard_arrow_down,
+                  size: 16,
+                  color: isDark ? HCColors.darkTextSecondary : HCColors.primary700,
+                ),
               ],
             ],
           ),
@@ -72,9 +79,11 @@ class HCChildContextBadge extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: HCColors.primary50,
+        color: isDark ? HCColors.darkSurfaceElevated : HCColors.primary50,
         borderRadius: HCRadii.radiusMd,
-        border: Border.all(color: HCColors.primary200),
+        border: Border.all(
+          color: isDark ? HCColors.darkBorder : HCColors.primary200,
+        ),
       ),
       child: Row(
         children: [
@@ -97,7 +106,7 @@ class HCChildContextBadge extends StatelessWidget {
                     Text(
                       'Criança Ativa:',
                       style: HCTypography.bodySmall.copyWith(
-                        color: HCColors.primary700,
+                        color: isDark ? HCColors.darkTextSecondary : HCColors.primary700,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -105,16 +114,18 @@ class HCChildContextBadge extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? HCColors.darkSurface : Colors.white,
                         borderRadius: HCRadii.radiusSm,
-                        border: Border.all(color: HCColors.primary200),
+                        border: Border.all(
+                          color: isDark ? HCColors.darkBorder : HCColors.primary200,
+                        ),
                       ),
                       child: Text(
                         profile.ageDisplay,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: HCColors.primary700,
+                          color: isDark ? HCColors.darkTextPrimary : HCColors.primary700,
                         ),
                       ),
                     ),
@@ -124,7 +135,7 @@ class HCChildContextBadge extends StatelessWidget {
                 Text(
                   profile.name,
                   style: HCTypography.subHeading.copyWith(
-                    color: HCColors.neutral900,
+                    color: isDark ? HCColors.darkTextPrimary : HCColors.neutral900,
                     fontWeight: FontWeight.w800,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -137,18 +148,20 @@ class HCChildContextBadge extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onSwitchTap,
               style: OutlinedButton.styleFrom(
-                backgroundColor: Colors.white,
-                side: const BorderSide(color: HCColors.primary300),
+                backgroundColor: isDark ? HCColors.darkSurface : Colors.white,
+                side: BorderSide(
+                  color: isDark ? HCColors.darkBorder : HCColors.primary300,
+                ),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusSm),
               ),
-              icon: const Icon(Icons.swap_horiz, size: 14, color: HCColors.primary600),
+              icon: const Icon(Icons.swap_horiz, size: 14, color: HCColors.primary500),
               label: Text(
                 'Trocar',
                 style: HCTypography.bodySmall.copyWith(
-                  color: HCColors.primary700,
+                  color: isDark ? HCColors.darkTextPrimary : HCColors.primary700,
                   fontWeight: FontWeight.bold,
                 ),
               ),

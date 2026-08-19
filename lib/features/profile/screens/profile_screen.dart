@@ -25,7 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   // Debounce para Salvamento Automático do Histórico
   Timer? _autoSaveDebounce;
-  String _autoSaveStatus = '🟢 Salvo automaticamente';
+  String _autoSaveStatus = 'Salvo automaticamente';
 
   // 1. Controladores - Criança & Nascimento
   late TextEditingController _nameCtrl;
@@ -222,12 +222,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   void _onFamilyHistoryChanged(String text) {
-    setState(() => _autoSaveStatus = '⏳ Salvando alterações...');
+    setState(() => _autoSaveStatus = 'Salvando alterações...');
     _autoSaveDebounce?.cancel();
     _autoSaveDebounce = Timer(const Duration(milliseconds: 900), () async {
       await _silentSaveProfile();
       if (mounted) {
-        setState(() => _autoSaveStatus = '🟢 Salvo automaticamente às ${DateFormat('HH:mm:ss').format(DateTime.now())}');
+        setState(() => _autoSaveStatus = 'Salvo às ${DateFormat('HH:mm:ss').format(DateTime.now())}');
       }
     });
   }
@@ -311,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     await _loadAllData();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ficha completa da criança salva com sucesso! ✅'), backgroundColor: Color(0xFF059669)),
+      const SnackBar(content: Text('Ficha completa da criança salva com sucesso!'), backgroundColor: HCColors.greenMain),
     );
   }
 
@@ -382,7 +382,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             Tab(icon: Icon(Icons.family_restroom, size: 18), text: '2. Pais'),
             Tab(icon: Icon(Icons.medication, size: 18), text: '3. Remédios'),
             Tab(icon: Icon(Icons.local_hospital, size: 18), text: '4. Triagem Médica'),
-            Tab(icon: Icon(Icons.menu_book, size: 18), text: '5. História da Família ✍️'),
+            Tab(icon: Icon(Icons.menu_book, size: 18), text: '5. História da Família'),
           ],
         ),
       ),
@@ -438,6 +438,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final double weight = double.tryParse(_weightCtrl.text) ?? _activeProfile!.weightKg;
     final double height = double.tryParse(_heightCtrl.text) ?? _activeProfile!.heightCm;
     final bmi = (height > 0) ? weight / ((height / 100) * (height / 100)) : 0.0;
+    final initials = _activeProfile!.name.trim().isNotEmpty
+        ? _activeProfile!.name.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+        : 'HC';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -448,9 +451,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             child: Column(
               children: [
                 CircleAvatar(
-                  radius: 38,
-                  backgroundColor: AppTheme.primaryLight,
-                  child: Text(_gender == 'Feminino' ? '👧' : '👦', style: const TextStyle(fontSize: 38)),
+                  radius: 36,
+                  backgroundColor: HCColors.primary500,
+                  child: Text(
+                    initials,
+                    style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -468,7 +474,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const SizedBox(height: 14),
 
           _buildCardSection(
-            title: '👦 1. Dados Pessoais da Criança',
+            title: '1. Dados Pessoais da Criança',
             children: [
               TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nome Completo da Criança')),
               const SizedBox(height: 10),
@@ -537,7 +543,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const SizedBox(height: 12),
 
           _buildCardSection(
-            title: '🍼 2. Histórico de Nascimento & Perinatal',
+            title: '2. Histórico de Nascimento & Perinatal',
             children: [
               Row(
                 children: [
@@ -572,7 +578,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const SizedBox(height: 12),
 
           _buildCardSection(
-            title: '🏥 3. Cartão SUS & Convênio Médico',
+            title: '3. Cartão SUS & Convênio Médico',
             children: [
               TextField(controller: _susCtrl, decoration: const InputDecoration(labelText: 'Nº do Cartão Nacional de Saúde (SUS)', hintText: '898 0000 1234 5678')),
               const SizedBox(height: 10),
@@ -598,7 +604,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       child: Column(
         children: [
           _buildCardSection(
-            title: '👩 Dados da Mãe / Responsável',
+            title: 'Dados da Mãe / Responsável',
             children: [
               TextField(controller: _motherNameCtrl, decoration: const InputDecoration(labelText: 'Nome da Mãe', hintText: 'Juliana Saccomani')),
               const SizedBox(height: 10),
@@ -607,7 +613,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
           const SizedBox(height: 12),
           _buildCardSection(
-            title: '👨 Dados do Pai / 2º Responsável',
+            title: 'Dados do Pai / 2º Responsável',
             children: [
               TextField(controller: _fatherNameCtrl, decoration: const InputDecoration(labelText: 'Nome do Pai', hintText: 'Pai')),
               const SizedBox(height: 10),
@@ -616,7 +622,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
           const SizedBox(height: 12),
           _buildCardSection(
-            title: '📍 Endereço & Contato de Emergência Imediata',
+            title: 'Endereço & Contato de Emergência Imediata',
             children: [
               TextField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'Cidade / Endereço Completo', hintText: 'São Paulo - SP')),
               const SizedBox(height: 10),
@@ -716,7 +722,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       child: Column(
         children: [
           _buildCardSection(
-            title: '🚨 1. Gravidade das Crises & Histórico de Pronto-Socorro',
+            title: '1. Gravidade das Crises & Histórico de Pronto-Socorro',
             children: [
               Row(
                 children: [
@@ -758,7 +764,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const SizedBox(height: 12),
 
           _buildCardSection(
-            title: '🌙 2. Sintomas Noturnos & Limitação nas Brincadeiras',
+            title: '2. Sintomas Noturnos & Limitação nas Brincadeiras',
             children: [
               TextField(
                 controller: _nightAwakeningsCtrl,
@@ -785,7 +791,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const SizedBox(height: 12),
 
           _buildCardSection(
-            title: '⚡ 3. O que costuma desencadear as crises dele (Gatilhos):',
+            title: '3. O que costuma desencadear as crises dele (Gatilhos):',
             children: [
               _buildMultiTagSelector('Gatilhos Principais:', _crisisTriggers, [
                 'Resfriados / Gripes', 'Mudança brusca de temperatura', 'Tempo seco e poeira',
@@ -797,7 +803,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const SizedBox(height: 12),
 
           _buildCardSection(
-            title: '💉 4. Vacinação & Ambiente da Casa',
+            title: '4. Vacinação & Ambiente da Casa',
             children: [
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -833,7 +839,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const SizedBox(height: 12),
 
           _buildCardSection(
-            title: '👨‍⚕️ 5. Médico Assistente & Hospital de Emergência',
+            title: '5. Médico Assistente & Hospital de Emergência',
             children: [
               TextField(controller: _doctorNameCtrl, decoration: const InputDecoration(labelText: 'Nome do Pediatra / Pneumopediatra', hintText: 'Dr. Marco Aurélio Valente')),
               const SizedBox(height: 10),
@@ -870,7 +876,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   children: [
                     const Row(
                       children: [
-                        Text('✍️', style: TextStyle(fontSize: 18)),
+                        Icon(Icons.edit_note, size: 20, color: Color(0xFF166534)),
                         SizedBox(width: 6),
                         Text('História do Filho Contada pelos Pais', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF166534))),
                       ],
@@ -931,21 +937,24 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildCardSection({required String title, required List<Widget> children}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-          const Divider(height: 14, color: Color(0xFFF1F5F9)),
-          ...children,
-        ],
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+            const Divider(height: 14, color: Color(0xFFF1F5F9)),
+            ...children,
+          ],
+        ),
       ),
     );
   }

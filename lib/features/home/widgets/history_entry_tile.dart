@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:clinical_core/clinical_core.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/design_system/design_system.dart';
 
 /// Card que renderiza cada anotação de saúde na Linha do Tempo da Home.
 class HistoryEntryTile extends StatelessWidget {
@@ -16,18 +16,22 @@ class HistoryEntryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final (zoneColor, zoneName) = switch (entry.peakFlowZone) {
-      ActionZoneType.green => (const Color(0xFF059669), 'Verde (Normal)'),
-      ActionZoneType.yellow => (const Color(0xFFD97706), 'Amarela (Atenção)'),
-      ActionZoneType.red => (const Color(0xFFDC2626), 'Vermelha (Perigo)'),
+      ActionZoneType.green => (HCColors.greenMain, 'Verde (Normal)'),
+      ActionZoneType.yellow => (HCColors.yellowMain, 'Amarela (Atenção)'),
+      ActionZoneType.red => (HCColors.redMain, 'Vermelha (Perigo)'),
     };
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: isDark ? HCColors.darkSurface : HCColors.surfaceWhite,
+        borderRadius: HCRadii.radiusLg,
+        border: Border.all(
+          color: isDark ? HCColors.darkBorder : HCColors.neutral200,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,21 +46,32 @@ class HistoryEntryTile extends StatelessWidget {
                     height: 8,
                     decoration: BoxDecoration(color: zoneColor, shape: BoxShape.circle),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Text(
                     DateFormat('dd/MM • HH:mm').format(entry.timestamp),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A)),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: isDark ? HCColors.darkTextPrimary : HCColors.neutral900,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryLight,
+                      color: isDark ? HCColors.darkSurfaceElevated : HCColors.primary50,
                       borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: isDark ? HCColors.darkBorder : HCColors.primary200,
+                      ),
                     ),
                     child: Text(
                       entry.authorName.isNotEmpty ? entry.authorName : 'Cuidador',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: HCColors.primary500,
+                      ),
                     ),
                   ),
                 ],
@@ -68,9 +83,16 @@ class HistoryEntryTile extends StatelessWidget {
                   padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   child: Row(
                     children: [
-                      Icon(Icons.verified_outlined, size: 13, color: AppTheme.primaryTeal),
+                      Icon(Icons.verified_outlined, size: 13, color: HCColors.primary500),
                       SizedBox(width: 3),
-                      Text('Hash SHA-256', style: TextStyle(fontSize: 10, color: AppTheme.primaryTeal, fontWeight: FontWeight.bold)),
+                      Text(
+                        'Hash SHA-256',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: HCColors.primary500,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -78,29 +100,54 @@ class HistoryEntryTile extends StatelessWidget {
             ],
           ),
 
-          const Divider(height: 12, color: Color(0xFFF1F5F9)),
+          Divider(height: 14, color: isDark ? HCColors.darkBorder : HCColors.neutral100),
 
           Wrap(
             spacing: 6,
             runSpacing: 4,
             children: [
               if (entry.peakFlowBest > 0)
-                _buildChip('Sopro: ${entry.peakFlowBest} L/min ($zoneName)', const Color(0xFFF0FDF4), const Color(0xFF166534)),
-              _buildChip('SpO2: ${entry.spo2}%', const Color(0xFFF0FDFA), const Color(0xFF0F766E)),
+                _buildChip(
+                  label: 'Sopro: ${entry.peakFlowBest} L/min ($zoneName)',
+                  bg: isDark ? const Color(0xFF06281E) : HCColors.greenLight,
+                  border: isDark ? const Color(0xFF0F5132) : HCColors.greenBorder,
+                  text: isDark ? HCColors.greenBorder : HCColors.greenText,
+                ),
+              _buildChip(
+                label: 'SpO2: ${entry.spo2}%',
+                bg: isDark ? const Color(0xFF06281E) : HCColors.primary50,
+                border: isDark ? const Color(0xFF0F5132) : HCColors.primary200,
+                text: isDark ? HCColors.primary300 : HCColors.primary700,
+              ),
               if (entry.medications.isNotEmpty)
-                _buildChip('${entry.medications.length} medicação(ões)', const Color(0xFFEFF6FF), const Color(0xFF1D4ED8)),
+                _buildChip(
+                  label: '${entry.medications.length} medicação(ões)',
+                  bg: isDark ? const Color(0xFF172554) : HCColors.blueLight,
+                  border: isDark ? const Color(0xFF1E40AF) : HCColors.blueBorder,
+                  text: isDark ? HCColors.blueBorder : HCColors.blueText,
+                ),
               if (entry.physiotherapy != null)
-                _buildChip('Fisio: ${entry.physiotherapy!.deviceName}', const Color(0xFFFAF5FF), const Color(0xFF7E22CE)),
+                _buildChip(
+                  label: 'Fisio: ${entry.physiotherapy!.deviceName}',
+                  bg: isDark ? const Color(0xFF2E1065) : HCColors.purpleLight,
+                  border: isDark ? const Color(0xFF581C87) : HCColors.purpleBorder,
+                  text: isDark ? HCColors.purpleBorder : HCColors.purpleText,
+                ),
               if (entry.mouthRinseCompleted)
-                _buildChip('Bochecho realizado', const Color(0xFFECFDF5), const Color(0xFF047857)),
+                _buildChip(
+                  label: 'Bochecho realizado',
+                  bg: isDark ? const Color(0xFF06281E) : HCColors.greenLight,
+                  border: isDark ? const Color(0xFF0F5132) : HCColors.greenBorder,
+                  text: isDark ? HCColors.greenBorder : HCColors.greenText,
+                ),
             ],
           ),
 
           if (entry.symptoms.isNotEmpty && !entry.symptoms.contains('Sem sintomas aparentes')) ...[
             const SizedBox(height: 6),
             Text(
-              'Sintomas notados: ${entry.symptoms.join(', ')}',
-              style: const TextStyle(fontSize: 11, color: Color(0xFFDC2626), fontWeight: FontWeight.w500),
+              'Sintomas: ${entry.symptoms.join(', ')}',
+              style: const TextStyle(fontSize: 11, color: HCColors.redMain, fontWeight: FontWeight.w500),
             ),
           ],
 
@@ -108,7 +155,11 @@ class HistoryEntryTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Nota: "${entry.notes}"',
-              style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Color(0xFF64748B)),
+              style: TextStyle(
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+                color: isDark ? HCColors.darkTextMuted : HCColors.neutral500,
+              ),
             ),
           ],
         ],
@@ -116,11 +167,23 @@ class HistoryEntryTile extends StatelessWidget {
     );
   }
 
-  Widget _buildChip(String label, Color bg, Color text) {
+  Widget _buildChip({
+    required String label,
+    required Color bg,
+    required Color border,
+    required Color text,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: text)),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: border),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: text),
+      ),
     );
   }
 }
