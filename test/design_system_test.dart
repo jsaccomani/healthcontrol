@@ -40,7 +40,8 @@ void main() {
         ),
       );
 
-      expect(find.text('🚨 SOS Emergência'), findsOneWidget);
+      expect(find.text('SOS Emergência'), findsOneWidget);
+      expect(find.byIcon(Icons.emergency), findsOneWidget);
       await tester.tap(find.byType(HCEmergencyButton));
       expect(tapped, isTrue);
     });

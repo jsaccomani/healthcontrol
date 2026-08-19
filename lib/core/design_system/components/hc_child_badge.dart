@@ -22,14 +22,16 @@ class HCChildContextBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatarEmoji = profile.gender == 'Feminino' ? '👧' : '👦';
+    final initials = profile.name.trim().isNotEmpty
+        ? profile.name.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+        : 'HC';
 
     if (isCompact) {
       return InkWell(
         onTap: onSwitchTap,
         borderRadius: HCRadii.radiusPill,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             color: HCColors.primary50,
             borderRadius: HCRadii.radiusPill,
@@ -38,7 +40,14 @@ class HCChildContextBadge extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(avatarEmoji, style: const TextStyle(fontSize: 14)),
+              CircleAvatar(
+                radius: 9,
+                backgroundColor: HCColors.primary500,
+                child: Text(
+                  initials.isNotEmpty ? initials[0] : 'P',
+                  style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
@@ -51,7 +60,7 @@ class HCChildContextBadge extends StatelessWidget {
               ),
               if (showSwitchAction && onSwitchTap != null) ...[
                 const SizedBox(width: 4),
-                const Icon(Icons.arrow_drop_down, size: 16, color: HCColors.primary700),
+                const Icon(Icons.keyboard_arrow_down, size: 16, color: HCColors.primary700),
               ],
             ],
           ),
@@ -71,8 +80,11 @@ class HCChildContextBadge extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: Colors.white,
-            child: Text(avatarEmoji, style: const TextStyle(fontSize: 18)),
+            backgroundColor: HCColors.primary500,
+            child: Text(
+              initials,
+              style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -83,7 +95,7 @@ class HCChildContextBadge extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'Paciente Selecionado:',
+                      'Criança Ativa:',
                       style: HCTypography.bodySmall.copyWith(
                         color: HCColors.primary700,
                         fontWeight: FontWeight.w600,

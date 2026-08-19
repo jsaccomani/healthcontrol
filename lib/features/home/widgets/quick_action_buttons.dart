@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/design_system/design_system.dart';
 
-/// Botões de Ações Rápidas da Home: SOS, Atualizar Receita, Novo Lançamento.
+/// Botões de Ações Rápidas da Home: Registrar Ação, Modo Crise / SOS e Plano Médico.
 class QuickActionButtons extends StatelessWidget {
   final VoidCallback onNewEntry;
   final VoidCallback onUpdatePrescription;
@@ -21,51 +22,64 @@ class QuickActionButtons extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryTeal,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
-                ),
-                onPressed: onNewEntry,
-                icon: const Icon(Icons.add_circle_outline, size: 18),
-                label: const Text(
-                  'Anotar Agora 📝',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              flex: 3,
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
+                    elevation: 0,
+                  ),
+                  onPressed: onNewEntry,
+                  icon: const Icon(Icons.add_circle, size: 20),
+                  label: const Text(
+                    'Registrar Ação',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFEE2E2),
-                foregroundColor: const Color(0xFFDC2626),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: HCColors.redLight,
+                    foregroundColor: HCColors.redMain,
+                    side: const BorderSide(color: HCColors.redBorder, width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
+                    elevation: 0,
+                  ),
+                  onPressed: onSosPressed,
+                  icon: const Icon(Icons.emergency, size: 20, color: HCColors.redMain),
+                  label: const Text(
+                    'Modo Crise',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
               ),
-              onPressed: onSosPressed,
-              child: const Text('🚨 SOS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,
+          height: 42,
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF0F766E),
-              side: const BorderSide(color: Color(0xFF99F6E4)),
-              backgroundColor: const Color(0xFFF0FDFA),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              foregroundColor: HCColors.neutral700,
+              side: const BorderSide(color: HCColors.neutral200),
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
             ),
             onPressed: onUpdatePrescription,
-            icon: const Icon(Icons.document_scanner_outlined, size: 16, color: Color(0xFF0F766E)),
+            icon: const Icon(Icons.description_outlined, size: 16, color: HCColors.neutral600),
             label: const Text(
-              'Atualizar receita médica da criança 📸',
+              'Ver Plano de Ação & Receitas Médicas',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
             ),
           ),

@@ -3,7 +3,6 @@ import 'package:clinical_core/clinical_core.dart';
 import '../../../core/storage/health_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/design_system/design_system.dart';
-import '../../diary/screens/new_entry_screen.dart';
 import '../../emergency/screens/emergency_screen.dart';
 import '../../cact/screens/cact_quiz_screen.dart';
 import '../../physio/screens/physio_screen.dart';
@@ -13,6 +12,7 @@ import '../../prescription/screens/prescription_scan_screen.dart';
 import '../widgets/home_header_card.dart';
 import '../widgets/health_status_card.dart';
 import '../widgets/quick_action_buttons.dart';
+import '../widgets/quick_actions_modal_sheet.dart';
 import '../widgets/history_entry_tile.dart';
 import '../widgets/pro_connect_banner.dart';
 
@@ -214,14 +214,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // 3. Ações Rápidas
               QuickActionButtons(
-                onNewEntry: () async {
-                  final created = await Navigator.push<bool>(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => NewEntryScreen(patientId: _profile!.id),
-                    ),
+                onNewEntry: () {
+                  HCQuickActionsModalSheet.show(
+                    context: context,
+                    profile: _profile!,
+                    onEntrySaved: _loadData,
                   );
-                  if (created == true) _loadData();
                 },
                 onUpdatePrescription: () async {
                   await Navigator.push(
@@ -283,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       SizedBox(height: 8),
                       Text('Nenhuma anotação gravada ainda.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF334155))),
                       SizedBox(height: 4),
-                      Text('Clique em "Anotar Agora 📝" para registrar o primeiro sopro ou remédio do dia.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                      Text('Clique em "Registrar Ação" para registrar o sopro, bombinha ou sintoma do dia.', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                     ],
                   ),
                 )

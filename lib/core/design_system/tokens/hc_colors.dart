@@ -65,9 +65,18 @@ class HCColors {
   static const Color purpleText = Color(0xFF6B21A8);
 
   // ---------------------------------------------------------------------------
-  // 4. Superfícies
+  // 4. Superfícies & Temas (Light & Dark)
   // ---------------------------------------------------------------------------
   static const Color surfaceWhite = Colors.white;
   static const Color background = neutral50;
   static const Color overlayDark = Color(0x660F172A);
+
+  // Superfícies do Modo Escuro (Nocturnal Healthcare)
+  static const Color darkBackground = Color(0xFF090D16);
+  static const Color darkSurface = Color(0xFF131B2E);
+  static const Color darkSurfaceElevated = Color(0xFF1E293B);
+  static const Color darkBorder = Color(0xFF23304B);
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFF94A3B8);
+  static const Color darkTextMuted = Color(0xFF64748B);
 }

@@ -106,35 +106,35 @@ class _CactQuizScreenState extends State<CactQuizScreen> {
 
             // Parte 1: Para a Criança Responder
             const Text(
-              '👦 Parte 1: Para a Criança Responder (com carinhas)',
+              'Parte 1: Para a Criança Responder (Percepção do Paciente)',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
             ),
             const SizedBox(height: 8),
 
             _buildChildQuestion(
-              title: '1. Como está sua asma hoje?',
-              options: ['Muito ruim 😭 (0)', 'Ruim 🙁 (1)', 'Boa 🙂 (2)', 'Muito boa! 😄 (3)'],
+              title: '1. Como você sente sua asma hoje?',
+              options: ['Muito ruim (0 pts)', 'Ruim (1 pt)', 'Boa (2 pts)', 'Muito boa (3 pts)'],
               currentValue: _q1,
               onChanged: (v) => setState(() => _q1 = v),
             ),
 
             _buildChildQuestion(
               title: '2. Sua asma atrapalha você de correr ou brincar?',
-              options: ['Muito! 😫 (0)', 'Às vezes 😕 (1)', 'Pouco 🙂 (2)', 'Nada! 🏃‍♂️ (3)'],
+              options: ['Atrapalha muito (0 pts)', 'Às vezes atrapalha (1 pt)', 'Atrapalha pouco (2 pts)', 'Não atrapalha nada (3 pts)'],
               currentValue: _q2,
               onChanged: (v) => setState(() => _q2 = v),
             ),
 
             _buildChildQuestion(
               title: '3. Você tosse por causa da sua asma?',
-              options: ['Muito 😷 (0)', 'Às vezes 😐 (1)', 'Pouco 🙂 (2)', 'Nunca! 😊 (3)'],
+              options: ['Tosso muito (0 pts)', 'Tosso às vezes (1 pt)', 'Tosso pouco (2 pts)', 'Não tosso nunca (3 pts)'],
               currentValue: _q3,
               onChanged: (v) => setState(() => _q3 = v),
             ),
 
             _buildChildQuestion(
               title: '4. Você acorda à noite tossindo ou chiando?',
-              options: ['Muitas vezes 😴❌ (0)', 'Algumas noites 🥱 (1)', 'Raramente 🙂 (2)', 'Nunca! 🛌 (3)'],
+              options: ['Muitas noites (0 pts)', 'Algumas noites (1 pt)', 'Raramente (2 pts)', 'Nunca acordo (3 pts)'],
               currentValue: _q4,
               onChanged: (v) => setState(() => _q4 = v),
             ),
@@ -143,28 +143,28 @@ class _CactQuizScreenState extends State<CactQuizScreen> {
 
             // Parte 2: Para os Pais Responderem
             const Text(
-              '👨‍👩‍👧 Parte 2: Para os Pais Responderem (Últimas 4 semanas)',
+              'Parte 2: Para os Pais Responderem (Últimas 4 semanas)',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
             ),
             const SizedBox(height: 8),
 
             _buildParentQuestion(
-              title: '5. Nos últimos 4 dias, em quantos dias ele(a) teve sintomas durante o dia?',
-              options: ['Todos os dias (0)', '3 a 4 dias (1)', '2 dias (2)', '1 dia (3)', 'Nenhum dia (4)'],
+              title: '5. Nos últimos 28 dias, em quantos dias a criança teve sintomas de asma durante o dia?',
+              options: ['Todos os dias (0)', '3 a 4 dias/sem (1)', '1 a 2 dias/sem (2)', 'Menos de 1 dia/sem (3)', 'Nenhum dia (4)'],
               currentValue: _q5,
               onChanged: (v) => setState(() => _q5 = v),
             ),
 
             _buildParentQuestion(
-              title: '6. Quantos dias ele(a) chiou o peito durante o dia?',
-              options: ['Todos os dias (0)', '3 a 4 dias (1)', '2 dias (2)', '1 dia (3)', 'Nenhum dia (4)'],
+              title: '6. Quantos dias a criança chiou o peito durante o dia?',
+              options: ['Todos os dias (0)', '3 a 4 dias/sem (1)', '1 a 2 dias/sem (2)', 'Menos de 1 dia/sem (3)', 'Nenhum dia (4)'],
               currentValue: _q6,
               onChanged: (v) => setState(() => _q6 = v),
             ),
 
             _buildParentQuestion(
-              title: '7. Quantos dias ele(a) acordou à noite com tosse/chiado?',
-              options: ['Todos os dias (0)', '3 a 4 dias (1)', '2 dias (2)', '1 dia (3)', 'Nenhum dia (4)'],
+              title: '7. Quantos dias a criança acordou durante a noite por causa da asma?',
+              options: ['Todos os dias (0)', '3 a 4 dias/sem (1)', '1 a 2 dias/sem (2)', 'Menos de 1 dia/sem (3)', 'Nenhum dia (4)'],
               currentValue: _q7,
               onChanged: (v) => setState(() => _q7 = v),
             ),

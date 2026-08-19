@@ -51,7 +51,7 @@ class PeakFlowInputCard extends StatelessWidget {
             children: [
               const Row(
                 children: [
-                  Text('🫁', style: TextStyle(fontSize: 18)),
+                  Icon(Icons.air, color: HCColors.blueMain, size: 20),
                   SizedBox(width: HCSpacing.xs),
                   Text('Sopro da Criança (Peak Flow)', style: HCTypography.subHeading),
                 ],

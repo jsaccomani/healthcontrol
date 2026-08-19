@@ -111,14 +111,14 @@ class HCEmergencyButton extends StatelessWidget {
 
   const HCEmergencyButton({
     super.key,
-    this.label = '🚨 SOS Emergência',
+    this.label = 'SOS Emergência',
     required this.onPressed,
     this.fullWidth = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final button = ElevatedButton(
+    final button = ElevatedButton.icon(
       style: ElevatedButton.styleFrom(
         backgroundColor: HCColors.redLight,
         foregroundColor: HCColors.redMain,
@@ -128,7 +128,8 @@ class HCEmergencyButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       onPressed: onPressed,
-      child: Text(
+      icon: const Icon(Icons.emergency, size: 18, color: HCColors.redMain),
+      label: Text(
         label,
         style: HCTypography.button.copyWith(color: HCColors.redMain),
       ),

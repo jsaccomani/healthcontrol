@@ -45,7 +45,7 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen> {
 
     final samples = [
       {
-        'title': '📋 Receita Pediátrica Padrão (Manutenção + Resgate)',
+        'title': 'Receita Pediátrica Padrão (Manutenção + Resgate)',
         'text': '''INSTITUTO PEDIÁTRICO DE PNEUMOLOGIA
 Dr. Marco Aurélio Valente - CRM 129.840/SP
 Data: 18/08/2026
@@ -68,7 +68,7 @@ USO ORAL:
 Validade: 6 meses.''',
       },
       {
-        'title': '🚨 Receita de Exacerbação / Crise Aguda',
+        'title': 'Receita de Exacerbação / Crise Aguda',
         'text': '''HOSPITAL INFANTIL PRONTO-SOCORRO
 Dra. Renata Silveira - CRM 165.430/SP
 Data: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}

@@ -103,7 +103,9 @@ class HCChildSelectorSheet extends StatelessWidget {
                 itemBuilder: (ctx, idx) {
                   final p = profiles[idx];
                   final isSelected = p.id == selectedProfileId;
-                  final emoji = p.gender == 'Feminino' ? '👧' : '👦';
+                  final initials = p.name.trim().isNotEmpty
+                      ? p.name.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+                      : 'HC';
 
                   return Material(
                     color: isSelected ? HCColors.primary50 : Colors.white,
@@ -123,9 +125,16 @@ class HCChildSelectorSheet extends StatelessWidget {
                         child: Row(
                           children: [
                             CircleAvatar(
-                              radius: 22,
-                              backgroundColor: isSelected ? Colors.white : HCColors.neutral100,
-                              child: Text(emoji, style: const TextStyle(fontSize: 22)),
+                              radius: 20,
+                              backgroundColor: isSelected ? HCColors.primary500 : HCColors.neutral200,
+                              child: Text(
+                                initials,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? Colors.white : HCColors.neutral700,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(

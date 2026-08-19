@@ -175,8 +175,8 @@ class _HCAddChildDialogState extends State<HCAddChildDialog> {
                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'Masculino', child: Text('👦 Menino')),
-                          DropdownMenuItem(value: 'Feminino', child: Text('👧 Menina')),
+                          DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
+                          DropdownMenuItem(value: 'Feminino', child: Text('Feminino')),
                         ],
                         onChanged: (v) {
                           if (v != null) setState(() => _gender = v);

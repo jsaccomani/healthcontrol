@@ -33,10 +33,10 @@ class PrescribedMedsChecklist extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Text('💊', style: TextStyle(fontSize: 16)),
+              Icon(Icons.medication_outlined, color: AppTheme.primaryTeal, size: 18),
               SizedBox(width: 6),
               Text(
-                '1. Remédios Prescritos pelo Médico da Criança',
+                '1. Medicações Prescritas pelo Médico',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A)),
               ),
             ],

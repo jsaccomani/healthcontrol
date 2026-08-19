@@ -250,8 +250,8 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Anotação de saúde gravada com sucesso! ✅'),
-        backgroundColor: Color(0xFF059669),
+        content: Text('Anotação de saúde registrada com sucesso!'),
+        backgroundColor: HCColors.greenMain,
       ),
     );
     Navigator.pop(context, true);
@@ -379,12 +379,12 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryTeal,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
                   elevation: 0,
                 ),
                 onPressed: _saveEntry,
-                icon: const Icon(Icons.save_outlined, size: 20),
-                label: const Text('Gravar Anotação de Saúde 💾', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                icon: const Icon(Icons.check, size: 20),
+                label: const Text('Salvar Anotação de Saúde', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               ),
             ),
 

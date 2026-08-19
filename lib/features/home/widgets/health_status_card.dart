@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:clinical_core/clinical_core.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/design_system/design_system.dart';
 
-/// Card de Estado de Saúde Diário (Zona Verde, Amarela ou Vermelha) e SpO2.
+/// Card de Estado de Saúde Diário com Alta Clareza e Baixa Carga Cognitiva.
 class HealthStatusCard extends StatelessWidget {
   final HealthControlEntry? latestEntry;
   final ActionZoneType currentZone;
@@ -21,31 +22,31 @@ class HealthStatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final (cardBg, borderColor, iconData, titleText, descText, tagBg, tagText) = switch (currentZone) {
       ActionZoneType.green => (
-          const Color(0xFFF0FDF4),
-          const Color(0xFFBBF7D0),
+          HCColors.greenLight,
+          HCColors.greenBorder,
           Icons.check_circle_outline,
           'Respiração Estável (Zona Verde)',
-          'Tudo calmo hoje! O fluxo respiratório está ótimo e as atividades podem seguir normalmente.',
+          'O fluxo respiratório está normal e as atividades habituais podem seguir com as medicações de rotina.',
           const Color(0xFFDCFCE7),
-          const Color(0xFF166534),
+          HCColors.greenText,
         ),
       ActionZoneType.yellow => (
-          const Color(0xFFFEFCE8),
-          const Color(0xFFFEF08A),
+          HCColors.yellowLight,
+          HCColors.yellowBorder,
           Icons.warning_amber_rounded,
-          'Atenção: Início de Crise (Zona Amarela)',
-          'Houve queda no sopro respiratório. Use o remédio de alívio rápido (resgate) prescrito e reavalie em 20 minutos.',
+          'Alerta: Início de Crise (Zona Amarela)',
+          'Queda no fluxo respiratório. Administre o medicamento de alívio rápido (resgate) prescrito e reavalie em 20 minutos.',
           const Color(0xFFFEF9C3),
-          const Color(0xFF854D0E),
+          HCColors.yellowText,
         ),
       ActionZoneType.red => (
-          const Color(0xFFFEF2F2),
-          const Color(0xFFFECACA),
+          HCColors.redLight,
+          HCColors.redBorder,
           Icons.dangerous_outlined,
-          'Emergência: Falta de Ar Severa (Zona Vermelha)',
-          'Queda perigosa no sopro respiratório! Aplique o resgate imediato e leve ao pronto-socorro.',
+          'Emergência: Crise Severa (Zona Vermelha)',
+          'Obstrução respiratória crítica. Aplique a medicação de resgate de ataque e busque atendimento médico imediato.',
           const Color(0xFFFEE2E2),
-          const Color(0xFF991B1B),
+          HCColors.redText,
         ),
     };
 
@@ -57,8 +58,9 @@ class HealthStatusCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: HCRadii.radiusLg,
         border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: HCShadows.subtle,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,15 +72,15 @@ class HealthStatusCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   titleText,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: tagText),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: tagText),
                 ),
               ),
               if (percentage != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: tagBg, borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: tagBg, borderRadius: HCRadii.radiusSm),
                   child: Text(
-                    '$percentage% do melhor',
+                    '$percentage% do recorde',
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: tagText),
                   ),
                 ),
@@ -87,10 +89,10 @@ class HealthStatusCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             descText,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF334155), height: 1.35),
+            style: const TextStyle(fontSize: 12, color: HCColors.neutral700, height: 1.4),
           ),
           if (latestEntry != null) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Row(
               children: [
                 if (latestEntry!.peakFlowBest > 0) ...[
@@ -102,9 +104,9 @@ class HealthStatusCard extends StatelessWidget {
                   const SizedBox(width: 8),
                 ],
                 _buildMetricBadge(
-                  'Oxigênio (SpO2)',
+                  'Saturação (SpO2)',
                   '${latestEntry!.spo2}%',
-                  latestEntry!.spo2 < 92 ? const Color(0xFFEF4444) : const Color(0xFF059669),
+                  latestEntry!.spo2 < 92 ? HCColors.redMain : HCColors.greenMain,
                 ),
               ],
             ),
@@ -113,16 +115,17 @@ class HealthStatusCard extends StatelessWidget {
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
+              height: 44,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFDC2626),
+                  backgroundColor: HCColors.redMain,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
+                  elevation: 0,
                 ),
                 onPressed: onSosPressed,
                 icon: const Icon(Icons.emergency, size: 18),
-                label: const Text('Abrir SOS e Ligar 192 (SAMU)', style: TextStyle(fontWeight: FontWeight.bold)),
+                label: const Text('Abrir Modo Crise / Ligar SAMU 192', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -133,17 +136,17 @@ class HealthStatusCard extends StatelessWidget {
 
   Widget _buildMetricBadge(String label, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        borderRadius: HCRadii.radiusSm,
+        border: Border.all(color: HCColors.neutral200),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('$label: ', style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
-          Text(value, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+          Text('$label: ', style: const TextStyle(fontSize: 11, color: HCColors.neutral500)),
+          Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
     );

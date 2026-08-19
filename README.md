@@ -3,7 +3,7 @@
 > **Plataforma Modular de Copiloto de Saúde Digital, Prontuário Pediátrico e Reabilitação Respiratória Offline-First**
 
 O **Health Control: Asma** é o primeiro módulo da plataforma **Health Control**, voltado para o monitoramento contínuo, prevenção de crises, profilaxia e reabilitação respiratória de pacientes pediátricos asmáticos (com foco na faixa de 4 a 11 anos).
-
+O Health Control deve reduzir a carga mental de cuidar de uma criança com asma. A informação certa precisa estar fácil de encontrar, o registro certo precisa ser fácil de fazer e decisões inseguras precisam ser difíceis de tomar.
 A plataforma foi concebida de forma modular e expansível para futuras especialidades de saúde crônica:
 - 🫁 **Health Control: Asma** (Módulo Atual - Foco total em Asma Grave, Peak Flow, Espaçador e Fisioterapia).
 - 🩺 *Futuro:* **Health Control: Diabetes** (Glicemia, Insulina, Contagem de Carboidratos).

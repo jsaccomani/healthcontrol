@@ -31,7 +31,7 @@ class AuthorAndNotesCard extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Text('👤', style: TextStyle(fontSize: 16)),
+              Icon(Icons.person_outline, color: Color(0xFF475569), size: 18),
               SizedBox(width: 6),
               Text('Quem está anotando?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
             ],

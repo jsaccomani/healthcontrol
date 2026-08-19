@@ -47,16 +47,16 @@ class HistoryEntryTile extends StatelessWidget {
                     DateFormat('dd/MM • HH:mm').format(entry.timestamp),
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A)),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryLight,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      entry.versionTag,
-                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
+                      entry.authorName.isNotEmpty ? entry.authorName : 'Cuidador',
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
                     ),
                   ),
                 ],
@@ -85,14 +85,14 @@ class HistoryEntryTile extends StatelessWidget {
             runSpacing: 4,
             children: [
               if (entry.peakFlowBest > 0)
-                _buildChip('🫁 Sopro: ${entry.peakFlowBest} L/min ($zoneName)', const Color(0xFFF0FDF4), const Color(0xFF166534)),
-              _buildChip('🩸 Oxigênio: ${entry.spo2}%', const Color(0xFFF0FDFA), const Color(0xFF0F766E)),
+                _buildChip('Sopro: ${entry.peakFlowBest} L/min ($zoneName)', const Color(0xFFF0FDF4), const Color(0xFF166534)),
+              _buildChip('SpO2: ${entry.spo2}%', const Color(0xFFF0FDFA), const Color(0xFF0F766E)),
               if (entry.medications.isNotEmpty)
-                _buildChip('💊 ${entry.medications.length} remédio(s) administrado(s)', const Color(0xFFEFF6FF), const Color(0xFF1D4ED8)),
+                _buildChip('${entry.medications.length} medicação(ões)', const Color(0xFFEFF6FF), const Color(0xFF1D4ED8)),
               if (entry.physiotherapy != null)
-                _buildChip('🫁 Fisioterapia: ${entry.physiotherapy!.deviceName}', const Color(0xFFFAF5FF), const Color(0xFF7E22CE)),
+                _buildChip('Fisio: ${entry.physiotherapy!.deviceName}', const Color(0xFFFAF5FF), const Color(0xFF7E22CE)),
               if (entry.mouthRinseCompleted)
-                _buildChip('💧 Bochecho Realizado', const Color(0xFFECFDF5), const Color(0xFF047857)),
+                _buildChip('Bochecho realizado', const Color(0xFFECFDF5), const Color(0xFF047857)),
             ],
           ),
 

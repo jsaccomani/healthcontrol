@@ -29,7 +29,7 @@ class PhysioInputCard extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Text('🫁', style: TextStyle(fontSize: 16)),
+              Icon(Icons.self_improvement, color: Color(0xFF7E22CE), size: 18),
               SizedBox(width: 6),
               Text('4. Fisioterapia / Exercício Respiratório', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
             ],

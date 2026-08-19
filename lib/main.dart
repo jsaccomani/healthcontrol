@@ -16,6 +16,8 @@ class HealthControlApp extends StatelessWidget {
       title: 'Health Control: Asma',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
       home: const HomeScreen(),
     );
   }

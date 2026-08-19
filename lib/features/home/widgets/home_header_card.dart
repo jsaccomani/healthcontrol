@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:clinical_core/clinical_core.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/design_system/design_system.dart';
 
-/// Card de cabeçalho com perfil do filho, avatar e seletor rápido.
+/// Card de cabeçalho com perfil do filho, avatar de iniciais e seletor rápido.
 class HomeHeaderCard extends StatelessWidget {
   final PatientProfile profile;
   final List<PatientProfile> allProfiles;
@@ -21,26 +21,29 @@ class HomeHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final initials = profile.name.trim().isNotEmpty
+        ? profile.name.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+        : 'HC';
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(color: Color(0x05000000), blurRadius: 6, offset: Offset(0, 2)),
-        ],
+        borderRadius: HCRadii.radiusLg,
+        border: Border.all(color: HCColors.neutral200),
+        boxShadow: HCShadows.subtle,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               CircleAvatar(
-                radius: 24,
-                backgroundColor: AppTheme.primaryLight,
+                radius: 22,
+                backgroundColor: HCColors.primary500,
                 child: Text(
-                  profile.gender == 'Feminino' ? '👧' : '👦',
-                  style: const TextStyle(fontSize: 24),
+                  initials,
+                  style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 12),
@@ -53,82 +56,94 @@ class HomeHeaderCard extends StatelessWidget {
                         Flexible(
                           child: Text(
                             profile.name,
-                            style: const TextStyle(
+                            style: HCTypography.subHeading.copyWith(
                               fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: Color(0xFF0F172A),
+                              fontSize: 16,
+                              color: HCColors.neutral900,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(6),
+                            color: HCColors.neutral100,
+                            borderRadius: HCRadii.radiusSm,
+                            border: Border.all(color: HCColors.neutral200),
                           ),
                           child: Text(
                             profile.ageDisplay,
                             style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF475569),
+                              color: HCColors.neutral700,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
-                      'Melhor Sopro Pessoal: ${profile.personalBestPef} L/min • ${profile.weightKg} kg • Sangue ${profile.bloodType}',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      'Recorde PFE: ${profile.personalBestPef} L/min • Peso: ${profile.weightKg} kg',
+                      style: HCTypography.bodySmall.copyWith(color: HCColors.neutral600),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                tooltip: 'Ver Ficha Completa',
+                tooltip: 'Ficha Completa',
                 onPressed: onOpenProfile,
-                icon: const Icon(Icons.edit_note, color: AppTheme.primaryTeal),
+                icon: const Icon(Icons.arrow_forward_ios, size: 16, color: HCColors.neutral400),
               ),
             ],
           ),
-          const Divider(height: 16, color: Color(0xFFF1F5F9)),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
+          if (allProfiles.length > 1) ...[
+            const Divider(height: 20, color: HCColors.neutral200),
+            Row(
               children: [
-                ...allProfiles.map((p) {
-                  final isSelected = p.id == profile.id;
-                  final emoji = p.gender == 'Feminino' ? '👧' : '👦';
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: ChoiceChip(
-                      avatar: Text(emoji, style: const TextStyle(fontSize: 12)),
-                      label: Text(p.name.split(' ').first, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                      selected: isSelected,
-                      selectedColor: AppTheme.primaryLight,
-                      onSelected: (selected) {
-                        if (selected) onProfileSelected(p);
-                      },
-                    ),
-                  );
-                }),
-                if (onAddChild != null)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 2),
-                    child: ActionChip(
-                      avatar: const Icon(Icons.add, size: 14, color: AppTheme.primaryTeal),
-                      label: const Text('+ Filho', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal)),
-                      backgroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0xFFCBD5E1), style: BorderStyle.solid),
-                      onPressed: onAddChild,
+                const Icon(Icons.people_outline, size: 16, color: HCColors.neutral500),
+                const SizedBox(width: 6),
+                Text(
+                  'Crianças:',
+                  style: HCTypography.bodySmall.copyWith(fontWeight: FontWeight.w600, color: HCColors.neutral600),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: allProfiles.map((p) {
+                        final isSelected = p.id == profile.id;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ChoiceChip(
+                            label: Text(
+                              p.name.split(' ').first,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? HCColors.primary800 : HCColors.neutral700,
+                              ),
+                            ),
+                            selected: isSelected,
+                            selectedColor: HCColors.primary100,
+                            backgroundColor: HCColors.neutral50,
+                            side: BorderSide(
+                              color: isSelected ? HCColors.primary300 : HCColors.neutral200,
+                            ),
+                            onSelected: (selected) {
+                              if (selected) onProfileSelected(p);
+                            },
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
+                ),
               ],
             ),
-          ),
+          ],
         ],
       ),
     );

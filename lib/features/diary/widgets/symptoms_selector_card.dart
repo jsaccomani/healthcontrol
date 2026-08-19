@@ -27,9 +27,9 @@ class SymptomsSelectorCard extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Text('🤒', style: TextStyle(fontSize: 16)),
+              Icon(Icons.sick_outlined, color: Color(0xFFD97706), size: 18),
               SizedBox(width: 6),
-              Text('5. Sintomas Notados', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
+              Text('5. Sintomas Observados', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
             ],
           ),
           const SizedBox(height: 8),

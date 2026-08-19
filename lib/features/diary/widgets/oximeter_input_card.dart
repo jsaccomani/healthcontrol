@@ -23,9 +23,9 @@ class OximeterInputCard extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Text('🩸', style: TextStyle(fontSize: 16)),
+              Icon(Icons.monitor_heart_outlined, color: Color(0xFF0F766E), size: 18),
               SizedBox(width: 6),
-              Text('3. Oxímetro de Dedo (SpO2)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
+              Text('3. Oxímetro de Pulso / Dedo (SpO2)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
             ],
           ),
           const SizedBox(height: 4),
