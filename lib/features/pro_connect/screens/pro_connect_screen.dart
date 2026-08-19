@@ -6,7 +6,8 @@ import '../../../core/design_system/design_system.dart';
 import 'package:clinical_core/clinical_core.dart';
 
 class ProConnectScreen extends StatefulWidget {
-  const ProConnectScreen({super.key});
+  final String? patientId;
+  const ProConnectScreen({super.key, this.patientId});
 
   @override
   State<ProConnectScreen> createState() => _ProConnectScreenState();
@@ -14,6 +15,8 @@ class ProConnectScreen extends StatefulWidget {
 
 class _ProConnectScreenState extends State<ProConnectScreen> {
   final HealthStorageService _storageService = HealthStorageService();
+  List<PatientProfile> _allProfiles = [];
+  PatientProfile? _profile;
   String _pairingCode = '...';
   List<HealthControlEntry> _entries = [];
   bool _isLoading = true;
@@ -21,17 +24,43 @@ class _ProConnectScreenState extends State<ProConnectScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadData(targetId: widget.patientId);
   }
 
-  Future<void> _loadData() async {
-    final code = await _storageService.getOrGenerateDoctorPairingCode();
-    final entries = await _storageService.getHealthEntries();
+  Future<void> _loadData({String? targetId}) async {
+    setState(() => _isLoading = true);
+    final profiles = await _storageService.getAllProfiles();
+    final profile = await _storageService.getPatientProfile(patientId: targetId);
+    final code = await _storageService.getOrGenerateDoctorPairingCode(patientId: profile.id);
+    final entries = await _storageService.getHealthEntries(patientId: profile.id);
+    if (!mounted) return;
     setState(() {
+      _allProfiles = profiles;
+      _profile = profile;
       _pairingCode = code;
       _entries = entries;
       _isLoading = false;
     });
+  }
+
+  void _switchChild(PatientProfile target) {
+    _loadData(targetId: target.id);
+  }
+
+  void _openChildSelectorSheet() {
+    HCChildSelectorSheet.show(
+      context: context,
+      profiles: _allProfiles,
+      selectedProfileId: _profile!.id,
+      onSelect: _switchChild,
+      onAddNew: () async {
+        final created = await HCAddChildDialog.show(
+          context: context,
+          onChildCreated: (c) {},
+        );
+        if (created != null) _switchChild(created);
+      },
+    );
   }
 
   void _copyToClipboard() {
@@ -69,6 +98,13 @@ class _ProConnectScreenState extends State<ProConnectScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+            // Identificação do Paciente Selecionado
+            HCChildContextBadge(
+              profile: _profile!,
+              onSwitchTap: _openChildSelectorSheet,
+            ),
+            const SizedBox(height: 14),
+
             // Banner de Apresentação
             Container(
               padding: const EdgeInsets.all(16),
@@ -101,9 +137,9 @@ class _ProConnectScreenState extends State<ProConnectScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  const Text(
-                    'Seu médico ou clínica utiliza o painel Pro para acompanhar o prontuário, descompensações e laudos do SUS em tempo real.',
-                    style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 13, height: 1.3),
+                  Text(
+                    'Seu médico ou clínica utiliza o painel Pro para acompanhar o prontuário de ${_profile!.name}, descompensações e laudos do SUS em tempo real.',
+                    style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13, height: 1.3),
                   ),
                 ],
               ),
@@ -122,9 +158,10 @@ class _ProConnectScreenState extends State<ProConnectScreen> {
               ),
               child: Column(
                 children: [
-                  const Text(
-                    '🔑 SUA CHAVE DE COMPARTILHAMENTO SEGURO',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.5),
+                  Text(
+                    '🔑 CHAVE DE ACESSO EXCLUSIVA: ${_profile!.name.toUpperCase()}',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.5),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -138,9 +175,9 @@ class _ProConnectScreenState extends State<ProConnectScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Informe esta chave ao seu pneumologista ou fisioterapeuta para vincular ao prontuário clínico dele.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  Text(
+                    'Esta chave concede acesso ReBAC seguro apenas aos dados de ${_profile!.name}. Outros filhos não são compartilhados.',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 14),

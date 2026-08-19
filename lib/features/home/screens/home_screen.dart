@@ -91,6 +91,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _showAddChildDialog() async {
+    final newChild = await HCAddChildDialog.show(
+      context: context,
+      onChildCreated: (child) {},
+    );
+    if (newChild != null) {
+      await _storageService.setSelectedProfileId(newChild.id);
+      await _loadData();
+    }
+  }
+
+  void _openChildSelectorSheet() {
+    HCChildSelectorSheet.show(
+      context: context,
+      profiles: _profiles,
+      selectedProfileId: _profile!.id,
+      onSelect: _switchChild,
+      onAddNew: _showAddChildDialog,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading || _profile == null) {
@@ -125,13 +146,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          HCChildContextBadge(
+            profile: _profile!,
+            isCompact: true,
+            onSwitchTap: _openChildSelectorSheet,
+          ),
+          const SizedBox(width: 4),
           IconButton(
             tooltip: 'Ficha Completa, Remédios & Receitas',
             icon: const Icon(Icons.person_outline, color: Color(0xFF475569)),
             onPressed: () async {
               await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                MaterialPageRoute(
+                  builder: (_) => ProfileScreen(patientId: _profile!.id),
+                ),
               );
               _loadData();
             },
@@ -154,8 +183,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 profile: _profile!,
                 allProfiles: _profiles,
                 onProfileSelected: _switchChild,
+                onAddChild: _showAddChildDialog,
                 onOpenProfile: () async {
-                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProfileScreen(patientId: _profile!.id),
+                    ),
+                  );
                   _loadData();
                 },
               ),
@@ -167,7 +202,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 latestEntry: latest,
                 currentZone: currentZone,
                 profile: _profile!,
-                onSosPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EmergencyScreen())),
+                onSosPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EmergencyScreen(patientId: _profile!.id),
+                  ),
+                ),
               ),
 
               const SizedBox(height: 14),
@@ -175,7 +215,12 @@ class _HomeScreenState extends State<HomeScreen> {
               // 3. Ações Rápidas
               QuickActionButtons(
                 onNewEntry: () async {
-                  final created = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const NewEntryScreen()));
+                  final created = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => NewEntryScreen(patientId: _profile!.id),
+                    ),
+                  );
                   if (created == true) _loadData();
                 },
                 onUpdatePrescription: () async {
@@ -190,7 +235,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                   _loadData();
                 },
-                onSosPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EmergencyScreen())),
+                onSosPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EmergencyScreen(patientId: _profile!.id),
+                  ),
+                ),
               ),
 
               const SizedBox(height: 18),
@@ -253,9 +303,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // 5. Integração com Médico e Fisioterapia
               ProConnectBanner(
-                onOpenProConnect: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProConnectScreen())),
-                onOpenCactQuiz: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CactQuizScreen())),
-                onOpenPhysio: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PhysioScreen())),
+                onOpenProConnect: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ProConnectScreen(patientId: _profile!.id)),
+                ),
+                onOpenCactQuiz: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => CactQuizScreen(patientId: _profile!.id)),
+                ),
+                onOpenPhysio: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => PhysioScreen(patientId: _profile!.id)),
+                ),
               ),
 
               const SizedBox(height: 24),

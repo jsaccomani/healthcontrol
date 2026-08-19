@@ -7,7 +7,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/design_system/design_system.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final String? patientId;
+  const ProfileScreen({super.key, this.patientId});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -17,6 +18,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   final HealthStorageService _storageService = HealthStorageService();
   late TabController _tabController;
 
+  List<PatientProfile> _allProfiles = [];
   PatientProfile? _activeProfile;
   List<PrescriptionRecord> _prescriptions = [];
   bool _isLoading = true;
@@ -85,7 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
-    _loadAllData();
+    _loadAllData(targetId: widget.patientId);
   }
 
   @override
@@ -95,16 +97,73 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     super.dispose();
   }
 
-  Future<void> _loadAllData() async {
+  Future<void> _loadAllData({String? targetId}) async {
     setState(() => _isLoading = true);
-    final current = await _storageService.getPatientProfile();
+    final profiles = await _storageService.getAllProfiles();
+    final current = await _storageService.getPatientProfile(patientId: targetId);
     final prescriptions = await _storageService.getPrescriptions(current.id);
 
+    _allProfiles = profiles;
     _activeProfile = current;
     _prescriptions = prescriptions;
     _populateControllers(current);
 
     setState(() => _isLoading = false);
+  }
+
+  Future<void> _switchChild(PatientProfile target) async {
+    await _silentSaveProfile();
+    await _loadAllData(targetId: target.id);
+  }
+
+  void _openChildSelectorSheet() {
+    HCChildSelectorSheet.show(
+      context: context,
+      profiles: _allProfiles,
+      selectedProfileId: _activeProfile!.id,
+      onSelect: _switchChild,
+      onAddNew: _showAddChildDialog,
+    );
+  }
+
+  Future<void> _showAddChildDialog() async {
+    final newChild = await HCAddChildDialog.show(
+      context: context,
+      onChildCreated: (child) {},
+    );
+    if (newChild != null) {
+      await _loadAllData(targetId: newChild.id);
+    }
+  }
+
+  Future<void> _deleteCurrentChild() async {
+    if (_allProfiles.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não é possível excluir o único filho cadastrado.')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir Perfil do Filho?'),
+        content: Text('Tem certeza que deseja excluir os dados de ${_activeProfile!.name}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: HCColors.redMain),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Excluir', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _storageService.deleteChildProfile(_activeProfile!.id);
+      await _loadAllData();
+    }
   }
 
   void _populateControllers(PatientProfile p) {
@@ -268,6 +327,48 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Ficha Médica & Anamnese', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        actions: [
+          HCChildContextBadge(
+            profile: _activeProfile!,
+            isCompact: true,
+            onSwitchTap: _openChildSelectorSheet,
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Opções da Família',
+            icon: const Icon(Icons.more_vert, color: Color(0xFF475569)),
+            onSelected: (val) {
+              if (val == 'add') {
+                _showAddChildDialog();
+              } else if (val == 'delete') {
+                _deleteCurrentChild();
+              }
+            },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem(
+                value: 'add',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_add_alt_1, size: 18, color: AppTheme.primaryTeal),
+                    SizedBox(width: 8),
+                    Text('Cadastrar Outro Filho'),
+                  ],
+                ),
+              ),
+              if (_allProfiles.length > 1)
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, size: 18, color: HCColors.redMain),
+                      SizedBox(width: 8),
+                      Text('Excluir Este Filho', style: TextStyle(color: HCColors.redMain)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 8),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,

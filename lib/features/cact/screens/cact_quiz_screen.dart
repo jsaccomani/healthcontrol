@@ -3,14 +3,21 @@ import 'package:clinical_core/clinical_core.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/design_system/design_system.dart';
 
+import '../../../core/storage/health_storage_service.dart';
+
 class CactQuizScreen extends StatefulWidget {
-  const CactQuizScreen({super.key});
+  final String? patientId;
+  const CactQuizScreen({super.key, this.patientId});
 
   @override
   State<CactQuizScreen> createState() => _CactQuizScreenState();
 }
 
 class _CactQuizScreenState extends State<CactQuizScreen> {
+  final HealthStorageService _storageService = HealthStorageService();
+  PatientProfile? _profile;
+  bool _isLoading = true;
+
   // Respostas da Criança (4 perguntas, 0 a 3)
   int _q1 = 3;
   int _q2 = 2;
@@ -24,6 +31,21 @@ class _CactQuizScreenState extends State<CactQuizScreen> {
 
   CactScoreResult? _result;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final p = await _storageService.getPatientProfile(patientId: widget.patientId);
+    if (!mounted) return;
+    setState(() {
+      _profile = p;
+      _isLoading = false;
+    });
+  }
+
   void _calculateScore() {
     final res = CactCalculator.calculate(
       childResponses: [_q1, _q2, _q3, _q4],
@@ -34,6 +56,12 @@ class _CactQuizScreenState extends State<CactQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading || _profile == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Teste de Controle (c-ACT)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
@@ -45,6 +73,13 @@ class _CactQuizScreenState extends State<CactQuizScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+            // Identificação da Criança Avaliada
+            HCChildContextBadge(
+              profile: _profile!,
+              showSwitchAction: false,
+            ),
+            const SizedBox(height: 14),
+
             // Banner Explicativo
             Container(
               padding: const EdgeInsets.all(12),

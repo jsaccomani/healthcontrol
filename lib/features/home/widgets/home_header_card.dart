@@ -8,6 +8,7 @@ class HomeHeaderCard extends StatelessWidget {
   final List<PatientProfile> allProfiles;
   final ValueChanged<PatientProfile> onProfileSelected;
   final VoidCallback onOpenProfile;
+  final VoidCallback? onAddChild;
 
   const HomeHeaderCard({
     super.key,
@@ -15,6 +16,7 @@ class HomeHeaderCard extends StatelessWidget {
     required this.allProfiles,
     required this.onProfileSelected,
     required this.onOpenProfile,
+    this.onAddChild,
   });
 
   @override
@@ -92,17 +94,19 @@ class HomeHeaderCard extends StatelessWidget {
               ),
             ],
           ),
-          if (allProfiles.length > 1) ...[
-            const Divider(height: 16, color: Color(0xFFF1F5F9)),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: allProfiles.map((p) {
+          const Divider(height: 16, color: Color(0xFFF1F5F9)),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ...allProfiles.map((p) {
                   final isSelected = p.id == profile.id;
+                  final emoji = p.gender == 'Feminino' ? '👧' : '👦';
                   return Padding(
                     padding: const EdgeInsets.only(right: 6),
                     child: ChoiceChip(
-                      label: Text(p.name.split(' ').first, style: const TextStyle(fontSize: 11)),
+                      avatar: Text(emoji, style: const TextStyle(fontSize: 12)),
+                      label: Text(p.name.split(' ').first, style: TextStyle(fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
                       selected: isSelected,
                       selectedColor: AppTheme.primaryLight,
                       onSelected: (selected) {
@@ -110,10 +114,21 @@ class HomeHeaderCard extends StatelessWidget {
                       },
                     ),
                   );
-                }).toList(),
-              ),
+                }),
+                if (onAddChild != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 2),
+                    child: ActionChip(
+                      avatar: const Icon(Icons.add, size: 14, color: AppTheme.primaryTeal),
+                      label: const Text('+ Filho', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal)),
+                      backgroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0xFFCBD5E1), style: BorderStyle.solid),
+                      onPressed: onAddChild,
+                    ),
+                  ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );

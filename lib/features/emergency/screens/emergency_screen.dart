@@ -6,7 +6,8 @@ import '../../../core/design_system/design_system.dart';
 
 /// Tela de Emergência e SOS de Alta Prioridade (100% Offline, Alto Contraste).
 class EmergencyScreen extends StatefulWidget {
-  const EmergencyScreen({super.key});
+  final String? patientId;
+  const EmergencyScreen({super.key, this.patientId});
 
   @override
   State<EmergencyScreen> createState() => _EmergencyScreenState();
@@ -14,6 +15,7 @@ class EmergencyScreen extends StatefulWidget {
 
 class _EmergencyScreenState extends State<EmergencyScreen> {
   final HealthStorageService _storageService = HealthStorageService();
+  List<PatientProfile> _allProfiles = [];
   PatientProfile? _profile;
   List<HealthControlEntry> _entries = [];
   List<PrescriptionRecord> _prescriptions = [];
@@ -22,22 +24,29 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   @override
   void initState() {
     super.initState();
-    _loadEmergencyData();
+    _loadEmergencyData(targetId: widget.patientId);
   }
 
-  Future<void> _loadEmergencyData() async {
-    final p = await _storageService.getPatientProfile();
+  Future<void> _loadEmergencyData({String? targetId}) async {
+    setState(() => _isLoading = true);
+    final profiles = await _storageService.getAllProfiles();
+    final p = await _storageService.getPatientProfile(patientId: targetId);
     final results = await Future.wait([
-      _storageService.getHealthEntries(),
+      _storageService.getHealthEntries(patientId: p.id),
       _storageService.getPrescriptions(p.id),
     ]);
     if (!mounted) return;
     setState(() {
+      _allProfiles = profiles;
       _profile = p;
       _entries = results[0] as List<HealthControlEntry>;
       _prescriptions = results[1] as List<PrescriptionRecord>;
       _isLoading = false;
     });
+  }
+
+  void _switchEmergencyChild(PatientProfile target) {
+    _loadEmergencyData(targetId: target.id);
   }
 
   @override
@@ -78,6 +87,60 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           maxWidth: 720,
           child: Column(
             children: [
+            if (_allProfiles.length > 1) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: HCRadii.radiusMd,
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.swap_horiz, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Trocar Criança:',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _allProfiles.map((p) {
+                            final isSel = p.id == _profile!.id;
+                            final emoji = p.gender == 'Feminino' ? '👧' : '👦';
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: ChoiceChip(
+                                avatar: Text(emoji, style: const TextStyle(fontSize: 12)),
+                                label: Text(
+                                  p.name.split(' ').first,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                                    color: isSel ? const Color(0xFF991B1B) : Colors.black87,
+                                  ),
+                                ),
+                                selected: isSel,
+                                selectedColor: Colors.white,
+                                backgroundColor: Colors.white.withValues(alpha: 0.8),
+                                onSelected: (sel) {
+                                  if (sel) _switchEmergencyChild(p);
+                                },
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             // 1. Banner para Apresentação Imediata ao Plantonista
             Container(
               width: double.infinity,
@@ -100,9 +163,29 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'PACIENTE: ${_profile!.name.toUpperCase()} (${_profile!.ageDisplay})',
+                    style: const TextStyle(
+                      color: Color(0xFF0F172A),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Sopro Recorde Pessoal: ${_profile!.personalBestPef} L/min • Peso: ${_profile!.weightKg} kg • Sangue: ${_profile!.bloodType}',
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 6),
                   Text(
-                    'Paciente pediátrico em acompanhamento de Asma. Último PFE: ${latest?.peakFlowBest ?? 0} L/min • SpO2: ${latest?.spo2 ?? 0}%',
+                    'Último PFE Medido: ${latest?.peakFlowBest ?? 0} L/min • SpO2: ${latest?.spo2 ?? 0}%',
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Color(0xFF334155), fontSize: 12, fontWeight: FontWeight.w600),
                   ),

@@ -8,8 +8,10 @@ class HealthStorageService {
   static const String _keyProfilesList = 'health_control_profiles_list';
   static const String _keySelectedProfileId = 'health_control_selected_profile_id';
   static const String _keyHealthEntriesPrefix = 'health_control_entries_';
-  static const String _keyEventLogs = 'health_control_event_logs';
-  static const String _keyDoctorPairingCode = 'health_control_doctor_pairing_code';
+  static const String _keyEventLogsPrefix = 'health_control_event_logs_';
+  static const String _keyLegacyEventLogs = 'health_control_event_logs';
+  static const String _keyDoctorPairingCodePrefix = 'health_control_pairing_code_';
+  static const String _keyLegacyDoctorPairingCode = 'health_control_doctor_pairing_code';
   static const String _keyPrescriptionsPrefix = 'health_control_prescriptions_';
 
   static final HealthStorageService _instance = HealthStorageService._internal();
@@ -26,10 +28,26 @@ class HealthStorageService {
   String? _cachedSelectedProfileId;
   final Map<String, List<HealthControlEntry>> _cachedEntries = {};
   final Map<String, List<PrescriptionRecord>> _cachedPrescriptions = {};
+  final Map<String, List<ClinicalEventLog>> _cachedEventLogs = {};
 
   Future<SharedPreferences> _getPrefs() async {
     _cachedPrefs ??= await SharedPreferences.getInstance();
     return _cachedPrefs!;
+  }
+
+  /// Limpa o cache de um paciente ou de todos
+  void clearMemoryCache({String? patientId}) {
+    if (patientId != null) {
+      _cachedEntries.remove(patientId);
+      _cachedPrescriptions.remove(patientId);
+      _cachedEventLogs.remove(patientId);
+    } else {
+      _cachedProfiles = null;
+      _cachedSelectedProfileId = null;
+      _cachedEntries.clear();
+      _cachedPrescriptions.clear();
+      _cachedEventLogs.clear();
+    }
   }
 
   /// Retorna a lista de todos os filhos/perfis cadastrados.
@@ -62,9 +80,15 @@ class HealthStorageService {
     }
   }
 
-  /// Retorna o perfil do filho atualmente selecionado.
-  Future<PatientProfile> getPatientProfile() async {
+  /// Retorna o perfil do filho específico ou do atualmente selecionado.
+  Future<PatientProfile> getPatientProfile({String? patientId}) async {
     final profiles = await getAllProfiles();
+    
+    if (patientId != null) {
+      final found = profiles.where((p) => p.id == patientId);
+      if (found.isNotEmpty) return found.first;
+    }
+
     final prefs = await _getPrefs();
     _cachedSelectedProfileId ??= prefs.getString(_keySelectedProfileId);
 
@@ -74,6 +98,13 @@ class HealthStorageService {
     }
 
     return profiles.first;
+  }
+
+  /// Retorna um perfil específico por ID, ou null se não existir.
+  Future<PatientProfile?> getProfileById(String profileId) async {
+    final profiles = await getAllProfiles();
+    final matches = profiles.where((p) => p.id == profileId);
+    return matches.isNotEmpty ? matches.first : null;
   }
 
   /// Define qual filho está selecionado no topo do app.
@@ -104,7 +135,7 @@ class HealthStorageService {
     await prefs.setString(_keySelectedProfileId, profile.id);
   }
 
-  /// Cria um novo perfil para outro filho.
+  /// Cria um novo perfil para outro filho com herança automática dos dados familiares.
   Future<PatientProfile> createNewChildProfile({
     required String name,
     required DateTime birthDate,
@@ -162,12 +193,15 @@ class HealthStorageService {
     final rawList = updated.map((p) => jsonEncode(p.toJson())).toList();
     await prefs.setStringList(_keyProfilesList, rawList);
     await setSelectedProfileId(updated.first.id);
+
+    // Limpa caches do perfil removido
+    clearMemoryCache(patientId: profileId);
     return true;
   }
 
-  /// Retorna lançamentos clínicos do filho ativo.
-  Future<List<HealthControlEntry>> getHealthEntries() async {
-    final profile = await getPatientProfile();
+  /// Retorna lançamentos clínicos de um filho específico ou do filho ativo.
+  Future<List<HealthControlEntry>> getHealthEntries({String? patientId}) async {
+    final profile = await getPatientProfile(patientId: patientId);
     if (_cachedEntries.containsKey(profile.id)) {
       return List.unmodifiable(_cachedEntries[profile.id]!);
     }
@@ -189,8 +223,9 @@ class HealthStorageService {
     return List.unmodifiable(entries);
   }
 
-  /// Adiciona um novo lançamento diário versionado (v1.0.x) com hash SHA-256 para o filho ativo.
+  /// Adiciona um novo lançamento diário versionado (v1.0.x) com hash SHA-256 para o filho selecionado.
   Future<HealthControlEntry> addHealthControlEntry({
+    String? targetPatientId,
     required String authorName,
     required String authorRole,
     required List<int> peakFlowAttempts,
@@ -204,8 +239,8 @@ class HealthStorageService {
     PhysioSessionRecord? physiotherapy,
     String notes = '',
   }) async {
-    final profile = await getPatientProfile();
-    final entries = await getHealthEntries();
+    final profile = await getPatientProfile(patientId: targetPatientId);
+    final entries = await getHealthEntries(patientId: profile.id);
 
     int bestPef = 0;
     bool varianceError = false;
@@ -276,6 +311,42 @@ class HealthStorageService {
     await prefs.setStringList('$_keyHealthEntriesPrefix$profileId', strList);
   }
 
+  /// Retorna os registros do event log criptográfico isolados por paciente.
+  Future<List<ClinicalEventLog>> getEventLogs({String? patientId}) async {
+    final profile = await getPatientProfile(patientId: patientId);
+    if (_cachedEventLogs.containsKey(profile.id)) {
+      return List.unmodifiable(_cachedEventLogs[profile.id]!);
+    }
+
+    final prefs = await _getPrefs();
+    final key = '$_keyEventLogsPrefix${profile.id}';
+    var rawLogs = prefs.getStringList(key);
+
+    // Migração de dados legados se existirem
+    if (rawLogs == null || rawLogs.isEmpty) {
+      final legacy = prefs.getStringList(_keyLegacyEventLogs);
+      if (legacy != null && legacy.isNotEmpty && profile.id == 'arthur_saccomani_01') {
+        rawLogs = legacy;
+        await prefs.setStringList(key, legacy);
+        await prefs.remove(_keyLegacyEventLogs);
+      }
+    }
+
+    if (rawLogs == null || rawLogs.isEmpty) {
+      return [];
+    }
+
+    try {
+      final loaded = rawLogs
+          .map((str) => ClinicalEventLog.fromJson(jsonDecode(str) as Map<String, dynamic>))
+          .toList();
+      _cachedEventLogs[profile.id] = loaded;
+      return List.unmodifiable(loaded);
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<void> _appendEventLog({
     required String patientId,
     required String version,
@@ -285,14 +356,12 @@ class HealthStorageService {
     required Map<String, dynamic> payload,
   }) async {
     final prefs = await _getPrefs();
-    final rawLogs = prefs.getStringList(_keyEventLogs) ?? [];
+    final key = '$_keyEventLogsPrefix$patientId';
+    final existingLogs = await getEventLogs(patientId: patientId);
 
     String prevHash = 'GENESIS_BLOCK_0000000000000000';
-    if (rawLogs.isNotEmpty) {
-      try {
-        final last = ClinicalEventLog.fromJson(jsonDecode(rawLogs.first));
-        prevHash = last.hash;
-      } catch (_) {}
+    if (existingLogs.isNotEmpty) {
+      prevHash = existingLogs.first.hash;
     }
 
     final log = ClinicalEventLog(
@@ -308,17 +377,32 @@ class HealthStorageService {
       previousHash: prevHash,
     );
 
-    final updated = [jsonEncode(log.toJson()), ...rawLogs];
-    await prefs.setStringList(_keyEventLogs, updated);
+    final updated = [log, ...existingLogs];
+    _cachedEventLogs[patientId] = updated;
+
+    final rawList = updated.map((l) => jsonEncode(l.toJson())).toList();
+    await prefs.setStringList(key, rawList);
   }
 
-  /// Retorna ou gera a chave de acesso do paciente para pareamento médico.
-  Future<String> getOrGenerateDoctorPairingCode() async {
+  /// Retorna ou gera a chave de acesso exclusiva do paciente para pareamento médico.
+  Future<String> getOrGenerateDoctorPairingCode({String? patientId}) async {
+    final profile = await getPatientProfile(patientId: patientId);
     final prefs = await _getPrefs();
-    String? code = prefs.getString(_keyDoctorPairingCode);
+    final key = '$_keyDoctorPairingCodePrefix${profile.id}';
+    
+    String? code = prefs.getString(key);
     if (code == null) {
+      // Migra legado se Arthur
+      if (profile.id == 'arthur_saccomani_01') {
+        code = prefs.getString(_keyLegacyDoctorPairingCode);
+        if (code != null) {
+          await prefs.setString(key, code);
+          await prefs.remove(_keyLegacyDoctorPairingCode);
+          return code;
+        }
+      }
       code = 'AC-${(1000 + (DateTime.now().millisecondsSinceEpoch % 8999))}';
-      await prefs.setString(_keyDoctorPairingCode, code);
+      await prefs.setString(key, code);
     }
     return code;
   }

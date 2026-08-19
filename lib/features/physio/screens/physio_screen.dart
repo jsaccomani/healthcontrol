@@ -4,14 +4,21 @@ import 'package:clinical_core/clinical_core.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/design_system/design_system.dart';
 
+import '../../../core/storage/health_storage_service.dart';
+
 class PhysioScreen extends StatefulWidget {
-  const PhysioScreen({super.key});
+  final String? patientId;
+  const PhysioScreen({super.key, this.patientId});
 
   @override
   State<PhysioScreen> createState() => _PhysioScreenState();
 }
 
 class _PhysioScreenState extends State<PhysioScreen> {
+  final HealthStorageService _storageService = HealthStorageService();
+  PatientProfile? _profile;
+  bool _isLoading = true;
+
   final TextEditingController _spo2Ctrl = TextEditingController(text: '97');
   final TextEditingController _respRateCtrl = TextEditingController(text: '22');
 
@@ -29,6 +36,21 @@ class _PhysioScreenState extends State<PhysioScreen> {
   int _timerSeconds = 0;
   Timer? _timer;
   int _breathCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final p = await _storageService.getPatientProfile(patientId: widget.patientId);
+    if (!mounted) return;
+    setState(() {
+      _profile = p;
+      _isLoading = false;
+    });
+  }
 
   void _runSafetyScreening() {
     final spo2 = int.tryParse(_spo2Ctrl.text.trim()) ?? 97;
@@ -75,6 +97,12 @@ class _PhysioScreenState extends State<PhysioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading || _profile == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fisioterapia & Reabilitação', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
@@ -86,6 +114,13 @@ class _PhysioScreenState extends State<PhysioScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Identificação do Paciente Selecionado
+              HCChildContextBadge(
+                profile: _profile!,
+                showSwitchAction: false,
+              ),
+              const SizedBox(height: 14),
+
               // Banner AMIB
               Container(
                 padding: const EdgeInsets.all(12),

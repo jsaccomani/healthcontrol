@@ -12,7 +12,8 @@ import '../widgets/symptoms_selector_card.dart';
 import '../widgets/author_and_notes_card.dart';
 
 class NewEntryScreen extends StatefulWidget {
-  const NewEntryScreen({super.key});
+  final String? patientId;
+  const NewEntryScreen({super.key, this.patientId});
 
   @override
   State<NewEntryScreen> createState() => _NewEntryScreenState();
@@ -21,6 +22,8 @@ class NewEntryScreen extends StatefulWidget {
 class _NewEntryScreenState extends State<NewEntryScreen> {
   final HealthStorageService _storageService = HealthStorageService();
 
+  List<PatientProfile> _allProfiles = [];
+  PatientProfile? _profile;
   List<PrescribedMedication> _childPrescribedMeds = [];
   bool _isLoading = true;
 
@@ -76,7 +79,7 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPatientAndPrescriptions();
+    _loadPatientAndPrescriptions(targetId: widget.patientId);
   }
 
   @override
@@ -90,9 +93,10 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
     super.dispose();
   }
 
-  Future<void> _loadPatientAndPrescriptions() async {
+  Future<void> _loadPatientAndPrescriptions({String? targetId}) async {
     setState(() => _isLoading = true);
-    final profile = await _storageService.getPatientProfile();
+    final profiles = await _storageService.getAllProfiles();
+    final profile = await _storageService.getPatientProfile(patientId: targetId);
     final prescriptions = await _storageService.getPrescriptions(profile.id);
 
     final List<PrescribedMedication> allMeds = [];
@@ -123,10 +127,32 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
 
     if (!mounted) return;
     setState(() {
+      _allProfiles = profiles;
+      _profile = profile;
       _childPrescribedMeds = allMeds;
       _personalBestPef = profile.personalBestPef;
       _isLoading = false;
     });
+  }
+
+  void _switchChild(PatientProfile target) {
+    _loadPatientAndPrescriptions(targetId: target.id);
+  }
+
+  void _openChildSelectorSheet() {
+    HCChildSelectorSheet.show(
+      context: context,
+      profiles: _allProfiles,
+      selectedProfileId: _profile!.id,
+      onSelect: _switchChild,
+      onAddNew: () async {
+        final created = await HCAddChildDialog.show(
+          context: context,
+          onChildCreated: (c) {},
+        );
+        if (created != null) _switchChild(created);
+      },
+    );
   }
 
   void _recalculatePeakFlow() {
@@ -183,6 +209,7 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
   }
 
   Future<void> _saveEntry() async {
+    if (_profile == null) return;
     final List<int> attempts = [];
     if (_includePeakFlow) {
       final b1 = int.tryParse(_blow1Ctrl.text.trim());
@@ -208,6 +235,7 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
     }
 
     await _storageService.addHealthControlEntry(
+      targetPatientId: _profile!.id,
       authorName: _author,
       authorRole: 'Cuidador Principal',
       peakFlowAttempts: attempts,
@@ -231,7 +259,7 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (_isLoading || _profile == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
       );
@@ -249,6 +277,13 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
           maxWidth: 720,
           child: Column(
             children: [
+            // Identificação do Paciente Selecionado
+            HCChildContextBadge(
+              profile: _profile!,
+              onSwitchTap: _openChildSelectorSheet,
+            ),
+            const SizedBox(height: 14),
+
             // Seletor Modular de Procedimentos
             ProcedureChipSelector(
               includeMedication: _includeMedication,
