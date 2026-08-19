@@ -49,8 +49,8 @@ class PeakFlowInputCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Text('🫁', style: TextStyle(fontSize: 18)),
                   SizedBox(width: HCSpacing.xs),
                   Text('Sopro da Criança (Peak Flow)', style: HCTypography.subHeading),
@@ -71,7 +71,7 @@ class PeakFlowInputCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: HCSpacing.xs),
-          Text(
+          const Text(
             'Peça para a criança soprar 3 vezes com força máxima no aparelho:',
             style: HCTypography.bodySmall,
           ),

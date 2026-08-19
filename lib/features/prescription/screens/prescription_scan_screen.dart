@@ -111,8 +111,8 @@ Paciente: ${widget.patientName}
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: const [
+                    const Row(
+                      children: [
                         Icon(Icons.document_scanner, color: AppTheme.primaryTeal, size: 24),
                         SizedBox(width: 8),
                         Text(
@@ -226,6 +226,7 @@ Paciente: ${widget.patientName}
                     label: const Text('Processar e Importar Medicamentos', style: TextStyle(fontWeight: FontWeight.bold)),
                     onPressed: () async {
                       if (rawTextCtrl.text.trim().isEmpty) return;
+                      final messenger = ScaffoldMessenger.of(context);
 
                       final parsed = PrescriptionOcrParser.parseRawPrescriptionText(
                         rawText: rawTextCtrl.text.trim(),
@@ -233,11 +234,14 @@ Paciente: ${widget.patientName}
                       );
 
                       await _storageService.savePrescription(parsed);
-                      Navigator.pop(ctx);
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                      }
+                      if (!mounted) return;
                       await _loadPrescriptions();
 
                       if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      messenger.showSnackBar(
                         SnackBar(
                           content: Text('Receita de ${parsed.doctorName} importada com ${parsed.medications.length} medicações! ✅'),
                           backgroundColor: const Color(0xFF059669),
@@ -272,8 +276,8 @@ Paciente: ${widget.patientName}
           child: ListView(
             controller: scrollCtrl,
             children: [
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Icon(Icons.medication, color: AppTheme.primaryTeal),
                   SizedBox(width: 8),
                   Text(
@@ -359,7 +363,10 @@ Paciente: ${widget.patientName}
                         await _storageService.savePrescription(newPresc);
                       }
 
-                      Navigator.pop(ctx);
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                      }
+                      if (!mounted) return;
                       await _loadPrescriptions();
 
                       if (!mounted) return;
@@ -449,8 +456,8 @@ Paciente: ${widget.patientName}
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 20),
               SizedBox(width: 8),
               Text(
@@ -675,8 +682,8 @@ Paciente: ${widget.patientName}
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Column(
-        children: const [
+      child: const Column(
+        children: [
           Icon(Icons.receipt_long, color: Color(0xFF94A3B8), size: 40),
           SizedBox(height: 8),
           Text(

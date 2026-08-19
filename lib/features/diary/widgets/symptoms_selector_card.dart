@@ -25,8 +25,8 @@ class SymptomsSelectorCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Text('🤒', style: TextStyle(fontSize: 16)),
               SizedBox(width: 6),
               Text('5. Sintomas Notados', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),

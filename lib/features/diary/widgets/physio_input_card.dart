@@ -27,8 +27,8 @@ class PhysioInputCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Text('🫁', style: TextStyle(fontSize: 16)),
               SizedBox(width: 6),
               Text('4. Fisioterapia / Exercício Respiratório', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
@@ -36,7 +36,7 @@ class PhysioInputCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: selectedDevice,
+            initialValue: selectedDevice,
             decoration: const InputDecoration(labelText: 'Aparelho / Exercício Utilizado'),
             items: availableDevices
                 .map((d) => DropdownMenuItem(value: d, child: Text(d, style: const TextStyle(fontSize: 12))))

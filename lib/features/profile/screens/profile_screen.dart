@@ -375,7 +375,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _gender,
+                      initialValue: _gender,
                       decoration: const InputDecoration(labelText: 'Sexo'),
                       items: const [
                         DropdownMenuItem(value: 'Masculino', child: Text('Menino')),
@@ -389,7 +389,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _bloodType,
+                      initialValue: _bloodType,
                       decoration: const InputDecoration(labelText: 'Tipo Sanguíneo'),
                       items: _commonBloodTypes.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
                       onChanged: (v) {
@@ -551,18 +551,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Column(
+            child: const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  children: const [
+                  children: [
                     Icon(Icons.document_scanner, color: Colors.white, size: 20),
                     SizedBox(width: 8),
                     Text('Escanear Receita do Médico', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                   ],
                 ),
-                const SizedBox(height: 4),
-                const Text(
+                SizedBox(height: 4),
+                Text(
                   'Tire foto da receita para o app ler os nomes das bombinhas e horários automaticamente.',
                   style: TextStyle(color: Colors.white70, fontSize: 11, height: 1.3),
                 ),
@@ -666,7 +666,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                value: _activityLimitation,
+                initialValue: _activityLimitation,
                 decoration: const InputDecoration(labelText: 'Limitação nas Atividades / Brincadeiras da Escola'),
                 items: const [
                   DropdownMenuItem(value: 'Normal - sem limitações para brincar', child: Text('Normal - corre e brinca normalmente')),
@@ -713,7 +713,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 onChanged: (v) => setState(() => _householdSmokers = v),
               ),
               DropdownButtonFormField<String>(
-                value: _householdPets,
+                initialValue: _householdPets,
                 decoration: const InputDecoration(labelText: 'Animais de Estimação em Casa'),
                 items: const [
                   DropdownMenuItem(value: 'Nenhum', child: Text('Nenhum')),
@@ -767,8 +767,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: const [
+                    const Row(
+                      children: [
                         Text('✍️', style: TextStyle(fontSize: 18)),
                         SizedBox(width: 6),
                         Text('História do Filho Contada pelos Pais', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF166534))),
