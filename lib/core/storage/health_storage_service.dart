@@ -229,10 +229,8 @@ class HealthStorageService {
     final rawList = prefs.getStringList('$_keyHealthEntriesPrefix${profile.id}');
 
     if (rawList == null || rawList.isEmpty) {
-      final seed = _generateSeedEntries(profile.personalBestPef);
-      _cachedEntries[profile.id] = seed;
-      await _saveHealthEntriesList(profile.id, seed);
-      return seed;
+      _cachedEntries[profile.id] = const [];
+      return const [];
     }
 
     final entries = rawList
@@ -436,10 +434,8 @@ class HealthStorageService {
     final rawList = prefs.getStringList('$_keyPrescriptionsPrefix$patientId');
 
     if (rawList == null || rawList.isEmpty) {
-      final seed = [_generateDefaultArthurPrescription(patientId)];
-      _cachedPrescriptions[patientId] = seed;
-      await _savePrescriptionsList(patientId, seed);
-      return seed;
+      _cachedPrescriptions[patientId] = const [];
+      return const [];
     }
 
     try {
@@ -676,122 +672,6 @@ class HealthStorageService {
       doctorName: 'Dr. Marco Aurélio Valente',
       doctorPhone: '(11) 98888-7777',
       preferredHospital: 'Hospital Infantil Sabará / Samaritano',
-    );
-  }
-
-  List<HealthControlEntry> _generateSeedEntries(int personalBest) {
-    final now = DateTime.now();
-    return [
-      HealthControlEntry(
-        id: 'seed-01',
-        versionTag: 'v1.0.2',
-        sequenceNumber: 2,
-        timestamp: now.subtract(const Duration(hours: 3)),
-        authorName: 'Mãe (Juliana)',
-        authorRole: 'Cuidadora Principal',
-        peakFlowAttempts: [210, 220, 215],
-        peakFlowBest: 220,
-        peakFlowZone: ActionZoneType.green,
-        peakFlowVarianceError: false,
-        spo2: 98,
-        heartRate: 88,
-        respiratoryRate: 22,
-        symptoms: const ['Sem sintomas aparentes'],
-        environmentalTriggers: const [],
-        medications: const [
-          MedicationUsage(
-            name: 'Clenil HFA 250mcg (com espaçador)',
-            dosage: '1 puff',
-            type: MedicationType.maintenance,
-          ),
-        ],
-        mouthRinseCompleted: true,
-        physiotherapy: const PhysioSessionRecord(
-          deviceName: 'Voldyne 2500 (Espirometria a Volume)',
-          durationMinutes: 10,
-          preSpo2: 97,
-          postSpo2: 99,
-          amibApproved: true,
-        ),
-        notes: 'Soprou com boa vedação, fez bochecho certinho após o spray.',
-        requiresRescueFollowup: false,
-      ),
-      HealthControlEntry(
-        id: 'seed-02',
-        versionTag: 'v1.0.1',
-        sequenceNumber: 1,
-        timestamp: now.subtract(const Duration(days: 1, hours: 2)),
-        authorName: 'Pai',
-        authorRole: 'Cuidador',
-        peakFlowAttempts: [195, 200, 205],
-        peakFlowBest: 205,
-        peakFlowZone: ActionZoneType.green,
-        peakFlowVarianceError: false,
-        spo2: 97,
-        heartRate: 92,
-        respiratoryRate: 24,
-        symptoms: const ['Tosse seca leve ao deitar'],
-        environmentalTriggers: const ['Tempo seco / Baixa umidade'],
-        medications: const [
-          MedicationUsage(
-            name: 'Clenil HFA 250mcg',
-            dosage: '1 puff',
-            type: MedicationType.maintenance,
-          ),
-        ],
-        mouthRinseCompleted: true,
-        notes: 'Umidificador de ar ligado no quarto.',
-        requiresRescueFollowup: false,
-      ),
-    ];
-  }
-
-  PrescriptionRecord _generateDefaultArthurPrescription(String patientId) {
-    return PrescriptionRecord(
-      id: 'presc_arthur_initial',
-      patientId: patientId,
-      doctorName: 'Dr. Marco Aurélio Valente',
-      doctorCrm: 'CRM/SP 129.840 - RQE 48.211',
-      clinicName: 'Instituto Pediátrico de Pneumologia e Alergia',
-      prescriptionDate: DateTime.now().subtract(const Duration(days: 20)),
-      validityMonths: 6,
-      medications: const [
-        PrescribedMedication(
-          id: 'med_01',
-          commercialName: 'Clenil HFA 250mcg Spray',
-          activeIngredient: 'Dipropionato de Beclometasona',
-          category: MedicationCategory.maintenanceInhaled,
-          dosage: '1 jato (puff)',
-          frequency: '12/12 horas (Manhã e Noite)',
-          instructions: 'Agitar bem a bombinha, usar com espaçador valvulado e máscara facial. Bochechar a boca com água após o uso para prevenir candidíase.',
-          spacerRequired: true,
-          isContinuous: true,
-        ),
-        PrescribedMedication(
-          id: 'med_02',
-          commercialName: 'Aerolin Spray 100mcg',
-          activeIngredient: 'Sulfato de Salbutamol',
-          category: MedicationCategory.rescueInhaled,
-          dosage: '2 a 4 jatos',
-          frequency: 'Uso se tosse, chiado ou falta de ar (Resgate)',
-          instructions: 'Aplicar 1 jato por vez no espaçador, aguardar 6 respirações calmas por jato. Repetir conforme plano de ação.',
-          spacerRequired: true,
-          isContinuous: false,
-        ),
-        PrescribedMedication(
-          id: 'med_03',
-          commercialName: 'Singulair Baby 4mg Sachê',
-          activeIngredient: 'Montelucaste de Sódio',
-          category: MedicationCategory.antileukotrieneOral,
-          dosage: '1 sachê (grânulos orais)',
-          frequency: '1x ao dia à noite',
-          instructions: 'Administrar à noite misturado em uma colher de alimento pastoso.',
-          spacerRequired: false,
-          isContinuous: true,
-        ),
-      ],
-      notes: 'Plano terapêutico de manutenção para Asma Grave Pediátrica. Retorno programado em 6 meses com diário e medições de Peak Flow.',
-      isLmeAltoCusto: false,
     );
   }
 

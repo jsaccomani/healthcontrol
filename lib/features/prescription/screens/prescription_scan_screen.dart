@@ -73,7 +73,13 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen> {
               subtitle: 'Use a câmera para capturar o documento impresso',
               onTap: () {
                 Navigator.pop(context);
-                _showCapturePreview(sourceType: 'camera');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Leitura automática ainda não disponível nesta versão. Cadastre a receita manualmente abaixo.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                _openManualEntryScreen();
               },
             ),
 
@@ -86,7 +92,13 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen> {
               subtitle: 'Selecione uma foto da galeria do seu dispositivo',
               onTap: () {
                 Navigator.pop(context);
-                _showCapturePreview(sourceType: 'gallery');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Leitura automática ainda não disponível nesta versão. Cadastre a receita manualmente abaixo.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                _openManualEntryScreen();
               },
             ),
 
@@ -99,7 +111,13 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen> {
               subtitle: 'Carregar arquivo digital fornecido pela clínica/hospital',
               onTap: () {
                 Navigator.pop(context);
-                _showCapturePreview(sourceType: 'pdf');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Leitura automática ainda não disponível nesta versão. Cadastre a receita manualmente abaixo.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                _openManualEntryScreen();
               },
             ),
 
@@ -114,45 +132,6 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen> {
                 Navigator.pop(context);
                 _openManualEntryScreen();
               },
-            ),
-
-            const SizedBox(height: 16),
-            Divider(height: 1, color: context.hcTheme.borderSubtle),
-            const SizedBox(height: 12),
-
-            // Opções de demonstração rápida (amostras clínicas)
-            Text(
-              'OU USE UM MODELO DE TESTE:',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
-                color: context.hcTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _startOcrSimulation(sampleType: 'standard');
-                    },
-                    child: const Text('Receita Padrão', style: TextStyle(fontSize: 11)),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _startOcrSimulation(sampleType: 'formoterol');
-                    },
-                    child: const Text('Receita Formoterol', style: TextStyle(fontSize: 11)),
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -217,180 +196,6 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  // ===========================================================================
-  // ETAPA 2: PREVIEW DO DOCUMENTO CAPTURADO
-  // ===========================================================================
-
-  void _showCapturePreview({required String sourceType}) {
-    final theme = context.hcTheme;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Material(
-        color: theme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Pré-visualização do Documento',
-                  style: HCTypography.heading.copyWith(fontSize: 16, color: theme.textPrimary),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Verifique se a receita médica está legível e bem enquadrada.',
-                  style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
-                ),
-                const SizedBox(height: 16),
-
-                // Mock visual do documento capturado
-                Container(
-                  width: double.infinity,
-                  height: 220,
-                  decoration: BoxDecoration(
-                    color: theme.elevatedSurface,
-                    borderRadius: HCRadii.radiusLg,
-                    border: Border.all(color: theme.border),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        sourceType == 'pdf' ? Icons.picture_as_pdf : Icons.document_scanner,
-                        size: 56,
-                        color: theme.primary,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        sourceType == 'pdf' ? 'receita_pediatrica.pdf (1.2 MB)' : 'receita_foto_001.jpg (2.4 MB)',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.textPrimary),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Qualidade: Alta Definição • Iluminação Adequada',
-                        style: TextStyle(fontSize: 11, color: theme.successText),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Botões de Recapturar vs Confirmar
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _startAddPrescriptionFlow();
-                        },
-                        icon: const Icon(Icons.refresh, size: 18),
-                        label: const Text('Recapturar'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _startOcrSimulation(sampleType: 'standard');
-                        },
-                        icon: const Icon(Icons.auto_awesome, size: 18),
-                        label: const Text(
-                          'Extrair Dados com OCR',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ===========================================================================
-  // ETAPA 3: PROCESSAMENTO OCR ASSÍNCRONO COM PROGRESSO NÃO-BLOQUEANTE
-  // ===========================================================================
-
-  void _startOcrSimulation({required String sampleType}) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => _OcrProcessingDialog(
-        onCompleted: (extractedData) {
-          Navigator.pop(ctx);
-          if (extractedData != null) {
-            _openReviewScreen(extractedData);
-          } else {
-            _showOcrFailureFallback();
-          }
-        },
-        sampleType: sampleType,
-      ),
-    );
-  }
-
-  void _showOcrFailureFallback() {
-    final theme = context.hcTheme;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: theme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: HCRadii.radiusLg,
-          side: BorderSide(color: theme.border),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: theme.warning, size: 24),
-            const SizedBox(width: 8),
-            const Expanded(child: Text('Leitura Inconclusiva', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
-          ],
-        ),
-        content: Text(
-          'Nossa leitura automática não conseguiu interpretar esta receita com segurança clínica suficiente.',
-          style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancelar', style: TextStyle(color: theme.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.primary,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _openManualEntryScreen();
-            },
-            child: const Text('Preencher Manualmente'),
-          ),
-        ],
       ),
     );
   }
@@ -690,150 +495,6 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen> {
                 ),
               )),
         ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// DIALOG DE PROCESSAMENTO OCR ASSÍNCRONO COM PROGRESSO SUAVE
-// =============================================================================
-
-class _OcrProcessingDialog extends StatefulWidget {
-  final ValueChanged<Map<String, dynamic>?> onCompleted;
-  final String sampleType;
-
-  const _OcrProcessingDialog({
-    required this.onCompleted,
-    required this.sampleType,
-  });
-
-  @override
-  State<_OcrProcessingDialog> createState() => _OcrProcessingDialogState();
-}
-
-class _OcrProcessingDialogState extends State<_OcrProcessingDialog> {
-  int _currentStep = 0;
-  final List<String> _steps = [
-    'Carregando e otimizando imagem...',
-    'Segmentando linhas e identificando médico...',
-    'Estruturando medicamentos e posologias...',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _startSteps();
-  }
-
-  void _startSteps() async {
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() => _currentStep = 1);
-
-    await Future.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
-    setState(() => _currentStep = 2);
-
-    await Future.delayed(const Duration(milliseconds: 700));
-    if (!mounted) return;
-
-    // Retorna os dados extraídos conforme o modelo selecionado
-    if (widget.sampleType == 'formoterol') {
-      widget.onCompleted({
-        'doctorName': 'Dra. Beatriz Menezes',
-        'doctorCrm': 'CRM/SP 145.220',
-        'clinicName': 'Clínica de Alergia e Imunologia Infantil',
-        'prescriptionDate': DateTime.now(),
-        'validityMonths': 6,
-        'isOcrExtracted': true,
-        'medications': [
-          {
-            'commercialName': 'Alenia 6/200mcg',
-            'activeIngredient': 'Fumarato de Formoterol + Budesonida',
-            'dosage': '1 cápsula inalatória',
-            'frequency': '1x ao dia pela manhã',
-            'instructions': 'Inalação oral via pó seco. Enxaguar a boca após o uso.',
-            'category': MedicationCategory.maintenanceInhaled,
-            'spacerRequired': false,
-            'isContinuous': true,
-            'hasLowConfidence': false,
-          },
-          {
-            'commercialName': 'Berotec Spray 100mcg',
-            'activeIngredient': 'Bromidrato de Fenoterol',
-            'dosage': '1 a 2 jatos',
-            'frequency': 'Em crise de falta de ar (Resgate)',
-            'instructions': 'Com espaçador valvulado.',
-            'category': MedicationCategory.rescueInhaled,
-            'spacerRequired': true,
-            'isContinuous': false,
-            'hasLowConfidence': true, // Destaque de baixa confiança
-          },
-        ],
-      });
-    } else {
-      widget.onCompleted({
-        'doctorName': 'Dr. Marco Aurélio Valente',
-        'doctorCrm': 'CRM/SP 129.840',
-        'clinicName': 'Instituto Pediátrico de Pneumologia',
-        'prescriptionDate': DateTime.now(),
-        'validityMonths': 6,
-        'isOcrExtracted': true,
-        'medications': [
-          {
-            'commercialName': 'Clenil HFA 250mcg Spray',
-            'activeIngredient': 'Dipropionato de Beclometasona',
-            'dosage': '1 jato (puff)',
-            'frequency': '12/12 horas (Manhã e Noite)',
-            'instructions': 'Usar com espaçador valvulado e máscara. Bochechar água após o uso.',
-            'category': MedicationCategory.maintenanceInhaled,
-            'spacerRequired': true,
-            'isContinuous': true,
-            'hasLowConfidence': false,
-          },
-          {
-            'commercialName': 'Aerolin Spray 100mcg',
-            'activeIngredient': 'Sulfato de Salbutamol',
-            'dosage': '2 a 4 jatos',
-            'frequency': 'A cada 20 min em caso de crise (Resgate)',
-            'instructions': 'Aplicar 1 jato por vez no espaçador, aguardar 6 respirações por jato.',
-            'category': MedicationCategory.rescueInhaled,
-            'spacerRequired': true,
-            'isContinuous': false,
-            'hasLowConfidence': false,
-          },
-        ],
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.hcTheme;
-
-    return AlertDialog(
-      backgroundColor: theme.surface,
-      shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusLg),
-      content: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 20),
-            Text(
-              'Extraindo Texto da Receita...',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.textPrimary),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _steps[_currentStep],
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: theme.textSecondary),
-            ),
-          ],
-        ),
       ),
     );
   }

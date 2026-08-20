@@ -208,16 +208,16 @@ class PrescriptionOcrParser {
     final now = referenceDate ?? DateTime.now();
 
     // 1. Extração do Nome do Médico e CRM
-    String doctorName = 'Dr. Pneumopediatra Assistente';
-    String doctorCrm = 'CRM/SP 148.920';
-    String clinicName = 'Clínica de Especialidades Pediátricas';
+    String doctorName = '';
+    String doctorCrm = '';
+    String clinicName = '';
 
     final crmMatch = RegExp(r'CRM[^\d]*(\d{4,7}(?:\/[A-Z]{2})?)', caseSensitive: false).firstMatch(rawText);
     if (crmMatch != null) {
       doctorCrm = 'CRM ${crmMatch.group(1)}';
     }
 
-    final docMatch = RegExp(r'(?:Dr\.|Dra\.|Médico\(a\):?)\s+([A-Za-zÀ-ÖØ-öø-ÿ\s]{3,35})', caseSensitive: false).firstMatch(rawText);
+    final docMatch = RegExp(r'(?:Dr\.|Dra\.|Médico\(a\):?)\s+([A-Za-zÀ-ÖØ-öø-ÿ ]{3,35})', caseSensitive: false).firstMatch(rawText);
     if (docMatch != null) {
       doctorName = 'Dr(a). ${docMatch.group(1)!.trim()}';
     }
@@ -264,34 +264,6 @@ class PrescriptionOcrParser {
       }
     }
 
-    // Se nenhum match for encontrado, providencia a profilaxia padrão
-    if (foundMeds.isEmpty) {
-      foundMeds.addAll([
-        const PrescribedMedication(
-          id: 'med_default_01',
-          commercialName: 'Clenil HFA 250mcg',
-          activeIngredient: 'Dipropionato de Beclometasona',
-          category: MedicationCategory.maintenanceInhaled,
-          dosage: '1 jato (puff)',
-          frequency: '12/12 horas (Manhã e Noite)',
-          instructions: 'Agitar bem, acoplar no espaçador valvulado com máscara. Bochechar após uso.',
-          spacerRequired: true,
-          isContinuous: true,
-        ),
-        const PrescribedMedication(
-          id: 'med_default_02',
-          commercialName: 'Aerolin Spray 100mcg',
-          activeIngredient: 'Sulfato de Salbutamol',
-          category: MedicationCategory.rescueInhaled,
-          dosage: '2 a 4 jatos',
-          frequency: 'Se tosse, chiado ou falta de ar (Resgate)',
-          instructions: 'Agitar a bombinha e usar com espaçador.',
-          spacerRequired: true,
-          isContinuous: false,
-        ),
-      ]);
-    }
-
     return PrescriptionRecord(
       id: 'presc_${prescriptionDate.millisecondsSinceEpoch}',
       patientId: patientId,
@@ -302,7 +274,7 @@ class PrescriptionOcrParser {
       validityMonths: 6,
       scannedImageUrl: imageUrl,
       medications: foundMeds,
-      notes: 'Prescrição digitalizada e validada pelo copiloto clínico.',
+      notes: 'Prescrição cadastrada manualmente pelo cuidador a partir de texto transcrito. Autenticidade não verificada.',
       isLmeAltoCusto: rawText.toLowerCase().contains('lme') || rawText.toLowerCase().contains('alto custo'),
     );
   }
