@@ -230,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final latest = _entries.isNotEmpty ? _entries.first : null;
-    final currentZone = latest?.peakFlowZone ?? ActionZoneType.green;
+    final currentZone = latest?.peakFlowZone;
 
     return Scaffold(
       backgroundColor: theme.background,

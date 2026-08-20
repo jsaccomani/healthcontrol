@@ -246,7 +246,7 @@ class HealthStorageService {
     required String authorName,
     required String authorRole,
     required List<int> peakFlowAttempts,
-    required int spo2,
+    int? spo2,
     int? heartRate,
     int? respiratoryRate,
     List<String> symptoms = const [],
@@ -269,10 +269,13 @@ class HealthStorageService {
       }
     }
 
-    final zoneEval = ActionZoneEvaluator.evaluate(
-      currentPef: bestPef,
-      personalBestPef: profile.personalBestPef,
-    );
+    ActionZoneEvaluation? zoneEval;
+    if (profile.personalBestPef > 0 && bestPef > 0) {
+      zoneEval = ActionZoneEvaluator.evaluate(
+        currentPef: bestPef,
+        personalBestPef: profile.personalBestPef,
+      );
+    }
 
     final nextSeq = entries.length + 1;
     final versionTag = 'v1.0.$nextSeq';
@@ -280,7 +283,7 @@ class HealthStorageService {
     final now = DateTime.now();
 
     final hasRescueMed = medications.any((m) => m.type == MedicationType.rescue);
-    final isYellowOrRed = zoneEval.zone != ActionZoneType.green;
+    final isYellowOrRed = zoneEval != null && zoneEval.zone != ActionZoneType.green;
     final requiresRescueFollowup = hasRescueMed || isYellowOrRed;
 
     final newEntry = HealthControlEntry(
@@ -292,7 +295,7 @@ class HealthStorageService {
       authorRole: authorRole,
       peakFlowAttempts: peakFlowAttempts,
       peakFlowBest: bestPef,
-      peakFlowZone: zoneEval.zone,
+      peakFlowZone: zoneEval?.zone,
       peakFlowVarianceError: varianceError,
       spo2: spo2,
       heartRate: heartRate,

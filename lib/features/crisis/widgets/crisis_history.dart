@@ -230,7 +230,9 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                                       ? theme.success
                                       : (entry.peakFlowZone == ActionZoneType.yellow
                                           ? theme.warning
-                                          : theme.critical),
+                                          : (entry.peakFlowZone == ActionZoneType.red
+                                              ? theme.critical
+                                              : theme.textTertiary)),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -243,7 +245,7 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                                 ),
                                 const SizedBox(width: 10),
                                 Text(
-                                  'PFE: ${entry.peakFlowBest > 0 ? "${entry.peakFlowBest} L/min" : "-"} • SpO2: ${entry.spo2}%',
+                                  'PFE: ${entry.peakFlowBest > 0 ? "${entry.peakFlowBest} L/min" : "-"} • SpO2: ${entry.spo2 != null ? "${entry.spo2}%" : "-"}',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: theme.textSecondary,

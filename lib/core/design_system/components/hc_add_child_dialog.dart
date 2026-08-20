@@ -74,9 +74,9 @@ class _HCAddChildDialogState extends State<HCAddChildDialog> {
     setState(() => _isSaving = true);
     try {
       final name = _nameCtrl.text.trim();
-      final height = double.tryParse(_heightCtrl.text.trim()) ?? 105.0;
-      final weight = double.tryParse(_weightCtrl.text.trim()) ?? 18.0;
-      final pef = int.tryParse(_pefCtrl.text.trim()) ?? 200;
+      final height = double.tryParse(_heightCtrl.text.trim()) ?? 0.0;
+      final weight = double.tryParse(_weightCtrl.text.trim()) ?? 0.0;
+      final pef = int.tryParse(_pefCtrl.text.trim()) ?? 0;
 
       final newProfile = await _storageService.createNewChildProfile(
         name: name,

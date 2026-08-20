@@ -220,7 +220,7 @@ class _NewEntryScreenState extends State<NewEntryScreen> {
       if (b3 != null) attempts.add(b3);
     }
 
-    final spo2Val = _includeSpo2 ? (int.tryParse(_spo2Ctrl.text.trim()) ?? 98) : 98;
+    final int? spo2Val = _includeSpo2 ? int.tryParse(_spo2Ctrl.text.trim()) : null;
 
     PhysioSessionRecord? physioRecord;
     if (_includePhysioCpap) {

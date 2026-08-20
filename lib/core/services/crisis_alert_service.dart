@@ -35,7 +35,7 @@ class LocalAuditCrisisAlertService implements CrisisAlertService {
         authorName: event.startedByName.isNotEmpty ? event.startedByName : event.startedBy,
         authorRole: event.startedByRole,
         peakFlowAttempts: [],
-        spo2: 95,
+        spo2: null,
         symptoms: const ['Crise Respiratória / Resgate Administrado'],
         medications: [
           MedicationUsage(

@@ -37,6 +37,9 @@ void main() {
       expect(patient.fluVaccineUpToDate, isFalse);
       expect(patient.pneumococcalVaccine, isFalse);
 
+      expect(patient.gestationalAgeWeeks, isNull);
+      expect(patient.birthWeightGrams, isNull);
+
       expect(patient.erVisitsLast12Months, equals(0));
       expect(patient.oralSteroidCoursesLastYear, equals(0));
       expect(patient.nightAwakeningsPerMonth, equals(0));
@@ -78,6 +81,9 @@ void main() {
       expect(patient.continuousMedications, isEmpty);
       expect(patient.drugAllergies, isEmpty);
       expect(patient.foodAllergies, isEmpty);
+
+      expect(patient.gestationalAgeWeeks, isNull);
+      expect(patient.birthWeightGrams, isNull);
 
       expect(patient.erVisitsLast12Months, equals(0));
       expect(patient.oralSteroidCoursesLastYear, equals(0));

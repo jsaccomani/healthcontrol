@@ -45,16 +45,16 @@ class PhysioSessionRecord {
   final String deviceName; // Voldyne, Shaker, Acapella, POWERbreathe, EPAP
   final int durationMinutes;
   final int? loadCmH2O;
-  final int preSpo2;
-  final int postSpo2;
+  final int? preSpo2;
+  final int? postSpo2;
   final bool amibApproved;
 
   const PhysioSessionRecord({
     required this.deviceName,
     required this.durationMinutes,
     this.loadCmH2O,
-    required this.preSpo2,
-    required this.postSpo2,
+    this.preSpo2,
+    this.postSpo2,
     required this.amibApproved,
   });
 
@@ -72,8 +72,8 @@ class PhysioSessionRecord {
         deviceName: json['device_name'] as String,
         durationMinutes: json['duration_minutes'] as int,
         loadCmH2O: json['load_cm_h2o'] as int?,
-        preSpo2: json['pre_spo2'] as int,
-        postSpo2: json['post_spo2'] as int,
+        preSpo2: json['pre_spo2'] as int?,
+        postSpo2: json['post_spo2'] as int?,
         amibApproved: json['amib_approved'] as bool? ?? true,
       );
 }
@@ -90,9 +90,9 @@ class HealthControlEntry {
   // Sinais Vitais & Peak Flow
   final List<int> peakFlowAttempts;
   final int peakFlowBest;
-  final ActionZoneType peakFlowZone;
+  final ActionZoneType? peakFlowZone;
   final bool peakFlowVarianceError;
-  final int spo2;
+  final int? spo2;
   final int? heartRate;
   final int? respiratoryRate;
 
@@ -120,9 +120,9 @@ class HealthControlEntry {
     required this.authorRole,
     required this.peakFlowAttempts,
     required this.peakFlowBest,
-    required this.peakFlowZone,
+    this.peakFlowZone,
     required this.peakFlowVarianceError,
-    required this.spo2,
+    this.spo2,
     this.heartRate,
     this.respiratoryRate,
     this.symptoms = const [],
@@ -143,7 +143,7 @@ class HealthControlEntry {
         'author_role': authorRole,
         'peak_flow_attempts': peakFlowAttempts,
         'peak_flow_best': peakFlowBest,
-        'peak_flow_zone': peakFlowZone.name,
+        'peak_flow_zone': peakFlowZone?.name,
         'peak_flow_variance_error': peakFlowVarianceError,
         'spo2': spo2,
         'heart_rate': heartRate,
@@ -170,11 +170,13 @@ class HealthControlEntry {
                 .toList() ??
             [],
         peakFlowBest: json['peak_flow_best'] as int? ?? 0,
-        peakFlowZone: ActionZoneType.values
-            .firstWhere((e) => e.name == json['peak_flow_zone']),
+        peakFlowZone: json['peak_flow_zone'] != null
+            ? ActionZoneType.values
+                .firstWhere((e) => e.name == json['peak_flow_zone'])
+            : null,
         peakFlowVarianceError:
             json['peak_flow_variance_error'] as bool? ?? false,
-        spo2: json['spo2'] as int? ?? 98,
+        spo2: json['spo2'] as int?,
         heartRate: json['heart_rate'] as int?,
         respiratoryRate: json['respiratory_rate'] as int?,
         symptoms: (json['symptoms'] as List<dynamic>?)

@@ -47,8 +47,8 @@ class PatientProfile {
   final String addressCityState;
 
   // 1. Histórico Perinatal & Nascimento
-  final int gestationalAgeWeeks; // Semanas de gestação (ex: 39 semanas)
-  final int birthWeightGrams; // Peso ao nascer em gramas (ex: 3200g)
+  final int? gestationalAgeWeeks; // Semanas de gestação (ex: 39 semanas)
+  final int? birthWeightGrams; // Peso ao nascer em gramas (ex: 3200g)
   final bool neonatalIcuOrOxygen; // Precisou de oxigênio ou UTI neonatal ao nascer?
 
   // 2. Anamnese Respiratória & Triagem Médica de Risco
@@ -118,8 +118,8 @@ class PatientProfile {
     this.emergencyContactName = '',
     this.emergencyContactPhone = '',
     this.addressCityState = '',
-    this.gestationalAgeWeeks = 39,
-    this.birthWeightGrams = 3200,
+    this.gestationalAgeWeeks,
+    this.birthWeightGrams,
     this.neonatalIcuOrOxygen = false,
     this.symptomsStartAge = '',
     this.hadIcuAdmission = false,
@@ -624,8 +624,8 @@ class PatientProfile {
       emergencyContactName: legacyEmergencyName.isNotEmpty ? legacyEmergencyName : (emergencyContacts.isNotEmpty ? emergencyContacts.first.fullName : ''),
       emergencyContactPhone: legacyEmergencyPhone.isNotEmpty ? legacyEmergencyPhone : (emergencyContacts.isNotEmpty ? emergencyContacts.first.phone : ''),
       addressCityState: json['address_city_state'] as String? ?? '',
-      gestationalAgeWeeks: (json['gestational_age_weeks'] as num?)?.toInt() ?? 39,
-      birthWeightGrams: (json['birth_weight_grams'] as num?)?.toInt() ?? 3200,
+      gestationalAgeWeeks: (json['gestational_age_weeks'] as num?)?.toInt(),
+      birthWeightGrams: (json['birth_weight_grams'] as num?)?.toInt(),
       neonatalIcuOrOxygen: json['neonatal_icu_or_oxygen'] as bool? ?? false,
       symptomsStartAge: json['symptoms_start_age'] as String? ?? '',
       hadIcuAdmission: json['had_icu_admission'] as bool? ?? false,

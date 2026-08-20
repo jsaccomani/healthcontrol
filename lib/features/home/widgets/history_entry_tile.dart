@@ -22,6 +22,7 @@ class HistoryEntryTile extends StatelessWidget {
       ActionZoneType.green => (HCColors.greenMain, 'Verde (Normal)'),
       ActionZoneType.yellow => (HCColors.yellowMain, 'Amarela (Atenção)'),
       ActionZoneType.red => (HCColors.redMain, 'Vermelha (Perigo)'),
+      null => (HCColors.neutral400, 'Não calculada'),
     };
 
     return Container(
@@ -108,17 +109,20 @@ class HistoryEntryTile extends StatelessWidget {
             children: [
               if (entry.peakFlowBest > 0)
                 _buildChip(
-                  label: 'Sopro: ${entry.peakFlowBest} L/min ($zoneName)',
+                  label: entry.peakFlowZone != null
+                      ? 'Sopro: ${entry.peakFlowBest} L/min ($zoneName)'
+                      : 'Sopro: ${entry.peakFlowBest} L/min',
                   bg: isDark ? const Color(0xFF06281E) : HCColors.greenLight,
                   border: isDark ? const Color(0xFF0F5132) : HCColors.greenBorder,
                   text: isDark ? HCColors.greenBorder : HCColors.greenText,
                 ),
-              _buildChip(
-                label: 'SpO2: ${entry.spo2}%',
-                bg: isDark ? const Color(0xFF06281E) : HCColors.primary50,
-                border: isDark ? const Color(0xFF0F5132) : HCColors.primary200,
-                text: isDark ? HCColors.primary300 : HCColors.primary700,
-              ),
+              if (entry.spo2 != null)
+                _buildChip(
+                  label: 'SpO2: ${entry.spo2}%',
+                  bg: isDark ? const Color(0xFF06281E) : HCColors.primary50,
+                  border: isDark ? const Color(0xFF0F5132) : HCColors.primary200,
+                  text: isDark ? HCColors.primary300 : HCColors.primary700,
+                ),
               if (entry.medications.isNotEmpty)
                 _buildChip(
                   label: '${entry.medications.length} medicação(ões)',

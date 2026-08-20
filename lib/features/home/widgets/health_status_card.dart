@@ -6,7 +6,7 @@ import '../../../core/design_system/design_system.dart';
 /// Responde imediatamente: "Como está meu filho agora?" e "O que devo fazer?".
 class HealthStatusCard extends StatelessWidget {
   final HealthControlEntry? latestEntry;
-  final ActionZoneType currentZone;
+  final ActionZoneType? currentZone;
   final PatientProfile profile;
   final VoidCallback onSosPressed;
   final VoidCallback? onOpenActionPlan;
@@ -51,6 +51,19 @@ class HealthStatusCard extends StatelessWidget {
           'Obstrução respiratória crítica.',
           'Inicie o plano de emergência médica e busque atendimento imediatamente.',
           HCColors.redMain,
+        ),
+      null => (
+          isDark ? HCColors.darkSurface : HCColors.surfaceWhite,
+          isDark ? HCColors.darkBorder : HCColors.neutral300,
+          Icons.info_outline,
+          latestEntry == null
+              ? 'Nenhum registro de saúde hoje'
+              : 'Sem Zona de Ação Calculada',
+          latestEntry == null
+              ? 'Registre as medições de fluxo respiratório ou sintomas para acompanhar a saúde diária.'
+              : 'Cadastre o Melhor PFE Pessoal no perfil para habilitar a classificação automática de zonas (GINA).',
+          'Mantenha os registros do seu filho atualizados.',
+          HCColors.primary500,
         ),
     };
 
@@ -138,12 +151,13 @@ class HealthStatusCard extends StatelessWidget {
                     value: '${latestEntry!.peakFlowBest} L/min',
                     valueColor: tagColor,
                   ),
-                _buildMetricBadge(
-                  context: context,
-                  label: 'Saturação (SpO2)',
-                  value: '${latestEntry!.spo2}%',
-                  valueColor: latestEntry!.spo2 < 92 ? HCColors.redMain : HCColors.greenMain,
-                ),
+                if (latestEntry!.spo2 != null)
+                  _buildMetricBadge(
+                    context: context,
+                    label: 'Saturação (SpO2)',
+                    value: '${latestEntry!.spo2}%',
+                    valueColor: latestEntry!.spo2! < 92 ? HCColors.redMain : HCColors.greenMain,
+                  ),
               ],
             ),
           ],

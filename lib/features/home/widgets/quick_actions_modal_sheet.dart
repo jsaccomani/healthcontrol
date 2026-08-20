@@ -145,9 +145,13 @@ class _QuickActionsModalSheetState extends State<QuickActionsModalSheet> {
     final variance = attempts.length > 1 ? best - min : 0;
     final alert = attempts.length > 1 && variance > 20;
 
-    final refPef = widget.profile.personalBestPef > 0 ? widget.profile.personalBestPef : 200;
-    final evaluation = ActionZoneEvaluator.evaluate(currentPef: best, personalBestPef: refPef);
-    final zone = evaluation.zone;
+    ActionZoneType? zone;
+    if (widget.profile.personalBestPef > 0) {
+      final evaluation = ActionZoneEvaluator.evaluate(currentPef: best, personalBestPef: widget.profile.personalBestPef);
+      zone = evaluation.zone;
+    } else {
+      zone = null;
+    }
 
     setState(() {
       _calcBest = best;
@@ -172,7 +176,7 @@ class _QuickActionsModalSheetState extends State<QuickActionsModalSheet> {
       authorName: _author,
       authorRole: _author == 'Mãe' || _author == 'Pai' ? 'Cuidador Principal' : 'Responsável',
       peakFlowAttempts: peakFlowAttempts ?? [],
-      spo2: spo2 ?? 98,
+      spo2: spo2,
       symptoms: symptoms != null && symptoms.isNotEmpty ? symptoms : ['Sem sintomas aparentes'],
       medications: medications ?? [],
       mouthRinseCompleted: mouthRinse,
@@ -582,12 +586,16 @@ class _QuickActionsModalSheetState extends State<QuickActionsModalSheet> {
             decoration: BoxDecoration(
               color: _calcZone == ActionZoneType.red
                   ? theme.criticalBg
-                  : (_calcZone == ActionZoneType.yellow || _hasVarianceAlert ? theme.warningBg : theme.successBg),
+                  : (_calcZone == ActionZoneType.yellow || _hasVarianceAlert
+                      ? theme.warningBg
+                      : (_calcZone == ActionZoneType.green ? theme.successBg : theme.elevatedSurface)),
               borderRadius: HCRadii.radiusMd,
               border: Border.all(
                 color: _calcZone == ActionZoneType.red
                     ? theme.criticalBorder
-                    : (_calcZone == ActionZoneType.yellow || _hasVarianceAlert ? theme.warningBorder : theme.successBorder),
+                    : (_calcZone == ActionZoneType.yellow || _hasVarianceAlert
+                        ? theme.warningBorder
+                        : (_calcZone == ActionZoneType.green ? theme.successBorder : theme.border)),
               ),
             ),
             child: Row(
@@ -596,10 +604,14 @@ class _QuickActionsModalSheetState extends State<QuickActionsModalSheet> {
                 Icon(
                   _calcZone == ActionZoneType.red
                       ? Icons.emergency
-                      : (_hasVarianceAlert || _calcZone == ActionZoneType.yellow ? Icons.warning_amber_rounded : Icons.check_circle_outline),
+                      : (_hasVarianceAlert || _calcZone == ActionZoneType.yellow
+                          ? Icons.warning_amber_rounded
+                          : (_calcZone == ActionZoneType.green ? Icons.check_circle_outline : Icons.info_outline)),
                   color: _calcZone == ActionZoneType.red
                       ? theme.critical
-                      : (_hasVarianceAlert || _calcZone == ActionZoneType.yellow ? theme.warning : theme.success),
+                      : (_hasVarianceAlert || _calcZone == ActionZoneType.yellow
+                          ? theme.warning
+                          : (_calcZone == ActionZoneType.green ? theme.success : theme.textSecondary)),
                   size: 22,
                 ),
                 const SizedBox(width: 10),
@@ -617,7 +629,9 @@ class _QuickActionsModalSheetState extends State<QuickActionsModalSheet> {
                               fontSize: 14,
                               color: _calcZone == ActionZoneType.red
                                   ? theme.criticalText
-                                  : (_hasVarianceAlert || _calcZone == ActionZoneType.yellow ? theme.warningText : theme.successText),
+                                  : (_hasVarianceAlert || _calcZone == ActionZoneType.yellow
+                                      ? theme.warningText
+                                      : (_calcZone == ActionZoneType.green ? theme.successText : theme.textPrimary)),
                             ),
                           ),
                           if (_calcZone != null)
@@ -645,9 +659,13 @@ class _QuickActionsModalSheetState extends State<QuickActionsModalSheet> {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        _hasVarianceAlert
-                            ? 'Variação de $_calcVariance L/min entre sopros (> 20 L/min). Verifique a vedação da boca e repita se necessário.'
-                            : 'Técnica consistente (variância: $_calcVariance L/min). Siga o plano de ação médica correspondente.',
+                        _calcZone == null
+                            ? (_hasVarianceAlert
+                                ? 'Variação de $_calcVariance L/min entre sopros (> 20 L/min). Sem PFE de referência cadastrado — não é possível calcular a zona. Cadastre o melhor PFE pessoal no perfil para habilitar esta avaliação.'
+                                : 'Sem PFE de referência cadastrado — não é possível calcular a zona. Cadastre o melhor PFE pessoal no perfil para habilitar esta avaliação.')
+                            : (_hasVarianceAlert
+                                ? 'Variação de $_calcVariance L/min entre sopros (> 20 L/min). Verifique a vedação da boca e repita se necessário.'
+                                : 'Técnica consistente (variância: $_calcVariance L/min). Siga o plano de ação médica correspondente.'),
                         style: TextStyle(fontSize: 11, color: theme.textSecondary),
                       ),
                     ],
@@ -746,8 +764,8 @@ class _QuickActionsModalSheetState extends State<QuickActionsModalSheet> {
   // --- Sub-View: SpO2 ---
   Widget _buildSpo2View() {
     final theme = context.hcTheme;
-    final val = int.tryParse(_spo2Ctrl.text.trim()) ?? 98;
-    final isCritical = val < 92;
+    final val = int.tryParse(_spo2Ctrl.text.trim());
+    final isCritical = val != null && val < 92;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -773,36 +791,38 @@ class _QuickActionsModalSheetState extends State<QuickActionsModalSheet> {
           ),
           onChanged: (_) => setState(() {}),
         ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isCritical ? theme.criticalBg : theme.successBg,
-            borderRadius: HCRadii.radiusMd,
-            border: Border.all(color: isCritical ? theme.criticalBorder : theme.successBorder),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                isCritical ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-                color: isCritical ? theme.critical : theme.success,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  isCritical
-                      ? 'Atenção: Saturação abaixo de 92% indica hipoxemia. Avalie resgate ou atendimento de emergência.'
-                      : 'Saturação adequada (≥ 95%).',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isCritical ? theme.criticalText : theme.successText,
+        if (val != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isCritical ? theme.criticalBg : theme.successBg,
+              borderRadius: HCRadii.radiusMd,
+              border: Border.all(color: isCritical ? theme.criticalBorder : theme.successBorder),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isCritical ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+                  color: isCritical ? theme.critical : theme.success,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    isCritical
+                        ? 'Atenção: Saturação abaixo de 92% indica hipoxemia. Avalie resgate ou atendimento de emergência.'
+                        : 'Saturação adequada (≥ 95%).',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isCritical ? theme.criticalText : theme.successText,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: 16),
         _buildAuthorSelector(),
         const SizedBox(height: 16),
@@ -811,7 +831,7 @@ class _QuickActionsModalSheetState extends State<QuickActionsModalSheet> {
           icon: Icons.check,
           isLoading: _isLoading,
           width: double.infinity,
-          onPressed: () => _saveQuickEntry(spo2: val),
+          onPressed: val == null ? null : () => _saveQuickEntry(spo2: val),
         ),
       ],
     );

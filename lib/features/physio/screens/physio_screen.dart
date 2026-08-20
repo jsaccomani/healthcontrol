@@ -51,8 +51,16 @@ class _PhysioScreenState extends State<PhysioScreen> {
   }
 
   void _runSafetyScreening() {
-    final spo2 = int.tryParse(_spo2Ctrl.text.trim()) ?? 97;
-    final fr = int.tryParse(_respRateCtrl.text.trim()) ?? 22;
+    final spo2 = int.tryParse(_spo2Ctrl.text.trim());
+    final fr = int.tryParse(_respRateCtrl.text.trim());
+
+    if (spo2 == null || fr == null) {
+      setState(() => _safetyCheck = const AmibSafetyResult(
+        isClearedForTherapy: false,
+        safetyViolations: ['Informe a SpO2 e a Frequência Respiratória reais para realizar a triagem de segurança.'],
+      ));
+      return;
+    }
 
     final check = AmibSafetyScreener.screenVitals(
       spo2Percent: spo2,
