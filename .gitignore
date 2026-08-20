@@ -28,8 +28,8 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .packages
 .pub-cache/
-.pub/
 /build/
+**/build/
 
 # Android related
 **/android/**/gradle-wrapper.jar
