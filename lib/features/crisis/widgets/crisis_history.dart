@@ -44,14 +44,14 @@ class _CrisisHistoryState extends State<CrisisHistory> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     return Material(
-      color: isDark ? HCColors.darkSurface : Colors.white,
+      color: theme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: HCRadii.radiusLg,
         side: BorderSide(
-          color: isDark ? HCColors.darkBorder : HCColors.neutral200,
+          color: theme.border,
         ),
       ),
       child: ExpansionTile(
@@ -66,44 +66,42 @@ class _CrisisHistoryState extends State<CrisisHistory> {
         leading: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white10 : HCColors.neutral100,
+            color: theme.elevatedSurface,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             Icons.history,
-            color: isDark ? HCColors.primary300 : HCColors.neutral800,
+            color: theme.primary,
             size: 20,
           ),
         ),
         title: Text(
           'Histórico de Crises e Medicações',
-          style: TextStyle(
+          style: HCTypography.title.copyWith(
             fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: isDark ? HCColors.darkText : HCColors.neutral900,
+            color: theme.textPrimary,
           ),
         ),
         subtitle: Text(
           _isExpanded ? 'Toque para recolher' : 'Ver administrações recentes sob demanda',
-          style: TextStyle(
-            fontSize: 11,
-            color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
+          style: HCTypography.caption.copyWith(
+            color: theme.textSecondary,
           ),
         ),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: _isLoadingHistory
-                ? const Center(
+                ? Center(
                     child: Padding(
-                      padding: EdgeInsets.all(12),
-                      child: CircularProgressIndicator(color: HCColors.primary500, strokeWidth: 2),
+                      padding: const EdgeInsets.all(12),
+                      child: CircularProgressIndicator(color: theme.primary, strokeWidth: 2),
                     ),
                   )
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Divider(height: 16),
+                      Divider(height: 16, color: theme.border),
 
                       // Eventos de Crises Registrados
                       Text(
@@ -112,7 +110,7 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
-                          color: isDark ? HCColors.darkTextMuted : HCColors.neutral700,
+                          color: theme.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -122,7 +120,7 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                           'Nenhuma crise anterior registrada no aplicativo.',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? HCColors.darkTextMuted : HCColors.neutral500,
+                            color: theme.textSecondary,
                             fontStyle: FontStyle.italic,
                           ),
                         )
@@ -133,10 +131,10 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                             child: Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: isDark ? Colors.black26 : HCColors.neutral50,
+                                color: theme.elevatedSurface,
                                 borderRadius: HCRadii.radiusMd,
                                 border: Border.all(
-                                  color: isDark ? Colors.white12 : HCColors.neutral200,
+                                  color: theme.border,
                                 ),
                               ),
                               child: Column(
@@ -150,15 +148,15 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 12,
-                                          color: isDark ? Colors.white : HCColors.neutral900,
+                                          color: theme.textPrimary,
                                         ),
                                       ),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                         decoration: BoxDecoration(
                                           color: event.isResolved
-                                              ? (isDark ? HCColors.greenMain.withAlpha(40) : HCColors.greenLight)
-                                              : (isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFEE2E2)),
+                                              ? theme.successBg
+                                              : theme.criticalBg,
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: Text(
@@ -166,7 +164,7 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
-                                            color: event.isResolved ? HCColors.greenMain : HCColors.redMain,
+                                            color: event.isResolved ? theme.successText : theme.criticalText,
                                           ),
                                         ),
                                       ),
@@ -178,7 +176,7 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                                       'Resgate: ${event.medicationAdministered} (${event.doseAdministered ?? "dose prescrita"})',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: isDark ? HCColors.darkTextMuted : HCColors.neutral700,
+                                        color: theme.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -187,7 +185,7 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                                     'Iniciado por: ${event.startedByName} (${event.startedByRole})',
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: isDark ? HCColors.darkTextMuted : HCColors.neutral500,
+                                      color: theme.textTertiary,
                                     ),
                                   ),
                                 ],
@@ -205,7 +203,7 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,
-                          color: isDark ? HCColors.darkTextMuted : HCColors.neutral700,
+                          color: theme.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -215,7 +213,7 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                           'Nenhuma medição recente cadastrada.',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? HCColors.darkTextMuted : HCColors.neutral500,
+                            color: theme.textSecondary,
                             fontStyle: FontStyle.italic,
                           ),
                         )
@@ -229,10 +227,10 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                                   Icons.circle,
                                   size: 8,
                                   color: entry.peakFlowZone == ActionZoneType.green
-                                      ? HCColors.greenMain
+                                      ? theme.success
                                       : (entry.peakFlowZone == ActionZoneType.yellow
-                                          ? HCColors.yellowMain
-                                          : HCColors.redMain),
+                                          ? theme.warning
+                                          : theme.critical),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -240,7 +238,7 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: isDark ? Colors.white70 : HCColors.neutral800,
+                                    color: theme.textPrimary,
                                   ),
                                 ),
                                 const SizedBox(width: 10),
@@ -248,7 +246,7 @@ class _CrisisHistoryState extends State<CrisisHistory> {
                                   'PFE: ${entry.peakFlowBest > 0 ? "${entry.peakFlowBest} L/min" : "-"} • SpO2: ${entry.spo2}%',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
+                                    color: theme.textSecondary,
                                   ),
                                 ),
                               ],

@@ -32,16 +32,16 @@ class CrisisChildSelector {
     required PatientProfile profile,
     required VoidCallback onConfirmed,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? HCColors.darkSurface : Colors.white,
+        backgroundColor: theme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: HCRadii.radiusLg,
           side: BorderSide(
-            color: isDark ? HCColors.darkBorder : HCColors.neutral200,
+            color: theme.border,
           ),
         ),
         title: Row(
@@ -58,10 +58,9 @@ class CrisisChildSelector {
             Expanded(
               child: Text(
                 '${profile.name} está em crise?',
-                style: TextStyle(
+                style: HCTypography.heading.copyWith(
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? HCColors.darkText : HCColors.neutral900,
+                  color: theme.textPrimary,
                 ),
               ),
             ),
@@ -69,9 +68,8 @@ class CrisisChildSelector {
         ),
         content: Text(
           'Você será direcionado para o plano de resgate médico imediato cadastrado para ${profile.name.split(" ").first}.',
-          style: TextStyle(
-            fontSize: 13,
-            color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
+          style: HCTypography.bodySmall.copyWith(
+            color: theme.textSecondary,
             height: 1.4,
           ),
         ),
@@ -82,7 +80,7 @@ class CrisisChildSelector {
               'Cancelar',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
+                color: theme.textSecondary,
               ),
             ),
           ),
@@ -112,14 +110,14 @@ class CrisisChildSelector {
     required List<PatientProfile> profiles,
     required ValueChanged<PatientProfile> onChildSelected,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) => Material(
-        color: isDark ? HCColors.darkSurface : Colors.white,
+        color: theme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -141,10 +139,9 @@ class CrisisChildSelector {
                     const SizedBox(width: 10),
                     Text(
                       'Qual criança está em crise?',
-                      style: TextStyle(
+                      style: HCTypography.heading.copyWith(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? HCColors.darkText : HCColors.neutral900,
+                        color: theme.textPrimary,
                       ),
                     ),
                   ],
@@ -152,9 +149,8 @@ class CrisisChildSelector {
                 const SizedBox(height: 6),
                 Text(
                   'Selecione a criança para carregar a prescrição de resgate correta:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
+                  style: HCTypography.bodySmall.copyWith(
+                    color: theme.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -162,12 +158,12 @@ class CrisisChildSelector {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Material(
-                      color: isDark ? const Color(0xFF2C0B0B) : const Color(0xFFFEF2F2),
+                      color: theme.criticalBg,
                       shape: RoundedRectangleBorder(
                         borderRadius: HCRadii.radiusMd,
                         side: BorderSide(
-                          color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA),
-                          width: 1.5,
+                          color: theme.criticalBorder,
+                          width: 1.2,
                         ),
                       ),
                       child: ListTile(
@@ -180,14 +176,14 @@ class CrisisChildSelector {
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
-                            color: isDark ? Colors.white : HCColors.neutral900,
+                            color: theme.textPrimary,
                           ),
                         ),
                         subtitle: Text(
-                          '${p.ageDisplay}${p.weightKg > 0 ? " • ${p.weightKg} kg" : ""}',
+                          '${p.ageDisplay}${p.weightKg > 0 ? " • ${p.weightKg.toString().replaceAll('.', ',')} kg" : ""}',
                           style: TextStyle(
                             fontSize: 11,
-                            color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
+                            color: theme.textSecondary,
                           ),
                         ),
                         trailing: const Icon(

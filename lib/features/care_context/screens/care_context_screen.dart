@@ -10,8 +10,12 @@ import '../widgets/crisis_entry_card.dart';
 import '../widgets/crisis_child_selector.dart';
 
 /// Tela de Entrada e Contexto de Cuidado (CareContextScreen).
-/// Responde imediatamente: "Quem você vai cuidar agora?"
-/// Ponto central de decisão sem carga de dados pesados desnecessários.
+/// Central de Decisão: "Quem você vai cuidar agora?"
+///
+/// Princípios:
+/// - Alta velocidade (não carrega prescrições, histórico ou event logs).
+/// - 3 ações em segundos: Selecionar Criança, Adicionar Criança ou Iniciar Crise.
+/// - Sofisticada mesmo com 1 criança, permitindo whitespace limpo.
 class CareContextScreen extends StatefulWidget {
   const CareContextScreen({super.key});
 
@@ -51,6 +55,11 @@ class _CareContextScreenState extends State<CareContextScreen> {
   }
 
   void _handleCrisisEntry() {
+    if (_profiles.isEmpty) {
+      _showAddChildDialog();
+      return;
+    }
+
     CrisisChildSelector.show(
       context: context,
       profiles: _profiles,
@@ -66,127 +75,28 @@ class _CareContextScreenState extends State<CareContextScreen> {
     ).then((_) => _loadProfiles());
   }
 
-  void _showAddChildDialog() {
-    final nameCtrl = TextEditingController();
-    final heightCtrl = TextEditingController();
-    final weightCtrl = TextEditingController();
-    final pefCtrl = TextEditingController();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showDialog(
+  Future<void> _showAddChildDialog() async {
+    final created = await HCAddChildDialog.show(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? HCColors.darkSurface : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: HCRadii.radiusLg,
-          side: BorderSide(
-            color: isDark ? HCColors.darkBorder : HCColors.neutral200,
-          ),
-        ),
-        title: Text(
-          'Cadastrar Nova Criança',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: isDark ? HCColors.darkText : HCColors.neutral900,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                style: TextStyle(color: isDark ? Colors.white : HCColors.neutral900),
-                decoration: const InputDecoration(
-                  labelText: 'Nome Completo',
-                  hintText: 'Ex: Helena Saccomani',
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: heightCtrl,
-                keyboardType: TextInputType.number,
-                style: TextStyle(color: isDark ? Colors.white : HCColors.neutral900),
-                decoration: const InputDecoration(
-                  labelText: 'Altura (cm)',
-                  hintText: '105',
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: weightCtrl,
-                keyboardType: TextInputType.number,
-                style: TextStyle(color: isDark ? Colors.white : HCColors.neutral900),
-                decoration: const InputDecoration(
-                  labelText: 'Peso (kg)',
-                  hintText: '17.5',
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: pefCtrl,
-                keyboardType: TextInputType.number,
-                style: TextStyle(color: isDark ? Colors.white : HCColors.neutral900),
-                decoration: const InputDecoration(
-                  labelText: 'Recorde PFE (L/min)',
-                  hintText: '180',
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancelar',
-              style: TextStyle(color: isDark ? HCColors.darkTextMuted : HCColors.neutral600),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: HCColors.primary500,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
-              elevation: 0,
-            ),
-            onPressed: () async {
-              final name = nameCtrl.text.trim();
-              if (name.isEmpty) return;
-              final height = double.tryParse(heightCtrl.text.trim()) ?? 100.0;
-              final weight = double.tryParse(weightCtrl.text.trim()) ?? 16.0;
-              final pef = int.tryParse(pefCtrl.text.trim()) ?? 160;
-
-              final created = await _storageService.createNewChildProfile(
-                name: name,
-                birthDate: DateTime.now().subtract(const Duration(days: 365 * 4)),
-                gender: 'Não informado',
-                heightCm: height,
-                weightKg: weight,
-                personalBestPef: pef,
-              );
-
-              if (ctx.mounted) Navigator.of(ctx).pop();
-              _loadProfiles();
-              _selectChildAndOpenHome(created);
-            },
-            child: const Text('Cadastrar', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+      onChildCreated: (c) {},
     );
+    if (created != null) {
+      await _storageService.setSelectedProfileId(created.id);
+      _loadProfiles();
+      _selectChildAndOpenHome(created);
+    }
   }
 
   void _showThemeSelector() {
+    final theme = context.hcTheme;
+
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final currentMode = appThemeModeNotifier.value;
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Material(
-          color: isDark ? HCColors.darkSurface : Colors.white,
+          color: theme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -199,15 +109,15 @@ class _CareContextScreenState extends State<CareContextScreen> {
                     'Aparência e Tema',
                     style: HCTypography.heading.copyWith(
                       fontSize: 16,
-                      color: isDark ? HCColors.darkText : HCColors.neutral900,
+                      color: theme.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 12),
                   ListTile(
-                    leading: const Icon(Icons.brightness_auto),
-                    title: const Text('Padrão do Sistema'),
+                    leading: Icon(Icons.brightness_auto, color: theme.textPrimary),
+                    title: Text('Padrão do Sistema', style: TextStyle(color: theme.textPrimary)),
                     trailing: currentMode == ThemeMode.system
-                        ? const Icon(Icons.check, color: HCColors.primary500)
+                        ? Icon(Icons.check, color: theme.primary)
                         : null,
                     onTap: () async {
                       if (ctx.mounted) Navigator.pop(ctx);
@@ -216,10 +126,10 @@ class _CareContextScreenState extends State<CareContextScreen> {
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.light_mode),
-                    title: const Text('Modo Claro (Calm Healthcare)'),
+                    leading: Icon(Icons.light_mode, color: theme.textPrimary),
+                    title: Text('Modo Claro (Calm Healthcare)', style: TextStyle(color: theme.textPrimary)),
                     trailing: currentMode == ThemeMode.light
-                        ? const Icon(Icons.check, color: HCColors.primary500)
+                        ? Icon(Icons.check, color: theme.primary)
                         : null,
                     onTap: () async {
                       if (ctx.mounted) Navigator.pop(ctx);
@@ -228,10 +138,10 @@ class _CareContextScreenState extends State<CareContextScreen> {
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.dark_mode),
-                    title: const Text('Modo Noturno (Nocturnal Healthcare)'),
+                    leading: Icon(Icons.dark_mode, color: theme.textPrimary),
+                    title: Text('Modo Noturno (Nocturnal Healthcare)', style: TextStyle(color: theme.textPrimary)),
                     trailing: currentMode == ThemeMode.dark
-                        ? const Icon(Icons.check, color: HCColors.primary500)
+                        ? Icon(Icons.check, color: theme.primary)
                         : null,
                     onTap: () async {
                       if (ctx.mounted) Navigator.pop(ctx);
@@ -250,32 +160,28 @@ class _CareContextScreenState extends State<CareContextScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     return Scaffold(
-      backgroundColor: isDark ? HCColors.darkBg : HCColors.neutral50,
+      backgroundColor: theme.background,
       appBar: AppBar(
-        backgroundColor: isDark ? HCColors.darkSurface : Colors.white,
-        foregroundColor: isDark ? HCColors.darkText : HCColors.neutral900,
-        elevation: 0,
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: isDark ? HCColors.primary900.withAlpha(90) : HCColors.primary50,
+                color: theme.primarySubtle,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.air, color: HCColors.primary500, size: 18),
+              child: Icon(Icons.air, color: theme.primary, size: 18),
             ),
             const SizedBox(width: 10),
             Text(
               'Health Control',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
+              style: HCTypography.heading.copyWith(
                 fontSize: 16,
                 letterSpacing: -0.2,
-                color: isDark ? HCColors.darkText : HCColors.neutral900,
+                color: theme.textPrimary,
               ),
             ),
           ],
@@ -283,8 +189,8 @@ class _CareContextScreenState extends State<CareContextScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              isDark ? Icons.dark_mode : Icons.light_mode,
-              color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
+              theme.isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+              color: theme.textSecondary,
             ),
             tooltip: 'Alternar Tema',
             onPressed: _showThemeSelector,
@@ -292,7 +198,7 @@ class _CareContextScreenState extends State<CareContextScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: HCColors.primary500))
+          ? const Center(child: HCLoadingState(message: 'Carregando...'))
           : SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               child: HCResponsiveContainer(
@@ -300,65 +206,104 @@ class _CareContextScreenState extends State<CareContextScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 1. Ação Global de Crise (SOS)
+                    // 1. Componente de Emergência Premium (Sempre evidente, sem ser assustador)
                     CrisisEntryCard(onTap: _handleCrisisEntry),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
 
-                    // 2. Pergunta Central de Contexto
+                    // 2. Subtítulo Contextual Curto ("Quem você vai cuidar agora?")
                     Text(
                       'Quem você vai cuidar agora?',
-                      style: TextStyle(
+                      style: HCTypography.heading.copyWith(
                         fontSize: 20,
-                        fontWeight: FontWeight.w800,
                         letterSpacing: -0.3,
-                        color: isDark ? HCColors.darkText : HCColors.neutral900,
+                        color: theme.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Selecione a criança para acompanhar a rotina diária de saúde.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
+                      'Selecione a criança para acompanhar a rotina de saúde.',
+                      style: HCTypography.bodySmall.copyWith(
+                        color: theme.textSecondary,
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
 
-                    // 3. Lista de Perfis das Crianças
-                    ..._profiles.map(
-                      (profile) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: ChildContextCard(
-                          profile: profile,
-                          onSelect: () => _selectChildAndOpenHome(profile),
+                    // 3. Estados: Empty State vs Lista de Crianças
+                    if (_profiles.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: theme.surface,
+                          borderRadius: HCRadii.radiusLg,
+                          border: Border.all(color: theme.border),
                         ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // 4. Botão de Adicionar Nova Criança
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: isDark ? HCColors.primary300 : HCColors.primary600,
-                          side: BorderSide(
-                            color: isDark ? HCColors.darkBorder : HCColors.primary200,
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: theme.primarySubtle,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.family_restroom,
+                                size: 36,
+                                color: theme.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Vamos começar pelo cadastro da criança.',
+                              textAlign: TextAlign.center,
+                              style: HCTypography.title.copyWith(
+                                fontSize: 16,
+                                color: theme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Cadastre o perfil para acompanhar o controle da asma, receitas e orientações de emergência.',
+                              textAlign: TextAlign.center,
+                              style: HCTypography.bodySmall.copyWith(
+                                color: theme.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            HCPrimaryButton(
+                              label: 'Adicionar Criança',
+                              icon: Icons.person_add_alt_1,
+                              onPressed: _showAddChildDialog,
+                            ),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      // Lista de Crianças
+                      ..._profiles.map(
+                        (profile) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: ChildContextCard(
+                            profile: profile,
+                            onSelect: () => _selectChildAndOpenHome(profile),
                           ),
-                          shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
-                        ),
-                        onPressed: _showAddChildDialog,
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text(
-                          'Adicionar Criança',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ),
-                    ),
+
+                      const SizedBox(height: 8),
+
+                      // Botão de Adicionar Criança
+                      HCOutlineButton(
+                        label: _profiles.length == 1 ? 'Adicionar Outra Criança' : 'Adicionar Criança',
+                        icon: Icons.person_add_alt_1,
+                        width: double.infinity,
+                        onPressed: _showAddChildDialog,
+                      ),
+                    ],
+
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),

@@ -1,10 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:clinical_core/clinical_core.dart';
 import '../../../core/storage/health_storage_service.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/design_system/design_system.dart';
 
+/// Tela de Captura, Extração OCR e Gestão de Receitas Médicas.
+///
+/// Princípio Clínico Rigoroso:
+/// - OCR é apenas EXTRAÇÃO preliminar.
+/// - Nunca transforma automaticamente o resultado em prescrição ativa sem revisão humana.
+/// - Fluxo: Documento -> OCR -> Dados Extraídos -> Revisão Humana -> Confirmação -> PrescriptionRecord.
 class PrescriptionScanScreen extends StatefulWidget {
   final String patientId;
   final String patientName;
@@ -34,222 +40,287 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen> {
   Future<void> _loadPrescriptions() async {
     setState(() => _isLoading = true);
     final list = await _storageService.getPrescriptions(widget.patientId);
+    if (!mounted) return;
     setState(() {
       _prescriptions = list;
       _isLoading = false;
     });
   }
 
-  void _openScanModal() {
-    final rawTextCtrl = TextEditingController();
-    int sampleSelected = 0;
+  // ===========================================================================
+  // FLUXO DE ADIÇÃO DE RECEITA (Seletor -> Preview -> OCR -> Revisão)
+  // ===========================================================================
 
-    final samples = [
-      {
-        'title': 'Receita Pediátrica Padrão (Manutenção + Resgate)',
-        'text': '''INSTITUTO PEDIÁTRICO DE PNEUMOLOGIA
-Dr. Marco Aurélio Valente - CRM 129.840/SP
-Data: 18/08/2026
+  void _startAddPrescriptionFlow() {
+    HCBottomSheet.show(
+      context: context,
+      title: 'Adicionar Receita',
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Escolha como deseja importar a prescrição médica para ${widget.patientName}:',
+              style: HCTypography.bodySmall,
+            ),
+            const SizedBox(height: 16),
 
-Paciente: ${widget.patientName}
+            // 1. Fotografar receita
+            _buildSourceOptionTile(
+              icon: Icons.camera_alt_outlined,
+              title: 'Fotografar Receita',
+              subtitle: 'Use a câmera para capturar o documento impresso',
+              onTap: () {
+                Navigator.pop(context);
+                _showCapturePreview(sourceType: 'camera');
+              },
+            ),
 
-USO INALATÓRIO:
-1. Clenil HFA 250mcg Spray
-   - Fazer 1 jato (puff) de 12 em 12 horas.
-   - Usar obrigatoriamente com espaçador valvulado e máscara facial.
-   - Enxaguar a cavidade oral ou escovar os dentes após a aplicação.
+            const SizedBox(height: 10),
 
-2. Aerolin Spray 100mcg (Sulfato de Salbutamol)
-   - Fazer 2 a 4 jatos com espaçador em caso de tosse, chiado ou falta de ar.
+            // 2. Escolher imagem
+            _buildSourceOptionTile(
+              icon: Icons.photo_library_outlined,
+              title: 'Escolher Imagem',
+              subtitle: 'Selecione uma foto da galeria do seu dispositivo',
+              onTap: () {
+                Navigator.pop(context);
+                _showCapturePreview(sourceType: 'gallery');
+              },
+            ),
 
-USO ORAL:
-3. Singulair Baby 4mg Sachê (Montelucaste)
-   - Tomar 1 sachê 1x ao dia à noite misturado em alimento pastoso.
+            const SizedBox(height: 10),
 
-Validade: 6 meses.''',
-      },
-      {
-        'title': 'Receita de Exacerbação / Crise Aguda',
-        'text': '''HOSPITAL INFANTIL PRONTO-SOCORRO
-Dra. Renata Silveira - CRM 165.430/SP
-Data: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}
+            // 3. Importar PDF
+            _buildSourceOptionTile(
+              icon: Icons.picture_as_pdf_outlined,
+              title: 'Importar PDF',
+              subtitle: 'Carregar arquivo digital fornecido pela clínica/hospital',
+              onTap: () {
+                Navigator.pop(context);
+                _showCapturePreview(sourceType: 'pdf');
+              },
+            ),
 
-Paciente: ${widget.patientName}
+            const SizedBox(height: 10),
 
-1. Aerolin 100mcg Spray
-   - 2 jatos de 4 em 4 horas no espaçador por 48 horas.
+            // 4. Cadastrar manualmente
+            _buildSourceOptionTile(
+              icon: Icons.edit_note_outlined,
+              title: 'Cadastrar Manualmente',
+              subtitle: 'Digite as informações da receita campo por campo',
+              onTap: () {
+                Navigator.pop(context);
+                _openManualEntryScreen();
+              },
+            ),
 
-2. Prednisolona 3mg/mL Solução Oral
-   - Tomar 6,5 mL (1mg/kg) 1x ao dia pela manhã por 5 dias consecutivos.
+            const SizedBox(height: 16),
+            Divider(height: 1, color: context.hcTheme.borderSubtle),
+            const SizedBox(height: 12),
 
-3. Clenil HFA 250mcg
-   - Manter 1 jato 12/12h com espaçador.''',
-      },
-    ];
+            // Opções de demonstração rápida (amostras clínicas)
+            Text(
+              'OU USE UM MODELO DE TESTE:',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+                color: context.hcTheme.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _startOcrSimulation(sampleType: 'standard');
+                    },
+                    child: const Text('Receita Padrão', style: TextStyle(fontSize: 11)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _startOcrSimulation(sampleType: 'formoterol');
+                    },
+                    child: const Text('Receita Formoterol', style: TextStyle(fontSize: 11)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-    rawTextCtrl.text = samples[0]['text'] as String;
+  Widget _buildSourceOptionTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    final theme = context.hcTheme;
+
+    return Material(
+      color: theme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: HCRadii.radiusMd,
+        side: BorderSide(color: theme.border),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: HCRadii.radiusMd,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.primarySubtle,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: theme.primary, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: theme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios, size: 12, color: theme.textTertiary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // ETAPA 2: PREVIEW DO DOCUMENTO CAPTURADO
+  // ===========================================================================
+
+  void _showCapturePreview({required String sourceType}) {
+    final theme = context.hcTheme;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setModalState) => Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          ),
-          child: SingleChildScrollView(
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Material(
+        color: theme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SafeArea(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.document_scanner, color: AppTheme.primaryTeal, size: 24),
-                        SizedBox(width: 8),
-                        Text(
-                          'Escanear Receita Médica',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
+                Text(
+                  'Pré-visualização do Documento',
+                  style: HCTypography.heading.copyWith(fontSize: 16, color: theme.textPrimary),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Tire uma foto da receita, importe uma prescrição digital ou use o leitor de texto com IA para alimentar as medicações e datas de validade automaticamente.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.3),
+                const SizedBox(height: 4),
+                Text(
+                  'Verifique se a receita médica está legível e bem enquadrada.',
+                  style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
                 ),
-                const SizedBox(height: 14),
-
-                // Botões de Ação de Captura
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.camera_alt, size: 18),
-                        label: const Text('Tirar Foto'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.primaryTeal,
-                          side: const BorderSide(color: AppTheme.primaryTeal),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Foto da receita capturada! Processando texto via OCR...')),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.photo_library, size: 18),
-                        label: const Text('Galeria / PDF'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF0284C7),
-                          side: const BorderSide(color: Color(0xFF0284C7)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Documento PDF importado com sucesso.')),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 14),
-
-                // Seletor de Amostras de IA
-                const Text('Modelos de Teste Rápido (OCR Simulado):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF475569))),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  children: List.generate(samples.length, (idx) {
-                    final isSel = sampleSelected == idx;
-                    return ChoiceChip(
-                      label: Text(idx == 0 ? 'Receita Contínua' : 'Receita de Crise', style: const TextStyle(fontSize: 11)),
-                      selected: isSel,
-                      selectedColor: AppTheme.primaryLight,
-                      onSelected: (sel) {
-                        if (sel) {
-                          setModalState(() {
-                            sampleSelected = idx;
-                            rawTextCtrl.text = samples[idx]['text'] as String;
-                          });
-                        }
-                      },
-                    );
-                  }),
-                ),
-
-                const SizedBox(height: 10),
-
-                // Campo de Texto da Receita
-                TextField(
-                  controller: rawTextCtrl,
-                  maxLines: 7,
-                  style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
-                  decoration: InputDecoration(
-                    labelText: 'Texto da Prescrição Médica (Extraído via OCR / Scanner)',
-                    alignLabelWithHint: true,
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                  ),
-                ),
-
                 const SizedBox(height: 16),
 
-                SizedBox(
+                // Mock visual do documento capturado
+                Container(
                   width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.auto_awesome),
-                    label: const Text('Processar e Importar Medicamentos', style: TextStyle(fontWeight: FontWeight.bold)),
-                    onPressed: () async {
-                      if (rawTextCtrl.text.trim().isEmpty) return;
-                      final messenger = ScaffoldMessenger.of(context);
-
-                      final parsed = PrescriptionOcrParser.parseRawPrescriptionText(
-                        rawText: rawTextCtrl.text.trim(),
-                        patientId: widget.patientId,
-                      );
-
-                      await _storageService.savePrescription(parsed);
-                      if (ctx.mounted) {
-                        Navigator.pop(ctx);
-                      }
-                      if (!mounted) return;
-                      await _loadPrescriptions();
-
-                      if (!mounted) return;
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text('Receita de ${parsed.doctorName} importada com ${parsed.medications.length} medicações!'),
-                          backgroundColor: HCColors.greenMain,
-                        ),
-                      );
-                    },
+                  height: 220,
+                  decoration: BoxDecoration(
+                    color: theme.elevatedSurface,
+                    borderRadius: HCRadii.radiusLg,
+                    border: Border.all(color: theme.border),
                   ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        sourceType == 'pdf' ? Icons.picture_as_pdf : Icons.document_scanner,
+                        size: 56,
+                        color: theme.primary,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        sourceType == 'pdf' ? 'receita_pediatrica.pdf (1.2 MB)' : 'receita_foto_001.jpg (2.4 MB)',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.textPrimary),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Qualidade: Alta Definição • Iluminação Adequada',
+                        style: TextStyle(fontSize: 11, color: theme.successText),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Botões de Recapturar vs Confirmar
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _startAddPrescriptionFlow();
+                        },
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Recapturar'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _startOcrSimulation(sampleType: 'standard');
+                        },
+                        icon: const Icon(Icons.auto_awesome, size: 18),
+                        label: const Text(
+                          'Extrair Dados com OCR',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -259,259 +330,265 @@ Paciente: ${widget.patientName}
     );
   }
 
-  void _openManualAddMedicationModal() {
-    showModalBottomSheet(
+  // ===========================================================================
+  // ETAPA 3: PROCESSAMENTO OCR ASSÍNCRONO COM PROGRESSO NÃO-BLOQUEANTE
+  // ===========================================================================
+
+  void _startOcrSimulation({required String sampleType}) {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      barrierDismissible: false,
+      builder: (ctx) => _OcrProcessingDialog(
+        onCompleted: (extractedData) {
+          Navigator.pop(ctx);
+          if (extractedData != null) {
+            _openReviewScreen(extractedData);
+          } else {
+            _showOcrFailureFallback();
+          }
+        },
+        sampleType: sampleType,
       ),
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.8,
-        maxChildSize: 0.95,
-        minChildSize: 0.5,
-        expand: false,
-        builder: (_, scrollCtrl) => Padding(
-          padding: const EdgeInsets.all(20),
-          child: ListView(
-            controller: scrollCtrl,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.medication, color: AppTheme.primaryTeal),
-                  SizedBox(width: 8),
-                  Text(
-                    'Catálogo Oficial de Bombinhas & Remédios',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Selecione um medicamento de referência (SBP / GINA / PCDT) para incluir no tratamento do seu filho:',
-                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 14),
+    );
+  }
 
-              ...PediatricPharmacopeia.catalog.map((item) {
-                final category = item['category'] as MedicationCategory;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  elevation: 0,
-                  color: const Color(0xFFF8FAFC),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    side: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.white,
-                      child: Text(category.iconEmoji, style: const TextStyle(fontSize: 18)),
-                    ),
-                    title: Text(
-                      item['name'] as String,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${item['active']} • ${item['defaultDosage']}', style: const TextStyle(fontSize: 11, color: Color(0xFF475569))),
-                        const SizedBox(height: 2),
-                        Text(
-                          category.displayName,
-                          style: const TextStyle(fontSize: 10, color: AppTheme.primaryTeal, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    trailing: const Icon(Icons.add_circle, color: AppTheme.primaryTeal),
-                    onTap: () async {
-                      final newMed = PrescribedMedication(
-                        id: 'med_${DateTime.now().millisecondsSinceEpoch}',
-                        commercialName: item['name'] as String,
-                        activeIngredient: item['active'] as String,
-                        category: category,
-                        dosage: item['defaultDosage'] as String,
-                        frequency: item['defaultFrequency'] as String,
-                        instructions: item['instructions'] as String,
-                        spacerRequired: item['spacer'] as bool,
-                        isContinuous: item['continuous'] as bool,
-                      );
+  void _showOcrFailureFallback() {
+    final theme = context.hcTheme;
 
-                      if (_prescriptions.isNotEmpty) {
-                        final active = _prescriptions.first;
-                        final updated = PrescriptionRecord(
-                          id: active.id,
-                          patientId: active.patientId,
-                          doctorName: active.doctorName,
-                          doctorCrm: active.doctorCrm,
-                          clinicName: active.clinicName,
-                          prescriptionDate: active.prescriptionDate,
-                          validityMonths: active.validityMonths,
-                          medications: [...active.medications, newMed],
-                          notes: active.notes,
-                        );
-                        await _storageService.savePrescription(updated);
-                      } else {
-                        final newPresc = PrescriptionRecord(
-                          id: 'presc_manual_${DateTime.now().millisecondsSinceEpoch}',
-                          patientId: widget.patientId,
-                          doctorName: 'Prescrição Cadastrada Manualmente',
-                          prescriptionDate: DateTime.now(),
-                          validityMonths: 6,
-                          medications: [newMed],
-                        );
-                        await _storageService.savePrescription(newPresc);
-                      }
-
-                      if (ctx.mounted) {
-                        Navigator.pop(ctx);
-                      }
-                      if (!mounted) return;
-                      await _loadPrescriptions();
-
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('${newMed.commercialName} adicionado ao plano de tratamento!'),
-                          backgroundColor: HCColors.greenMain,
-                        ),
-                      );
-                    },
-                  ),
-                );
-              }),
-            ],
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: theme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: HCRadii.radiusLg,
+          side: BorderSide(color: theme.border),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: theme.warning, size: 24),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('Leitura Inconclusiva', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+          ],
+        ),
+        content: Text(
+          'Nossa leitura automática não conseguiu interpretar esta receita com segurança clínica suficiente.',
+          style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancelar', style: TextStyle(color: theme.textSecondary)),
           ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _openManualEntryScreen();
+            },
+            child: const Text('Preencher Manualmente'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // ETAPA 4: TELA DE REVISÃO HUMANA (MANDATÓRIA ANTES DE SALVAR)
+  // ===========================================================================
+
+  void _openReviewScreen(Map<String, dynamic> rawExtracted) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _PrescriptionReviewScreen(
+          patientId: widget.patientId,
+          patientName: widget.patientName,
+          initialData: rawExtracted,
+          onSavePrescription: (record) async {
+            await _storageService.addPrescription(record);
+            _loadPrescriptions();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Prescrição confirmada e ativada com sucesso!'),
+                  backgroundColor: HCColors.greenMain,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
         ),
       ),
     );
   }
 
+  void _openManualEntryScreen() {
+    _openReviewScreen({
+      'doctorName': '',
+      'doctorCrm': '',
+      'clinicName': '',
+      'prescriptionDate': DateTime.now(),
+      'validityMonths': 6,
+      'isOcrExtracted': false,
+      'medications': [
+        {
+          'commercialName': '',
+          'activeIngredient': '',
+          'dosage': '1 jato',
+          'frequency': '12/12h',
+          'instructions': 'Usar com espaçador valvulado e máscara.',
+          'category': MedicationCategory.maintenanceInhaled,
+          'spacerRequired': true,
+          'isContinuous': true,
+          'hasLowConfidence': false,
+        }
+      ],
+    });
+  }
+
+  // ===========================================================================
+  // INTERFACE PRINCIPAL (LISTA DE PRESCRIÇÕES ATIVAS + CTA)
+  // ===========================================================================
+
   @override
   Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: theme.background,
       appBar: AppBar(
-        title: const Text('Receitas & Bombinhas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+        title: Text(
+          'Prescrições & Receitas',
+          style: HCTypography.heading.copyWith(fontSize: 16, color: theme.textPrimary),
+        ),
         actions: [
-          IconButton(
-            tooltip: 'Escanear Nova Receita',
-            icon: const Icon(Icons.document_scanner, color: AppTheme.primaryTeal),
-            onPressed: _openScanModal,
+          TextButton.icon(
+            onPressed: _startAddPrescriptionFlow,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Adicionar', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal))
+          ? const Center(child: HCLoadingState(message: 'Carregando receitas...'))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Banner de Ação
-                  _buildScanBanner(),
-
-                  const SizedBox(height: 16),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Prescrições Médicas Ativas',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: HCResponsiveContainer(
+                maxWidth: 720,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Banner Superior Explicativo
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.surface,
+                        borderRadius: HCRadii.radiusLg,
+                        border: Border.all(color: theme.border),
                       ),
-                      TextButton.icon(
-                        icon: const Icon(Icons.add, size: 16),
-                        label: const Text('Adicionar Remédio', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                        onPressed: _openManualAddMedicationModal,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: theme.primarySubtle,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.document_scanner_outlined, color: theme.primary, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Digitalização Segura de Receitas',
+                                  style: HCTypography.title.copyWith(fontSize: 14, color: theme.textPrimary),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Extraia os dados da receita médica com OCR e confirme os medicamentos para ativar o plano de cuidado e resgate.',
+                                  style: HCTypography.caption.copyWith(color: theme.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
 
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 18),
 
-                  if (_prescriptions.isEmpty)
-                    _buildEmptyPrescriptionsState()
-                  else
-                    ..._prescriptions.map((p) => _buildPrescriptionCard(p)),
+                    // Botão Principal de Adição
+                    HCPrimaryButton(
+                      label: 'Adicionar Nova Receita Médica',
+                      icon: Icons.camera_alt_outlined,
+                      width: double.infinity,
+                      onPressed: _startAddPrescriptionFlow,
+                    ),
 
-                  const SizedBox(height: 30),
-                ],
+                    const SizedBox(height: 24),
+
+                    // Título da Lista
+                    Text(
+                      'RECEITAS CADASTRADAS (${_prescriptions.length})',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                        color: theme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    if (_prescriptions.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: theme.surface,
+                          borderRadius: HCRadii.radiusLg,
+                          border: Border.all(color: theme.border),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.description_outlined, size: 40, color: theme.textTertiary),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Nenhuma receita médica cadastrada ainda.',
+                              style: HCTypography.title.copyWith(fontSize: 14, color: theme.textPrimary),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Fotografe ou importe o PDF da receita para estruturar o plano.',
+                              style: HCTypography.caption.copyWith(color: theme.textSecondary),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      ..._prescriptions.map((p) => _buildPrescriptionCard(p, theme)),
+
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
     );
   }
 
-  Widget _buildScanBanner() {
+  Widget _buildPrescriptionCard(PrescriptionRecord p, HCSemanticTheme theme) {
     return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 3)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Digitalizador Inteligente de Prescrições',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Escaneie a receita do pneumopediatra para alimentar automaticamente as bombinhas, horários, doses e acompanhar a data de validade da receita.',
-            style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.3),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF0F766E),
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.document_scanner),
-              label: const Text('Escanear Receita do Médico', style: TextStyle(fontWeight: FontWeight.bold)),
-              onPressed: _openScanModal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPrescriptionCard(PrescriptionRecord p) {
-    final isExp = p.isExpired;
-    final days = p.daysUntilExpiration;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isExp ? const Color(0xFFFCA5A5) : const Color(0xFFE2E8F0),
-          width: isExp ? 1.5 : 1.0,
-        ),
-        boxShadow: const [
-          BoxShadow(color: Color(0x08000000), blurRadius: 6, offset: Offset(0, 2)),
-        ],
+        color: theme.surface,
+        borderRadius: HCRadii.radiusLg,
+        border: Border.all(color: theme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -520,187 +597,631 @@ Paciente: ${widget.patientName}
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      p.doctorName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
-                    ),
-                    if (p.doctorCrm.isNotEmpty)
-                      Text(
-                        p.doctorCrm,
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                      ),
-                  ],
-                ),
+              Row(
+                children: [
+                  Icon(Icons.verified, size: 16, color: theme.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    p.doctorName,
+                    style: HCTypography.title.copyWith(fontSize: 14, color: theme.textPrimary),
+                  ),
+                ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isExp ? const Color(0xFFFEE2E2) : const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: isExp ? const Color(0xFFEF4444) : const Color(0xFF10B981)),
+                  color: theme.successBg,
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: theme.successBorder, width: 0.8),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isExp ? Icons.warning_amber : Icons.check_circle_outline,
-                      size: 12,
-                      color: isExp ? const Color(0xFFDC2626) : const Color(0xFF059669),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      isExp ? 'Receita Vencida' : 'Válida (${days}d)',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: isExp ? const Color(0xFFDC2626) : const Color(0xFF059669),
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  DateFormat('dd/MM/yyyy').format(p.prescriptionDate),
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.successText),
                 ),
               ),
             ],
           ),
-
-          const SizedBox(height: 6),
-
-          Row(
-            children: [
-              Text(
-                'Emitida em: ${DateFormat('dd/MM/yyyy').format(p.prescriptionDate)}',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '• Vence em: ${DateFormat('dd/MM/yyyy').format(p.expirationDate)}',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-              ),
-            ],
-          ),
-
-          const Divider(height: 20, color: Color(0xFFF1F5F9)),
-
-          // Lista de Medicações da Receita
-          const Text(
-            'Medicamentos & Bombinhas Prescritas:',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF334155)),
-          ),
-          const SizedBox(height: 8),
-
-          ...p.medications.map((m) => _buildMedicationItem(m)),
-
-          if (p.notes.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'Recomendações: ${p.notes}',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontStyle: FontStyle.italic),
-              ),
+          if (p.doctorCrm.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              p.doctorCrm,
+              style: HCTypography.caption.copyWith(color: theme.textSecondary),
             ),
           ],
-        ],
-      ),
-    );
-  }
 
-  Widget _buildMedicationItem(PrescribedMedication m) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(m.category.iconEmoji, style: const TextStyle(fontSize: 22)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(height: 12),
+          Divider(height: 1, color: theme.borderSubtle),
+          const SizedBox(height: 12),
+
+          // Medicamentos Prescritos
+          ...p.medications.map((m) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.elevatedSurface,
+                  borderRadius: HCRadii.radiusMd,
+                  border: Border.all(color: theme.border),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
-                      child: Text(
-                        m.commercialName,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
-                      ),
-                    ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: m.isContinuous ? const Color(0xFFE0F2FE) : const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(6),
+                        color: m.category == MedicationCategory.rescueInhaled
+                            ? theme.criticalBg
+                            : theme.primarySubtle,
+                        borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        m.isContinuous ? 'Uso Contínuo' : 'Resgate / S.O.S.',
+                        m.category == MedicationCategory.rescueInhaled ? 'RESGATE' : 'CONTROLE',
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
-                          color: m.isContinuous ? const Color(0xFF0369A1) : const Color(0xFFB45309),
+                          color: m.category == MedicationCategory.rescueInhaled
+                              ? theme.criticalText
+                              : theme.primary,
                         ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            m.commercialName,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.textPrimary),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Dose: ${m.dosage} • Frequência: ${m.frequency}',
+                            style: TextStyle(fontSize: 11, color: theme.textSecondary),
+                          ),
+                          if (m.instructions.isNotEmpty)
+                            Text(
+                              m.instructions,
+                              style: TextStyle(fontSize: 10, color: theme.textTertiary),
+                            ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                Text(
-                  '${m.activeIngredient} • Dose: ${m.dosage} • Frequência: ${m.frequency}',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF475569)),
-                ),
-                if (m.spacerRequired)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 3),
-                    child: Text(
-                      '🫧 Uso obrigatório com espaçador valvulado e bochecho',
-                      style: TextStyle(fontSize: 10, color: AppTheme.primaryTeal, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+              )),
         ],
       ),
     );
   }
+}
 
-  Widget _buildEmptyPrescriptionsState() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: const Column(
-        children: [
-          Icon(Icons.receipt_long, color: Color(0xFF94A3B8), size: 40),
-          SizedBox(height: 8),
-          Text(
-            'Nenhuma receita digitalizada ainda.',
-            style: TextStyle(fontSize: 14, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 4),
-          Text(
-            'Toque no botão de escanear acima para ler a prescrição do seu médico.',
-            style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-            textAlign: TextAlign.center,
-          ),
+// =============================================================================
+// DIALOG DE PROCESSAMENTO OCR ASSÍNCRONO COM PROGRESSO SUAVE
+// =============================================================================
+
+class _OcrProcessingDialog extends StatefulWidget {
+  final ValueChanged<Map<String, dynamic>?> onCompleted;
+  final String sampleType;
+
+  const _OcrProcessingDialog({
+    required this.onCompleted,
+    required this.sampleType,
+  });
+
+  @override
+  State<_OcrProcessingDialog> createState() => _OcrProcessingDialogState();
+}
+
+class _OcrProcessingDialogState extends State<_OcrProcessingDialog> {
+  int _currentStep = 0;
+  final List<String> _steps = [
+    'Carregando e otimizando imagem...',
+    'Segmentando linhas e identificando médico...',
+    'Estruturando medicamentos e posologias...',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _startSteps();
+  }
+
+  void _startSteps() async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+    setState(() => _currentStep = 1);
+
+    await Future.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+    setState(() => _currentStep = 2);
+
+    await Future.delayed(const Duration(milliseconds: 700));
+    if (!mounted) return;
+
+    // Retorna os dados extraídos conforme o modelo selecionado
+    if (widget.sampleType == 'formoterol') {
+      widget.onCompleted({
+        'doctorName': 'Dra. Beatriz Menezes',
+        'doctorCrm': 'CRM/SP 145.220',
+        'clinicName': 'Clínica de Alergia e Imunologia Infantil',
+        'prescriptionDate': DateTime.now(),
+        'validityMonths': 6,
+        'isOcrExtracted': true,
+        'medications': [
+          {
+            'commercialName': 'Alenia 6/200mcg',
+            'activeIngredient': 'Fumarato de Formoterol + Budesonida',
+            'dosage': '1 cápsula inalatória',
+            'frequency': '1x ao dia pela manhã',
+            'instructions': 'Inalação oral via pó seco. Enxaguar a boca após o uso.',
+            'category': MedicationCategory.maintenanceInhaled,
+            'spacerRequired': false,
+            'isContinuous': true,
+            'hasLowConfidence': false,
+          },
+          {
+            'commercialName': 'Berotec Spray 100mcg',
+            'activeIngredient': 'Bromidrato de Fenoterol',
+            'dosage': '1 a 2 jatos',
+            'frequency': 'Em crise de falta de ar (Resgate)',
+            'instructions': 'Com espaçador valvulado.',
+            'category': MedicationCategory.rescueInhaled,
+            'spacerRequired': true,
+            'isContinuous': false,
+            'hasLowConfidence': true, // Destaque de baixa confiança
+          },
         ],
+      });
+    } else {
+      widget.onCompleted({
+        'doctorName': 'Dr. Marco Aurélio Valente',
+        'doctorCrm': 'CRM/SP 129.840',
+        'clinicName': 'Instituto Pediátrico de Pneumologia',
+        'prescriptionDate': DateTime.now(),
+        'validityMonths': 6,
+        'isOcrExtracted': true,
+        'medications': [
+          {
+            'commercialName': 'Clenil HFA 250mcg Spray',
+            'activeIngredient': 'Dipropionato de Beclometasona',
+            'dosage': '1 jato (puff)',
+            'frequency': '12/12 horas (Manhã e Noite)',
+            'instructions': 'Usar com espaçador valvulado e máscara. Bochechar água após o uso.',
+            'category': MedicationCategory.maintenanceInhaled,
+            'spacerRequired': true,
+            'isContinuous': true,
+            'hasLowConfidence': false,
+          },
+          {
+            'commercialName': 'Aerolin Spray 100mcg',
+            'activeIngredient': 'Sulfato de Salbutamol',
+            'dosage': '2 a 4 jatos',
+            'frequency': 'A cada 20 min em caso de crise (Resgate)',
+            'instructions': 'Aplicar 1 jato por vez no espaçador, aguardar 6 respirações por jato.',
+            'category': MedicationCategory.rescueInhaled,
+            'spacerRequired': true,
+            'isContinuous': false,
+            'hasLowConfidence': false,
+          },
+        ],
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+
+    return AlertDialog(
+      backgroundColor: theme.surface,
+      shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusLg),
+      content: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            Text(
+              'Extraindo Texto da Receita...',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.textPrimary),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _steps[_currentStep],
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: theme.textSecondary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// TELA DE REVISÃO HUMANA (CAMPOS EDITÁVEIS + VALIDAÇÃO EXPLÍCITA)
+// =============================================================================
+
+class _PrescriptionReviewScreen extends StatefulWidget {
+  final String patientId;
+  final String patientName;
+  final Map<String, dynamic> initialData;
+  final ValueChanged<PrescriptionRecord> onSavePrescription;
+
+  const _PrescriptionReviewScreen({
+    required this.patientId,
+    required this.patientName,
+    required this.initialData,
+    required this.onSavePrescription,
+  });
+
+  @override
+  State<_PrescriptionReviewScreen> createState() => _PrescriptionReviewScreenState();
+}
+
+class _PrescriptionReviewScreenState extends State<_PrescriptionReviewScreen> {
+  late TextEditingController _doctorNameCtrl;
+  late TextEditingController _doctorCrmCtrl;
+  late TextEditingController _clinicNameCtrl;
+  late DateTime _prescriptionDate;
+  late int _validityMonths;
+  late bool _isOcr;
+
+  late List<Map<String, dynamic>> _medications;
+
+  @override
+  void initState() {
+    super.initState();
+    _doctorNameCtrl = TextEditingController(text: widget.initialData['doctorName'] as String? ?? '');
+    _doctorCrmCtrl = TextEditingController(text: widget.initialData['doctorCrm'] as String? ?? '');
+    _clinicNameCtrl = TextEditingController(text: widget.initialData['clinicName'] as String? ?? '');
+    _prescriptionDate = widget.initialData['prescriptionDate'] as DateTime? ?? DateTime.now();
+    _validityMonths = widget.initialData['validityMonths'] as int? ?? 6;
+    _isOcr = widget.initialData['isOcrExtracted'] as bool? ?? false;
+
+    final meds = widget.initialData['medications'] as List<dynamic>? ?? [];
+    _medications = meds.map((m) => Map<String, dynamic>.from(m as Map)).toList();
+  }
+
+  void _addMedicationItem() {
+    setState(() {
+      _medications.add({
+        'commercialName': '',
+        'activeIngredient': '',
+        'dosage': '1 jato',
+        'frequency': '12/12h',
+        'instructions': 'Usar com espaçador valvulado.',
+        'category': MedicationCategory.maintenanceInhaled,
+        'spacerRequired': true,
+        'isContinuous': true,
+        'hasLowConfidence': false,
+      });
+    });
+  }
+
+  void _removeMedicationItem(int index) {
+    setState(() {
+      _medications.removeAt(index);
+    });
+  }
+
+  void _saveFinalPrescription() {
+    if (_doctorNameCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, informe o nome do médico prescritor.')),
+      );
+      return;
+    }
+
+    final List<PrescribedMedication> finalMeds = [];
+    for (int i = 0; i < _medications.length; i++) {
+      final m = _medications[i];
+      final name = (m['commercialName'] as String).trim();
+      if (name.isNotEmpty) {
+        finalMeds.add(PrescribedMedication(
+          id: 'med_${DateTime.now().millisecondsSinceEpoch}_$i',
+          commercialName: name,
+          activeIngredient: m['activeIngredient'] as String? ?? '',
+          category: m['category'] as MedicationCategory? ?? MedicationCategory.maintenanceInhaled,
+          dosage: m['dosage'] as String? ?? '1 jato',
+          frequency: m['frequency'] as String? ?? '12/12h',
+          instructions: m['instructions'] as String? ?? '',
+          spacerRequired: m['spacerRequired'] as bool? ?? true,
+          isContinuous: m['isContinuous'] as bool? ?? true,
+        ));
+      }
+    }
+
+    if (finalMeds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Adicione pelo menos 1 medicamento válido na receita.')),
+      );
+      return;
+    }
+
+    final record = PrescriptionRecord(
+      id: 'presc_${DateTime.now().millisecondsSinceEpoch}',
+      patientId: widget.patientId,
+      doctorName: _doctorNameCtrl.text.trim(),
+      doctorCrm: _doctorCrmCtrl.text.trim(),
+      clinicName: _clinicNameCtrl.text.trim(),
+      prescriptionDate: _prescriptionDate,
+      validityMonths: _validityMonths,
+      medications: finalMeds,
+    );
+
+    widget.onSavePrescription(record);
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+
+    return Scaffold(
+      backgroundColor: theme.background,
+      appBar: AppBar(
+        title: Text(
+          'Revisão da Prescrição Médica',
+          style: HCTypography.heading.copyWith(fontSize: 16, color: theme.textPrimary),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: HCResponsiveContainer(
+          maxWidth: 720,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Banner de Transparência & Segurança Clínica
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: _isOcr ? theme.infoBg : theme.surface,
+                  borderRadius: HCRadii.radiusMd,
+                  border: Border.all(color: _isOcr ? theme.infoBorder : theme.border),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      _isOcr ? Icons.auto_awesome : Icons.edit_note,
+                      color: theme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _isOcr ? 'Extraído da receita via OCR' : 'Cadastro Manual',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: theme.textPrimary),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Revise todos os campos com atenção antes de salvar. A extração automática nunca substitui a conferência dos pais ou a orientação do médico assistente.',
+                            style: HCTypography.caption.copyWith(color: theme.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              // Dados do Médico Prescritor
+              Text(
+                'MÉDICO PRESCRITOR & CONSULTÓRIO',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5, color: theme.textSecondary),
+              ),
+              const SizedBox(height: 8),
+
+              HCTextField(
+                controller: _doctorNameCtrl,
+                labelText: 'Nome do Médico Assistente *',
+                prefixIcon: Icons.person_outline,
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: HCTextField(
+                      controller: _doctorCrmCtrl,
+                      labelText: 'CRM / Registro',
+                      prefixIcon: Icons.badge_outlined,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: HCTextField(
+                      controller: _clinicNameCtrl,
+                      labelText: 'Clínica / Hospital',
+                      prefixIcon: Icons.local_hospital_outlined,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // Medicamentos Prescritos
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'MEDICAMENTOS PRESCRITOS (${_medications.length})',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5, color: theme.textSecondary),
+                  ),
+                  TextButton.icon(
+                    onPressed: _addMedicationItem,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Adicionar Item', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              ..._medications.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final m = entry.value;
+                final isLowConfidence = m['hasLowConfidence'] as bool? ?? false;
+
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: theme.surface,
+                    borderRadius: HCRadii.radiusMd,
+                    border: Border.all(
+                      color: isLowConfidence ? theme.warning : theme.border,
+                      width: isLowConfidence ? 1.5 : 1.0,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Item #${idx + 1}',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.textPrimary),
+                              ),
+                              if (isLowConfidence) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: theme.warningBg,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: theme.warningBorder, width: 0.8),
+                                  ),
+                                  child: Text(
+                                    'Baixa confiança - confira',
+                                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: theme.warningText),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (_medications.length > 1)
+                            IconButton(
+                              icon: Icon(Icons.delete_outline, size: 18, color: theme.critical),
+                              onPressed: () => _removeMedicationItem(idx),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      TextFormField(
+                        initialValue: m['commercialName'] as String,
+                        decoration: const InputDecoration(
+                          labelText: 'Nome Comercial do Medicamento *',
+                          hintText: 'Ex: Clenil HFA 250mcg / Aerolin 100mcg',
+                        ),
+                        onChanged: (val) => m['commercialName'] = val,
+                      ),
+                      const SizedBox(height: 10),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: m['dosage'] as String,
+                              decoration: const InputDecoration(
+                                labelText: 'Dose (ex: 1 jato / 2 puffs)',
+                              ),
+                              onChanged: (val) => m['dosage'] = val,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: m['frequency'] as String,
+                              decoration: const InputDecoration(
+                                labelText: 'Frequência (ex: 12/12h)',
+                              ),
+                              onChanged: (val) => m['frequency'] = val,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      TextFormField(
+                        initialValue: m['instructions'] as String,
+                        decoration: const InputDecoration(
+                          labelText: 'Instruções de Uso / Dispositivo',
+                          hintText: 'Ex: Espaçador valvulado com máscara, enxaguar a boca',
+                        ),
+                        onChanged: (val) => m['instructions'] = val,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Categoria (Manutenção vs Resgate)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<MedicationCategory>(
+                              initialValue: m['category'] as MedicationCategory,
+                              decoration: const InputDecoration(labelText: 'Finalidade Clínica'),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: MedicationCategory.maintenanceInhaled,
+                                  child: Text('Controle Diário (Manutenção)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: MedicationCategory.rescueInhaled,
+                                  child: Text('Resgate em Crise (Alívio)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: MedicationCategory.antileukotrieneOral,
+                                  child: Text('Antileucotrieno Oral'),
+                                ),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) setState(() => m['category'] = val);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+              const SizedBox(height: 24),
+
+              // Botão de Confirmação Final com Origem Explícita
+              HCPrimaryButton(
+                label: 'Confirmar e Salvar Prescrição',
+                icon: Icons.check_circle_outline,
+                width: double.infinity,
+                onPressed: _saveFinalPrescription,
+              ),
+
+              const SizedBox(height: 10),
+              Center(
+                child: Text(
+                  'Ao confirmar, você valida que os medicamentos acima conferem com a receita física.',
+                  textAlign: TextAlign.center,
+                  style: HCTypography.caption.copyWith(color: theme.textTertiary),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
       ),
     );
   }

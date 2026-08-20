@@ -35,7 +35,7 @@ class HCStatusBadge extends StatelessWidget {
         children: [
           if (icon != null) ...[
             Icon(icon, size: 12, color: textColor),
-            const SizedBox(width: HCSpacing.xs),
+            const SizedBox(width: HCSpacing.space4),
           ],
           Text(
             label,
@@ -55,26 +55,28 @@ class HCActionZoneBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+
     final (bg, text, border, label, icon) = switch (zone) {
       ActionZoneType.green => (
-          HCColors.greenLight,
-          HCColors.greenText,
-          HCColors.greenBorder,
-          'Zona Verde (Normal)',
+          theme.successBg,
+          theme.successText,
+          theme.successBorder,
+          'Zona Verde (Estável)',
           Icons.check_circle_outline,
         ),
       ActionZoneType.yellow => (
-          HCColors.yellowLight,
-          HCColors.yellowText,
-          HCColors.yellowBorder,
+          theme.warningBg,
+          theme.warningText,
+          theme.warningBorder,
           'Zona Amarela (Alerta)',
           Icons.warning_amber_rounded,
         ),
       ActionZoneType.red => (
-          HCColors.redLight,
-          HCColors.redText,
-          HCColors.redBorder,
-          'Zona Vermelha (Perigo)',
+          theme.criticalBg,
+          theme.criticalText,
+          theme.criticalBorder,
+          'Zona Vermelha (Crise)',
           Icons.emergency_outlined,
         ),
     };

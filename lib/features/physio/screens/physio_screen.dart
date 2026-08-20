@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:clinical_core/clinical_core.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/design_system/design_system.dart';
-
 import '../../../core/storage/health_storage_service.dart';
 
 class PhysioScreen extends StatefulWidget {
@@ -97,15 +95,22 @@ class _PhysioScreenState extends State<PhysioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+
     if (_isLoading || _profile == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
+      return Scaffold(
+        backgroundColor: theme.background,
+        body: const Center(child: HCLoadingState(message: 'Carregando módulo de fisioterapia...')),
       );
     }
 
     return Scaffold(
+      backgroundColor: theme.background,
       appBar: AppBar(
-        title: const Text('Fisioterapia & Reabilitação', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+        title: Text(
+          'Fisioterapia & Reabilitação',
+          style: HCTypography.heading.copyWith(fontSize: 16, color: theme.textPrimary),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -122,25 +127,10 @@ class _PhysioScreenState extends State<PhysioScreen> {
               const SizedBox(height: 14),
 
               // Banner AMIB
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: HCColors.primary100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: HCColors.primary200),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.shield_outlined, color: AppTheme.primaryTeal, size: 20),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Protocolo com Travas de Segurança da AMIB (Associação de Medicina Intensiva Brasileira).',
-                        style: TextStyle(fontSize: 12, color: AppTheme.primaryDark, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
+              const HCInfoCard(
+                title: 'Protocolo de Segurança AMIB',
+                message: 'Critérios oficiais da Associação de Medicina Intensiva Brasileira para segurança de exercícios respiratórios.',
+                icon: Icons.shield_outlined,
               ),
 
               const SizedBox(height: 16),
@@ -149,14 +139,17 @@ class _PhysioScreenState extends State<PhysioScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  color: theme.surface,
+                  borderRadius: HCRadii.radiusLg,
+                  border: Border.all(color: theme.border),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('1. Sinais Vitais Pré-Fisioterapia:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(
+                      '1. Sinais Vitais Pré-Fisioterapia:',
+                      style: HCTypography.title.copyWith(fontSize: 13, color: theme.textPrimary),
+                    ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -164,6 +157,7 @@ class _PhysioScreenState extends State<PhysioScreen> {
                           child: TextField(
                             controller: _spo2Ctrl,
                             keyboardType: TextInputType.number,
+                            style: TextStyle(color: theme.textPrimary),
                             decoration: const InputDecoration(labelText: 'SpO2 Atual (%)', hintText: 'ex: 97'),
                             onChanged: (_) => _runSafetyScreening(),
                           ),
@@ -173,6 +167,7 @@ class _PhysioScreenState extends State<PhysioScreen> {
                           child: TextField(
                             controller: _respRateCtrl,
                             keyboardType: TextInputType.number,
+                            style: TextStyle(color: theme.textPrimary),
                             decoration: const InputDecoration(labelText: 'Freq. Resp. (irpm)', hintText: 'ex: 22'),
                             onChanged: (_) => _runSafetyScreening(),
                           ),
@@ -182,16 +177,24 @@ class _PhysioScreenState extends State<PhysioScreen> {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       initialValue: _selectedDevice,
+                      dropdownColor: theme.surface,
                       decoration: const InputDecoration(labelText: 'Aparelho Utilizado:'),
-                      items: _devices.map((d) => DropdownMenuItem(value: d, child: Text(d, style: const TextStyle(fontSize: 12)))).toList(),
+                      items: _devices
+                          .map((d) => DropdownMenuItem(
+                                value: d,
+                                child: Text(d, style: TextStyle(fontSize: 12, color: theme.textPrimary)),
+                              ))
+                          .toList(),
                       onChanged: (val) {
                         if (val != null) setState(() => _selectedDevice = val);
                       },
                     ),
                     const SizedBox(height: 12),
-                    ElevatedButton(
+                    HCPrimaryButton(
+                      label: 'Verificar Critérios de Segurança AMIB',
+                      icon: Icons.verified_user_outlined,
+                      width: double.infinity,
                       onPressed: _runSafetyScreening,
-                      child: const Text('Verificar Critérios de Segurança AMIB'),
                     ),
                   ],
                 ),
@@ -202,10 +205,10 @@ class _PhysioScreenState extends State<PhysioScreen> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: _safetyCheck!.isClearedForTherapy ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(14),
+                    color: _safetyCheck!.isClearedForTherapy ? theme.successBg : theme.criticalBg,
+                    borderRadius: HCRadii.radiusLg,
                     border: Border.all(
-                      color: _safetyCheck!.isClearedForTherapy ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
+                      color: _safetyCheck!.isClearedForTherapy ? theme.successBorder : theme.criticalBorder,
                     ),
                   ),
                   child: Column(
@@ -215,7 +218,7 @@ class _PhysioScreenState extends State<PhysioScreen> {
                         children: [
                           Icon(
                             _safetyCheck!.isClearedForTherapy ? Icons.check_circle : Icons.warning,
-                            color: _safetyCheck!.isClearedForTherapy ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                            color: _safetyCheck!.isClearedForTherapy ? theme.success : theme.critical,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -224,7 +227,7 @@ class _PhysioScreenState extends State<PhysioScreen> {
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
-                                color: _safetyCheck!.isClearedForTherapy ? const Color(0xFF065F46) : const Color(0xFF991B1B),
+                                color: _safetyCheck!.isClearedForTherapy ? theme.successText : theme.criticalText,
                               ),
                             ),
                           ),
@@ -235,7 +238,7 @@ class _PhysioScreenState extends State<PhysioScreen> {
                         _safetyCheck!.isClearedForTherapy
                             ? 'Todos os parâmetros estão dentro dos limites seguros da AMIB.'
                             : _safetyCheck!.safetyViolations.join(' • '),
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF334155)),
+                        style: TextStyle(fontSize: 12, color: theme.textPrimary),
                       ),
                     ],
                   ),
@@ -248,17 +251,20 @@ class _PhysioScreenState extends State<PhysioScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  color: theme.surface,
+                  borderRadius: HCRadii.radiusLg,
+                  border: Border.all(color: theme.border),
                 ),
                 child: Column(
                   children: [
-                    const Text('Cronômetro do Exercício Respiratório', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(
+                      'Cronômetro do Exercício Respiratório',
+                      style: HCTypography.title.copyWith(fontSize: 13, color: theme.textPrimary),
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       '${(_timerSeconds ~/ 60).toString().padLeft(2, '0')}:${(_timerSeconds % 60).toString().padLeft(2, '0')}',
-                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
+                      style: HCTypography.clinicalValueLarge.copyWith(fontSize: 36, color: theme.primary),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -267,7 +273,10 @@ class _PhysioScreenState extends State<PhysioScreen> {
                         ElevatedButton.icon(
                           onPressed: _isTimerRunning ? _stopTimer : _startTimer,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _isTimerRunning ? const Color(0xFFEF4444) : AppTheme.primaryTeal,
+                            backgroundColor: _isTimerRunning ? theme.critical : theme.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           ),
                           icon: Icon(_isTimerRunning ? Icons.pause : Icons.play_arrow),
                           label: Text(_isTimerRunning ? 'Pausar' : 'Iniciar Exercício'),
@@ -277,8 +286,12 @@ class _PhysioScreenState extends State<PhysioScreen> {
                           onPressed: () {
                             setState(() => _breathCount++);
                           },
-                          icon: const Icon(Icons.add),
-                          label: Text('Respiração ($_breathCount)'),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: theme.border),
+                            shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
+                          ),
+                          icon: Icon(Icons.add, color: theme.textPrimary),
+                          label: Text('Respiração ($_breathCount)', style: TextStyle(color: theme.textPrimary)),
                         ),
                       ],
                     ),

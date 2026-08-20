@@ -113,6 +113,14 @@ class HealthStorageService {
     return matches.isNotEmpty ? matches.first : null;
   }
 
+  /// Retorna o ID do filho atualmente selecionado.
+  Future<String?> getSelectedProfileId() async {
+    if (_cachedSelectedProfileId != null) return _cachedSelectedProfileId;
+    final prefs = await _getPrefs();
+    _cachedSelectedProfileId = prefs.getString(_keySelectedProfileId);
+    return _cachedSelectedProfileId;
+  }
+
   /// Define qual filho está selecionado no topo do app.
   Future<void> setSelectedProfileId(String profileId) async {
     _cachedSelectedProfileId = profileId;
@@ -458,6 +466,9 @@ class HealthStorageService {
     _cachedPrescriptions[prescription.patientId] = updated;
     await _savePrescriptionsList(prescription.patientId, updated);
   }
+
+  /// Adiciona uma nova prescrição médica escaneada/inserida.
+  Future<void> addPrescription(PrescriptionRecord prescription) => savePrescription(prescription);
 
   /// Remove uma prescrição médica.
   Future<void> deletePrescription(String patientId, String prescriptionId) async {

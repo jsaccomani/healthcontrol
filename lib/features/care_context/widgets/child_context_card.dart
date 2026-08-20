@@ -3,7 +3,8 @@ import 'package:clinical_core/clinical_core.dart';
 import '../../../core/design_system/design_system.dart';
 
 /// Card de Contexto e Seleção da Criança para o Cuidador.
-/// Apresenta dados essenciais: Nome, Idade, Peso, Status e Ação "Acompanhar".
+/// Apresenta dados essenciais: Nome, Idade, Peso e Status Clínico Relevante (se existir).
+/// Ao tocar: abre a Home individual da criança.
 class ChildContextCard extends StatelessWidget {
   final PatientProfile profile;
   final VoidCallback onSelect;
@@ -16,17 +17,26 @@ class ChildContextCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
     final initial = profile.name.trim().isNotEmpty
         ? profile.name.trim().substring(0, 1).toUpperCase()
         : 'C';
 
+    // Status clínico relevante (somente se existir)
+    final clinicalStatus = profile.hasCarePlan
+        ? 'Asma controlada'
+        : (profile.drugAllergies.isNotEmpty
+            ? 'Alerta de Alergia'
+            : (profile.specialConditions.isNotEmpty
+                ? profile.specialConditions.first.name
+                : null));
+
     return Material(
-      color: isDark ? HCColors.darkSurface : Colors.white,
+      color: theme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: HCRadii.radiusLg,
         side: BorderSide(
-          color: isDark ? HCColors.darkBorder : HCColors.neutral200,
+          color: theme.border,
           width: 1,
         ),
       ),
@@ -34,7 +44,7 @@ class ChildContextCard extends StatelessWidget {
         onTap: onSelect,
         borderRadius: HCRadii.radiusLg,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(
             children: [
               // Avatar com Inicial (Visual Clínico Calmo)
@@ -42,10 +52,10 @@ class ChildContextCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: isDark ? HCColors.primary900.withAlpha(80) : HCColors.primary50,
+                  color: theme.primarySubtle,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isDark ? HCColors.primary700 : HCColors.primary200,
+                    color: theme.primaryBorder,
                     width: 1,
                   ),
                 ),
@@ -55,71 +65,53 @@ class ChildContextCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: isDark ? HCColors.primary300 : HCColors.primary600,
+                      color: theme.primary,
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 14),
 
-              // Informações da Criança
+              // Informações da Criança (Nome, Idade • Peso, Status se existir)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            profile.name,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? HCColors.darkText : HCColors.neutral900,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (profile.hasCarePlan) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                            decoration: BoxDecoration(
-                              color: isDark ? HCColors.greenMain.withAlpha(40) : HCColors.greenLight,
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(
-                                color: isDark ? HCColors.greenMain : HCColors.greenBorder,
-                                width: 0.8,
-                              ),
-                            ),
-                            child: Text(
-                              'Plano Ativo',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? HCColors.greenBorder : HCColors.greenText,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      profile.name,
+                      style: HCTypography.heading.copyWith(
+                        fontSize: 16,
+                        color: theme.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${profile.ageDisplay}${profile.weightKg > 0 ? " • ${profile.weightKg} kg" : ""}${profile.personalBestPef > 0 ? " • PFE: ${profile.personalBestPef} L/min" : ""}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
+                      '${profile.ageDisplay}${profile.weightKg > 0 ? " • ${profile.weightKg.toString().replaceAll('.', ',')} kg" : ""}',
+                      style: HCTypography.bodySmall.copyWith(
+                        color: theme.textSecondary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    if (profile.healthInsurance.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        profile.healthInsurance,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? HCColors.darkTextMuted : HCColors.neutral500,
+                    if (clinicalStatus != null) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: theme.successBg,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: theme.successBorder,
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Text(
+                          clinicalStatus,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: theme.successText,
+                          ),
                         ),
                       ),
                     ],
@@ -129,34 +121,17 @@ class ChildContextCard extends StatelessWidget {
 
               const SizedBox(width: 8),
 
-              // Ação "Acompanhar"
+              // Indicador sutil de navegação
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: isDark ? HCColors.darkSurfaceElevated : HCColors.primary50,
-                  borderRadius: HCRadii.radiusMd,
-                  border: Border.all(
-                    color: isDark ? HCColors.darkBorder : HCColors.primary100,
-                  ),
+                  color: theme.elevatedSurface,
+                  shape: BoxShape.circle,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Acompanhar',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? HCColors.primary300 : HCColors.primary700,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      Icons.arrow_forward,
-                      size: 14,
-                      color: isDark ? HCColors.primary300 : HCColors.primary700,
-                    ),
-                  ],
+                child: Icon(
+                  Icons.arrow_forward_ios,
+                  size: 13,
+                  color: theme.textSecondary,
                 ),
               ),
             ],

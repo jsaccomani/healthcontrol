@@ -17,7 +17,7 @@ class QuickActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -31,7 +31,7 @@ class QuickActionButtons extends StatelessWidget {
                 height: 48,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: HCColors.primary500,
+                    backgroundColor: theme.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
                     elevation: 0,
@@ -52,20 +52,20 @@ class QuickActionButtons extends StatelessWidget {
                 height: 48,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isDark ? const Color(0xFF350A0A) : HCColors.redLight,
-                    foregroundColor: HCColors.redMain,
+                    backgroundColor: theme.criticalBg,
+                    foregroundColor: theme.critical,
                     side: BorderSide(
-                      color: isDark ? const Color(0xFF991B1B) : HCColors.redBorder,
+                      color: theme.criticalBorder,
                       width: 1.2,
                     ),
                     shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
                     elevation: 0,
                   ),
                   onPressed: onSosPressed,
-                  icon: const Icon(Icons.emergency, size: 18, color: HCColors.redMain),
-                  label: const Text(
+                  icon: Icon(Icons.emergency, size: 18, color: theme.critical),
+                  label: Text(
                     'Crise',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.critical),
                   ),
                 ),
               ),
@@ -127,12 +127,13 @@ class QuickActionButtons extends StatelessWidget {
     required String label,
     required VoidCallback onTap,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
+
     return Material(
-      color: isDark ? HCColors.darkSurface : HCColors.surfaceWhite,
+      color: theme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: HCRadii.radiusMd,
-        side: BorderSide(color: isDark ? HCColors.darkBorder : HCColors.neutral200),
+        side: BorderSide(color: theme.border),
       ),
       child: InkWell(
         onTap: onTap,
@@ -145,7 +146,7 @@ class QuickActionButtons extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: isDark ? HCColors.darkTextSecondary : HCColors.neutral600,
+                color: theme.textSecondary,
               ),
               const SizedBox(width: 6),
               Text(
@@ -153,7 +154,7 @@ class QuickActionButtons extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? HCColors.darkTextPrimary : HCColors.neutral700,
+                  color: theme.textPrimary,
                 ),
               ),
             ],

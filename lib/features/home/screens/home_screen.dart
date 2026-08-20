@@ -67,15 +67,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showHashAuditDialog(HealthControlEntry entry) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        shape: RoundedRectangleBorder(
+          borderRadius: HCRadii.radiusLg,
+          side: BorderSide(color: theme.border),
+        ),
+        backgroundColor: theme.surface,
+        title: Row(
           children: [
-            Icon(Icons.verified, color: HCColors.primary500, size: 20),
-            SizedBox(width: 8),
-            Text('Integridade da Versão', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+            Icon(Icons.verified, color: theme.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Integridade da Versão',
+              style: HCTypography.title.copyWith(fontSize: 15, color: theme.textPrimary),
+            ),
           ],
         ),
         content: Column(
@@ -84,31 +93,34 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(
               'Responsável: ${entry.authorName.isNotEmpty ? entry.authorName : "Cuidador"} (${entry.authorRole})',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.textPrimary),
             ),
             const SizedBox(height: 4),
             Text(
               'Data e Hora: ${entry.timestamp.day.toString().padLeft(2, "0")}/${entry.timestamp.month.toString().padLeft(2, "0")} às ${entry.timestamp.hour.toString().padLeft(2, "0")}:${entry.timestamp.minute.toString().padLeft(2, "0")}',
-              style: const TextStyle(fontSize: 12),
+              style: TextStyle(fontSize: 12, color: theme.textSecondary),
             ),
-            const Divider(height: 16),
+            Divider(height: 16, color: theme.border),
             Text(
               'Identificador / Hash do Registro (CFM 1.331/89):',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: isDark ? HCColors.darkTextMuted : HCColors.neutral500,
+                color: theme.textTertiary,
               ),
             ),
             const SizedBox(height: 4),
             SelectableText(
               entry.id,
-              style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: HCColors.primary500),
+              style: TextStyle(fontSize: 10, fontFamily: 'monospace', color: theme.primary),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fechar')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Fechar', style: TextStyle(color: theme.textSecondary)),
+          ),
         ],
       ),
     );
@@ -136,14 +148,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showThemeSelector() {
+    final theme = context.hcTheme;
+
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final currentMode = appThemeModeNotifier.value;
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         return Material(
-          color: isDark ? HCColors.darkSurface : Colors.white,
+          color: theme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -152,66 +165,67 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                Text(
-                  'Aparência e Tema',
-                  style: HCTypography.heading.copyWith(fontSize: 16),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  leading: const Icon(Icons.brightness_auto),
-                  title: const Text('Padrão do Sistema'),
-                  trailing: currentMode == ThemeMode.system ? const Icon(Icons.check, color: HCColors.primary500) : null,
-                  onTap: () async {
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    await _storageService.setThemeMode(ThemeMode.system);
-                    appThemeModeNotifier.value = ThemeMode.system;
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.light_mode),
-                  title: const Text('Modo Claro (Calm Healthcare)'),
-                  trailing: currentMode == ThemeMode.light ? const Icon(Icons.check, color: HCColors.primary500) : null,
-                  onTap: () async {
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    await _storageService.setThemeMode(ThemeMode.light);
-                    appThemeModeNotifier.value = ThemeMode.light;
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.dark_mode),
-                  title: const Text('Modo Noturno (Nocturnal Healthcare)'),
-                  trailing: currentMode == ThemeMode.dark ? const Icon(Icons.check, color: HCColors.primary500) : null,
-                  onTap: () async {
-                    if (ctx.mounted) Navigator.pop(ctx);
-                    await _storageService.setThemeMode(ThemeMode.dark);
-                    appThemeModeNotifier.value = ThemeMode.dark;
-                  },
-                ),
-              ],
+                  Text(
+                    'Aparência e Tema',
+                    style: HCTypography.heading.copyWith(fontSize: 16, color: theme.textPrimary),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    leading: Icon(Icons.brightness_auto, color: theme.textPrimary),
+                    title: Text('Padrão do Sistema', style: TextStyle(color: theme.textPrimary)),
+                    trailing: currentMode == ThemeMode.system ? Icon(Icons.check, color: theme.primary) : null,
+                    onTap: () async {
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      await _storageService.setThemeMode(ThemeMode.system);
+                      appThemeModeNotifier.value = ThemeMode.system;
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.light_mode, color: theme.textPrimary),
+                    title: Text('Modo Claro (Calm Healthcare)', style: TextStyle(color: theme.textPrimary)),
+                    trailing: currentMode == ThemeMode.light ? Icon(Icons.check, color: theme.primary) : null,
+                    onTap: () async {
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      await _storageService.setThemeMode(ThemeMode.light);
+                      appThemeModeNotifier.value = ThemeMode.light;
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.dark_mode, color: theme.textPrimary),
+                    title: Text('Modo Noturno (Nocturnal Healthcare)', style: TextStyle(color: theme.textPrimary)),
+                    trailing: currentMode == ThemeMode.dark ? Icon(Icons.check, color: theme.primary) : null,
+                    onTap: () async {
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      await _storageService.setThemeMode(ThemeMode.dark);
+                      appThemeModeNotifier.value = ThemeMode.dark;
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   void _openDirectAction(String actionKey) {
-    HCQuickActionsModalSheet.show(
+    QuickActionsModalSheet.show(
       context: context,
       profile: _profile!,
-      initialView: actionKey,
+      initialAction: actionKey,
       onEntrySaved: _loadData,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     if (_isLoading || _profile == null) {
       return Scaffold(
-        body: Center(child: CircularProgressIndicator(color: isDark ? HCColors.primary400 : HCColors.primary500)),
+        backgroundColor: theme.background,
+        body: const Center(child: HCLoadingState(message: 'Carregando painel de cuidado...')),
       );
     }
 
@@ -219,21 +233,22 @@ class _HomeScreenState extends State<HomeScreen> {
     final currentZone = latest?.peakFlowZone ?? ActionZoneType.green;
 
     return Scaffold(
+      backgroundColor: theme.background,
       appBar: AppBar(
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: isDark ? HCColors.darkSurfaceElevated : HCColors.primary50,
+                color: theme.primarySubtle,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.air, color: HCColors.primary500, size: 20),
+              child: Icon(Icons.air, color: theme.primary, size: 20),
             ),
             const SizedBox(width: 8),
             Text(
               'Health Control',
-              style: HCTypography.heading.copyWith(fontSize: 16),
+              style: HCTypography.heading.copyWith(fontSize: 16, color: theme.textPrimary),
             ),
           ],
         ),
@@ -250,8 +265,8 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             tooltip: 'Aparência e Tema',
             icon: Icon(
-              isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-              color: isDark ? HCColors.darkTextSecondary : HCColors.neutral600,
+              theme.isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+              color: theme.textSecondary,
             ),
             onPressed: _showThemeSelector,
           ),
@@ -261,8 +276,9 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Mais Recursos',
             icon: Icon(
               Icons.more_vert,
-              color: isDark ? HCColors.darkTextSecondary : HCColors.neutral600,
+              color: theme.textSecondary,
             ),
+            color: theme.surface,
             onSelected: (value) async {
               switch (value) {
                 case 'profile':
@@ -315,64 +331,64 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             itemBuilder: (ctx) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'profile',
                 child: Row(
                   children: [
-                    Icon(Icons.person_outline, size: 18),
-                    SizedBox(width: 10),
-                    Text('Ficha Completa da Criança'),
+                    Icon(Icons.person_outline, size: 18, color: theme.primary),
+                    const SizedBox(width: 10),
+                    Text('Ficha Completa da Criança', style: TextStyle(color: theme.textPrimary)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'prescription',
                 child: Row(
                   children: [
-                    Icon(Icons.description_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Text('Plano de Ação & Receitas'),
+                    Icon(Icons.description_outlined, size: 18, color: theme.primary),
+                    const SizedBox(width: 10),
+                    Text('Plano de Ação & Receitas', style: TextStyle(color: theme.textPrimary)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'cact',
                 child: Row(
                   children: [
-                    Icon(Icons.quiz_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Text('Questionário Mensal c-ACT'),
+                    Icon(Icons.quiz_outlined, size: 18, color: theme.primary),
+                    const SizedBox(width: 10),
+                    Text('Questionário Mensal c-ACT', style: TextStyle(color: theme.textPrimary)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'physio',
                 child: Row(
                   children: [
-                    Icon(Icons.fitness_center_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Text('Fisioterapia / CPAP (AMIB)'),
+                    Icon(Icons.fitness_center_outlined, size: 18, color: theme.primary),
+                    const SizedBox(width: 10),
+                    Text('Fisioterapia / CPAP (AMIB)', style: TextStyle(color: theme.textPrimary)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'pro_connect',
                 child: Row(
                   children: [
-                    Icon(Icons.qr_code_2, size: 18),
-                    SizedBox(width: 10),
-                    Text('Conectar ao Médico (Pro)'),
+                    Icon(Icons.qr_code_2, size: 18, color: theme.primary),
+                    const SizedBox(width: 10),
+                    Text('Conectar ao Médico (Pro)', style: TextStyle(color: theme.textPrimary)),
                   ],
                 ),
               ),
               const PopupMenuDivider(),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'emergency',
                 child: Row(
                   children: [
-                    Icon(Icons.emergency, size: 18, color: HCColors.redMain),
-                    SizedBox(width: 10),
-                    Text('Modo Crise / Emergência', style: TextStyle(color: HCColors.redMain)),
+                    Icon(Icons.emergency, size: 18, color: theme.critical),
+                    const SizedBox(width: 10),
+                    Text('Modo Crise / Emergência', style: TextStyle(color: theme.critical)),
                   ],
                 ),
               ),
@@ -381,7 +397,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: RefreshIndicator(
-        color: HCColors.primary500,
+        color: theme.primary,
         onRefresh: _loadData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -422,7 +438,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // C & D. Ações Rápidas: Primária ("Registrar") e Secundárias em Chips
                 QuickActionButtons(
                   onRegister: () {
-                    HCQuickActionsModalSheet.show(
+                    QuickActionsModalSheet.show(
                       context: context,
                       profile: _profile!,
                       onEntrySaved: _loadData,
@@ -443,21 +459,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Text(
                       'Histórico Recente',
-                      style: HCTypography.subHeading.copyWith(
-                        color: isDark ? HCColors.darkTextPrimary : HCColors.neutral900,
+                      style: HCTypography.title.copyWith(
+                        color: theme.textPrimary,
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: isDark ? HCColors.darkSurfaceElevated : HCColors.neutral100,
+                        color: theme.elevatedSurface,
                         borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: theme.border),
                       ),
                       child: Text(
                         '${_entries.length} anotações',
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? HCColors.darkTextSecondary : HCColors.neutral500,
+                          color: theme.textSecondary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -467,41 +484,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 8),
 
                 if (_entries.isEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: isDark ? HCColors.darkSurface : HCColors.surfaceWhite,
-                      borderRadius: HCRadii.radiusLg,
-                      border: Border.all(color: isDark ? HCColors.darkBorder : HCColors.neutral200),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.edit_calendar_outlined,
-                          color: isDark ? HCColors.darkTextMuted : HCColors.neutral400,
-                          size: 36,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Nenhuma anotação gravada ainda.',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: isDark ? HCColors.darkTextPrimary : HCColors.neutral700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Toque em "Registrar" para anotar o sopro, bombinha ou sintoma.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? HCColors.darkTextSecondary : HCColors.neutral500,
-                          ),
-                        ),
-                      ],
-                    ),
+                  HCEmptyState(
+                    title: 'Nenhuma anotação gravada ainda',
+                    message: 'Toque em "Registrar" para anotar o sopro no Peak Flow, bombinhas ou sintomas de hoje.',
+                    icon: Icons.edit_calendar_outlined,
+                    actionLabel: 'Registrar Agora',
+                    onActionPressed: () {
+                      QuickActionsModalSheet.show(
+                        context: context,
+                        profile: _profile!,
+                        onEntrySaved: _loadData,
+                      );
+                    },
                   )
                 else
                   ListView.separated(

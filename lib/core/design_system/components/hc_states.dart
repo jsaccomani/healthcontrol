@@ -15,15 +15,20 @@ class HCLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+
     return Center(
       child: Padding(
         padding: HCSpacing.paddingCard,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: HCColors.primary500, strokeWidth: 2.5),
-            const SizedBox(height: HCSpacing.md),
-            Text(message, style: HCTypography.bodyMedium),
+            CircularProgressIndicator(color: theme.primary, strokeWidth: 2.5),
+            const SizedBox(height: HCSpacing.space16),
+            Text(
+              message,
+              style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
+            ),
           ],
         ),
       ),
@@ -50,44 +55,38 @@ class HCEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     return Container(
       width: double.infinity,
       padding: HCSpacing.paddingCard * 1.5,
       decoration: BoxDecoration(
-        color: isDark ? HCColors.darkSurface : HCColors.surfaceWhite,
+        color: theme.surface,
         borderRadius: HCRadii.radiusLg,
-        border: Border.all(
-          color: isDark ? HCColors.darkBorder : HCColors.neutral200,
-        ),
+        border: Border.all(color: theme.border),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             icon,
-            color: isDark ? HCColors.darkTextMuted : HCColors.neutral400,
+            color: theme.textMuted,
             size: 40,
           ),
-          const SizedBox(height: HCSpacing.sm),
+          const SizedBox(height: HCSpacing.space12),
           Text(
             title,
-            style: HCTypography.subHeading.copyWith(
-              color: isDark ? HCColors.darkTextPrimary : HCColors.neutral900,
-            ),
+            style: HCTypography.title.copyWith(color: theme.textPrimary),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: HCSpacing.xs),
+          const SizedBox(height: HCSpacing.space4),
           Text(
             message,
-            style: HCTypography.bodySmall.copyWith(
-              color: isDark ? HCColors.darkTextSecondary : HCColors.neutral500,
-            ),
+            style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
             textAlign: TextAlign.center,
           ),
           if (actionLabel != null && onActionPressed != null) ...[
-            const SizedBox(height: HCSpacing.md),
+            const SizedBox(height: HCSpacing.space16),
             HCPrimaryButton(label: actionLabel!, onPressed: onActionPressed),
           ],
         ],
@@ -111,28 +110,38 @@ class HCErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+
     return Container(
       width: double.infinity,
       padding: HCSpacing.paddingCard,
       decoration: BoxDecoration(
-        color: HCColors.redLight,
+        color: theme.criticalBg,
         borderRadius: HCRadii.radiusLg,
-        border: Border.all(color: HCColors.redBorder),
+        border: Border.all(color: theme.criticalBorder),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.error_outline, color: HCColors.redMain, size: 36),
-          const SizedBox(height: HCSpacing.sm),
-          Text(title, style: HCTypography.subHeading.copyWith(color: HCColors.redText)),
-          const SizedBox(height: HCSpacing.xs),
-          Text(message, style: HCTypography.bodySmall.copyWith(color: HCColors.redText), textAlign: TextAlign.center),
+          Icon(Icons.error_outline, color: theme.critical, size: 36),
+          const SizedBox(height: HCSpacing.space8),
+          Text(
+            title,
+            style: HCTypography.title.copyWith(color: theme.criticalText),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: HCSpacing.space4),
+          Text(
+            message,
+            style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
+            textAlign: TextAlign.center,
+          ),
           if (onRetry != null) ...[
-            const SizedBox(height: HCSpacing.md),
+            const SizedBox(height: HCSpacing.space12),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: HCColors.redMain,
-                side: const BorderSide(color: HCColors.redBorder),
+                foregroundColor: theme.critical,
+                side: BorderSide(color: theme.criticalBorder),
               ),
               onPressed: onRetry,
               icon: const Icon(Icons.refresh, size: 16),

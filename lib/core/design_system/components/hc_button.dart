@@ -3,13 +3,14 @@ import '../tokens/hc_colors.dart';
 import '../tokens/hc_spacing.dart';
 import '../tokens/hc_typography.dart';
 
-/// Botão Primário Padrão do Health Control (Ação Principal).
+/// Botão Primário Padrão do Health Control (Ação Principal da Tela).
 class HCPrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final bool isLoading;
   final double? width;
+  final double height;
 
   const HCPrimaryButton({
     super.key,
@@ -18,6 +19,7 @@ class HCPrimaryButton extends StatelessWidget {
     this.icon,
     this.isLoading = false,
     this.width,
+    this.height = 48,
   });
 
   @override
@@ -34,7 +36,7 @@ class HCPrimaryButton extends StatelessWidget {
             children: [
               if (icon != null) ...[
                 Icon(icon, size: 18),
-                const SizedBox(width: HCSpacing.sm),
+                const SizedBox(width: HCSpacing.space8),
               ],
               Text(label, style: HCTypography.button),
             ],
@@ -42,7 +44,7 @@ class HCPrimaryButton extends StatelessWidget {
 
     return SizedBox(
       width: width,
-      height: 48,
+      height: height,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: HCColors.primary500,
@@ -64,6 +66,7 @@ class HCSecondaryButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final IconData? icon;
   final double? width;
+  final double height;
 
   const HCSecondaryButton({
     super.key,
@@ -71,19 +74,20 @@ class HCSecondaryButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.width,
+    this.height = 48,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     return SizedBox(
       width: width,
-      height: 48,
+      height: height,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: isDark ? HCColors.darkSurfaceElevated : HCColors.neutral100,
-          foregroundColor: isDark ? HCColors.darkTextPrimary : HCColors.neutral800,
+          backgroundColor: theme.elevatedSurface,
+          foregroundColor: theme.textPrimary,
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
           padding: HCSpacing.paddingButton,
@@ -94,14 +98,12 @@ class HCSecondaryButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 18, color: isDark ? HCColors.darkTextSecondary : HCColors.neutral700),
-              const SizedBox(width: HCSpacing.sm),
+              Icon(icon, size: 18, color: theme.textSecondary),
+              const SizedBox(width: HCSpacing.space8),
             ],
             Text(
               label,
-              style: HCTypography.button.copyWith(
-                color: isDark ? HCColors.darkTextPrimary : HCColors.neutral800,
-              ),
+              style: HCTypography.button.copyWith(color: theme.textPrimary),
             ),
           ],
         ),
@@ -110,30 +112,32 @@ class HCSecondaryButton extends StatelessWidget {
   }
 }
 
-/// Botão de Emergência SOS (Ação Crítica com Alto Destaque Visual).
+/// Botão de Emergência SOS (Ação Crítica com Alto Destaque Visual e Calma).
 class HCEmergencyButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool fullWidth;
+  final double height;
 
   const HCEmergencyButton({
     super.key,
     this.label = 'SOS Emergência',
     required this.onPressed,
     this.fullWidth = false,
+    this.height = 48,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     final button = ElevatedButton.icon(
       style: ElevatedButton.styleFrom(
-        backgroundColor: isDark ? const Color(0xFF350A0A) : HCColors.redLight,
-        foregroundColor: HCColors.redMain,
+        backgroundColor: theme.criticalBg,
+        foregroundColor: theme.critical,
         elevation: 0,
         side: BorderSide(
-          color: isDark ? const Color(0xFF991B1B) : HCColors.redBorder,
+          color: theme.criticalBorder,
           width: 1.2,
         ),
         shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
@@ -143,12 +147,12 @@ class HCEmergencyButton extends StatelessWidget {
       icon: const Icon(Icons.emergency, size: 18, color: HCColors.redMain),
       label: Text(
         label,
-        style: HCTypography.button.copyWith(color: HCColors.redMain),
+        style: HCTypography.button.copyWith(color: theme.critical),
       ),
     );
 
     if (fullWidth) {
-      return SizedBox(width: double.infinity, height: 48, child: button);
+      return SizedBox(width: double.infinity, height: height, child: button);
     }
     return button;
   }
@@ -160,6 +164,7 @@ class HCOutlineButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final IconData? icon;
   final double? width;
+  final double height;
 
   const HCOutlineButton({
     super.key,
@@ -167,22 +172,21 @@ class HCOutlineButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.width,
+    this.height = 48,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     return SizedBox(
       width: width,
-      height: 48,
+      height: height,
       child: OutlinedButton(
         style: OutlinedButton.styleFrom(
-          foregroundColor: isDark ? HCColors.primary300 : HCColors.primary600,
-          side: BorderSide(
-            color: isDark ? HCColors.darkBorder : HCColors.primary200,
-          ),
-          backgroundColor: isDark ? HCColors.darkSurface : HCColors.primary50,
+          foregroundColor: theme.primary,
+          side: BorderSide(color: theme.primaryBorder),
+          backgroundColor: theme.primarySubtle,
           shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         ),
@@ -192,18 +196,65 @@ class HCOutlineButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 16, color: isDark ? HCColors.primary300 : HCColors.primary600),
-              const SizedBox(width: HCSpacing.xs),
+              Icon(icon, size: 16, color: theme.primary),
+              const SizedBox(width: HCSpacing.space4),
             ],
             Text(
               label,
-              style: HCTypography.labelBold.copyWith(
-                color: isDark ? HCColors.primary300 : HCColors.primary600,
-              ),
+              style: HCTypography.labelBold.copyWith(color: theme.primary),
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// Botão de Ícone Padronizado com Target de Toque Mínimo de 44x44px.
+class HCIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final String? tooltip;
+  final Color? color;
+  final Color? backgroundColor;
+  final double size;
+
+  const HCIconButton({
+    super.key,
+    required this.icon,
+    required this.onPressed,
+    this.tooltip,
+    this.color,
+    this.backgroundColor,
+    this.size = 20,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+
+    Widget button = InkWell(
+      onTap: onPressed,
+      borderRadius: HCRadii.radiusMd,
+      child: Container(
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: backgroundColor ?? Colors.transparent,
+          borderRadius: HCRadii.radiusMd,
+        ),
+        child: Icon(
+          icon,
+          size: size,
+          color: color ?? theme.textSecondary,
+        ),
+      ),
+    );
+
+    if (tooltip != null) {
+      return Tooltip(message: tooltip!, child: button);
+    }
+    return button;
   }
 }

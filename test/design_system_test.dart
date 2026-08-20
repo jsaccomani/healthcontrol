@@ -49,7 +49,7 @@ void main() {
     testWidgets('HCActionZoneBadge renderiza corretamente para todas as Zonas GINA', (tester) async {
       // 1. Zona Verde
       await tester.pumpWidget(createTestableWidget(const HCActionZoneBadge(zone: ActionZoneType.green)));
-      expect(find.text('Zona Verde (Normal)'), findsOneWidget);
+      expect(find.text('Zona Verde (Estável)'), findsOneWidget);
       expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
 
       // 2. Zona Amarela
@@ -59,7 +59,7 @@ void main() {
 
       // 3. Zona Vermelha
       await tester.pumpWidget(createTestableWidget(const HCActionZoneBadge(zone: ActionZoneType.red)));
-      expect(find.text('Zona Vermelha (Perigo)'), findsOneWidget);
+      expect(find.text('Zona Vermelha (Crise)'), findsOneWidget);
       expect(find.byIcon(Icons.emergency_outlined), findsOneWidget);
     });
 

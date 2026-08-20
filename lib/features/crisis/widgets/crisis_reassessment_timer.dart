@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/design_system/design_system.dart';
 
 /// Componente Isolado de Temporizador de Reavaliação Pós-Resgate (20 minutos).
+/// Responde imediatamente: "QUANDO REAVALIAR?"
+///
 /// Princípio de Performance & Resiliência:
 /// - Possui seu próprio ciclo de rebuild (não reconstrói a tela inteira a cada segundo).
 /// - Deriva a contagem estritamente do timestamp absoluto [reassessmentAt] (resiste a background/restart).
@@ -71,7 +73,7 @@ class _CrisisReassessmentTimerState extends State<CrisisReassessmentTimer> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
-                  'Tempo de reavaliação atingido (20 min). Observe a respiração e meça o Peak Flow da criança.',
+                  'Tempo de reavaliação atingido (20 min). Observe o esforço respiratório e meça o Peak Flow.',
                 ),
                 backgroundColor: HCColors.redMain,
                 duration: Duration(seconds: 8),
@@ -92,19 +94,19 @@ class _CrisisReassessmentTimerState extends State<CrisisReassessmentTimer> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
     final isRunning = _secondsRemaining > 0;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? HCColors.darkSurface : Colors.white,
+        color: theme.surface,
         borderRadius: HCRadii.radiusLg,
         border: Border.all(
-          color: isDark ? HCColors.darkBorder : HCColors.neutral200,
+          color: isRunning ? theme.primaryBorder : theme.border,
+          width: isRunning ? 1.2 : 1.0,
         ),
-        boxShadow: HCShadows.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,18 +116,26 @@ class _CrisisReassessmentTimerState extends State<CrisisReassessmentTimer> {
             children: [
               Row(
                 children: [
-                  const Icon(
-                    Icons.timer_outlined,
-                    color: HCColors.primary600,
-                    size: 20,
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: theme.primarySubtle,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      Icons.timer_outlined,
+                      color: theme.primary,
+                      size: 18,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Reavaliação Pós-Resgate (20 min)',
+                    'REAVALIAÇÃO (20 MIN)',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: isDark ? HCColors.darkText : HCColors.primary700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                      color: theme.textPrimary,
                     ),
                   ),
                 ],
@@ -133,23 +143,23 @@ class _CrisisReassessmentTimerState extends State<CrisisReassessmentTimer> {
               if (!isRunning && widget.onStartManualTimer != null)
                 TextButton(
                   onPressed: widget.onStartManualTimer,
-                  child: const Text(
-                    'Iniciar 20 min',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  child: Text(
+                    'Iniciar Manualmente',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: theme.primary),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           if (isRunning) ...[
             Center(
               child: Text(
                 _formatTimer(_secondsRemaining),
-                style: const TextStyle(
-                  fontSize: 34,
+                style: TextStyle(
+                  fontSize: 38,
                   fontWeight: FontWeight.w900,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                  color: HCColors.primary600,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                  color: theme.primary,
                   letterSpacing: 2,
                 ),
               ),
@@ -159,26 +169,25 @@ class _CrisisReassessmentTimerState extends State<CrisisReassessmentTimer> {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: (20 * 60 - _secondsRemaining) / (20 * 60),
-                backgroundColor: isDark ? Colors.white12 : const Color(0xFFE2E8F0),
-                valueColor: const AlwaysStoppedAnimation<Color>(HCColors.primary500),
+                backgroundColor: theme.elevatedSurface,
+                valueColor: AlwaysStoppedAnimation<Color>(theme.primary),
                 minHeight: 6,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Aguarde o tempo de ação do broncodilatador. Ao zerar, verifique a expansão torácica e meça o sopro.',
+              'Aguarde 20 minutos para a ação plena do broncodilatador. Ao zerar, observe o esforço torácico e realize a medição do sopro.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: HCTypography.bodySmall.copyWith(
+                color: theme.textSecondary,
                 fontSize: 11,
-                color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
               ),
             ),
           ] else ...[
             Text(
-              'Recomenda-se aguardar 20 minutos após a bombinha de resgate para verificar se o sopro voltou para a Zona Verde ou se necessita ir ao Pronto-Socorro.',
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
+              'O temporizador de 20 minutos iniciará automaticamente ao confirmar a administração da dose de resgate.',
+              style: HCTypography.bodySmall.copyWith(
+                color: theme.textSecondary,
                 height: 1.3,
               ),
             ),

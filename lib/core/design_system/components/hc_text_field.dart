@@ -36,7 +36,7 @@ class HCTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,11 +44,9 @@ class HCTextField extends StatelessWidget {
         if (labelText != null) ...[
           Text(
             labelText!,
-            style: HCTypography.labelBold.copyWith(
-              color: isDark ? HCColors.darkTextSecondary : HCColors.neutral700,
-            ),
+            style: HCTypography.label.copyWith(color: theme.textSecondary),
           ),
-          const SizedBox(height: HCSpacing.xs),
+          const SizedBox(height: HCSpacing.space4),
         ],
         TextField(
           controller: controller,
@@ -57,35 +55,96 @@ class HCTextField extends StatelessWidget {
           readOnly: readOnly,
           maxLines: maxLines,
           onChanged: onChanged,
-          style: HCTypography.bodyLarge.copyWith(
-            color: isDark ? HCColors.darkTextPrimary : HCColors.neutral900,
-          ),
+          style: HCTypography.body.copyWith(color: theme.textPrimary),
           decoration: InputDecoration(
             hintText: hintText,
             helperText: helperText,
             errorText: errorText,
             suffixText: suffixUnit,
             prefixIcon: prefixIcon != null
-                ? Icon(prefixIcon, size: 20, color: isDark ? HCColors.darkTextMuted : HCColors.neutral500)
+                ? Icon(prefixIcon, size: 20, color: theme.textMuted)
                 : null,
             filled: true,
-            fillColor: isDark ? HCColors.darkSurface : HCColors.surfaceWhite,
+            fillColor: theme.surface,
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             border: OutlineInputBorder(
               borderRadius: HCRadii.radiusMd,
-              borderSide: BorderSide(color: isDark ? HCColors.darkBorder : HCColors.neutral300),
+              borderSide: BorderSide(color: theme.border),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: HCRadii.radiusMd,
-              borderSide: BorderSide(color: isDark ? HCColors.darkBorder : HCColors.neutral300),
+              borderSide: BorderSide(color: theme.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: HCRadii.radiusMd,
-              borderSide: const BorderSide(color: HCColors.primary500, width: 1.8),
+              borderSide: BorderSide(color: theme.primary, width: 1.8),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: HCRadii.radiusMd,
-              borderSide: const BorderSide(color: HCColors.redMain),
+              borderSide: BorderSide(color: theme.critical),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Campo de Seleção Padronizado (Dropdown / Select).
+class HCSelectField<T> extends StatelessWidget {
+  final String? labelText;
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+  final IconData? prefixIcon;
+
+  const HCSelectField({
+    super.key,
+    this.labelText,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    this.prefixIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (labelText != null) ...[
+          Text(
+            labelText!,
+            style: HCTypography.label.copyWith(color: theme.textSecondary),
+          ),
+          const SizedBox(height: HCSpacing.space4),
+        ],
+        DropdownButtonFormField<T>(
+          initialValue: value,
+          items: items,
+          onChanged: onChanged,
+          dropdownColor: theme.surface,
+          style: HCTypography.body.copyWith(color: theme.textPrimary),
+          decoration: InputDecoration(
+            prefixIcon: prefixIcon != null
+                ? Icon(prefixIcon, size: 20, color: theme.textMuted)
+                : null,
+            filled: true,
+            fillColor: theme.surface,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: HCRadii.radiusMd,
+              borderSide: BorderSide(color: theme.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: HCRadii.radiusMd,
+              borderSide: BorderSide(color: theme.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: HCRadii.radiusMd,
+              borderSide: BorderSide(color: theme.primary, width: 1.8),
             ),
           ),
         ),

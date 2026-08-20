@@ -3,7 +3,8 @@ import 'package:clinical_core/clinical_core.dart';
 import '../../../core/design_system/design_system.dart';
 
 /// Topo / Banner de Identificação Estrita da Criança no Modo Crise.
-/// Apresenta o contexto clínico trancado (sem seletor de troca).
+/// Responde imediatamente à pergunta: "QUEM?"
+/// Apresenta o contexto clínico trancado (sem troca casual de paciente).
 class CrisisHeader extends StatelessWidget {
   final PatientProfile profile;
 
@@ -14,39 +15,38 @@ class CrisisHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF240A0A) : const Color(0xFFFEF2F2),
+        color: theme.criticalBg,
         borderRadius: HCRadii.radiusLg,
         border: Border.all(
-          color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA),
-          width: 1.5,
+          color: theme.criticalBorder,
+          width: 1.2,
         ),
-        boxShadow: HCShadows.card,
       ),
       child: Row(
         children: [
-          // Badge Crise com Ícone
+          // Ícone de Modo Operacional Crise
           Container(
-            width: 48,
-            height: 48,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: HCColors.redMain,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.emergency,
               color: Colors.white,
-              size: 26,
+              size: 24,
             ),
           ),
           const SizedBox(width: 14),
 
-          // Identidade e Dados Vitais da Criança
+          // Identidade e Dados Vitais da Criança (QUEM?)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,9 +60,9 @@ class CrisisHeader extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: const Text(
-                        'CRISE',
+                        'MODO CRISE',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 9,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                           letterSpacing: 0.5,
@@ -72,12 +72,11 @@ class CrisisHeader extends StatelessWidget {
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        profile.name.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.2,
-                          color: isDark ? Colors.white : HCColors.neutral900,
+                        profile.name,
+                        style: HCTypography.heading.copyWith(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textPrimary,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -86,10 +85,9 @@ class CrisisHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${profile.ageDisplay}${profile.weightKg > 0 ? " • Peso: ${profile.weightKg} kg" : ""}${profile.personalBestPef > 0 ? " • Recorde PFE: ${profile.personalBestPef} L/min" : ""}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? const Color(0xFFFCA5A5) : HCColors.neutral700,
+                  '${profile.ageDisplay}${profile.weightKg > 0 ? " • ${profile.weightKg.toString().replaceAll('.', ',')} kg" : ""}${profile.personalBestPef > 0 ? " • PFE Base: ${profile.personalBestPef} L/min" : ""}',
+                  style: HCTypography.bodySmall.copyWith(
+                    color: theme.textSecondary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

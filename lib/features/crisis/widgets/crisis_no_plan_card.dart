@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/design_system/design_system.dart';
 
 /// Card de Segurança quando NÃO HÁ plano de resgate cadastrado.
-/// Princípio Clínico: O sistema não inventa medicamentos ou posologias na ausência de prescrição.
+/// Princípio de Segurança Clínica: O aplicativo não inventa nem sugere medicamentos sem prescrição médica válida.
 class CrisisNoPlanCard extends StatelessWidget {
   final VoidCallback onCallSamu;
   final VoidCallback? onCallDoctor;
@@ -17,19 +17,18 @@ class CrisisNoPlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2C1E0B) : const Color(0xFFFEFCE8),
+        color: theme.warningBg,
         borderRadius: HCRadii.radiusLg,
         border: Border.all(
-          color: isDark ? const Color(0xFFB45309) : const Color(0xFFFDE047),
-          width: 1.5,
+          color: theme.warningBorder,
+          width: 1.2,
         ),
-        boxShadow: HCShadows.card,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,24 +38,24 @@ class CrisisNoPlanCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD97706).withAlpha(30),
+                  color: theme.warning.withAlpha(30),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.warning_amber_rounded,
-                  color: Color(0xFFD97706),
-                  size: 24,
+                  color: theme.warning,
+                  size: 22,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'NENHUM PLANO DE RESGATE CADASTRADO',
+                  'PLANO DE RESGATE NÃO CADASTRADO',
                   style: TextStyle(
-                    color: isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309),
+                    color: theme.warningText,
                     fontWeight: FontWeight.w900,
-                    fontSize: 13,
-                    letterSpacing: 0.3,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ),
@@ -64,28 +63,35 @@ class CrisisNoPlanCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Este aplicativo não possui uma orientação médica registrada para esta criança.',
-            style: TextStyle(
-              fontSize: 14,
+            'Não existe um plano de resgate cadastrado para esta criança.',
+            style: HCTypography.title.copyWith(
+              fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : HCColors.neutral900,
+              color: theme.textPrimary,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Por segurança clínica, o aplicativo não recomenda medicamentos ou doses sem prescrição. Em caso de falta de ar, chiado ou cansaço, acione o serviço de urgência imediatamente.',
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? HCColors.darkTextMuted : HCColors.neutral700,
-              height: 1.4,
+            'Em uma emergência, procure atendimento médico imediatamente.',
+            style: HCTypography.bodySmall.copyWith(
+              color: theme.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Por segurança clínica estrita, este aplicativo não sugere medicamentos ou dosagens sem prévia prescrição cadastrada.',
+            style: HCTypography.caption.copyWith(
+              color: theme.textTertiary,
+              height: 1.3,
             ),
           ),
           const SizedBox(height: 16),
 
-          // Botão 192 com Saliência Máxima
+          // Botão 192 SAMU em Destaque Absoluto
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: 48,
             child: ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: HCColors.redMain,
@@ -94,7 +100,7 @@ class CrisisNoPlanCard extends StatelessWidget {
                 elevation: 0,
               ),
               onPressed: onCallSamu,
-              icon: const Icon(Icons.phone_in_talk, size: 22),
+              icon: const Icon(Icons.phone_in_talk, size: 20),
               label: const Text(
                 'Ligar 192 (SAMU Emergência)',
                 style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
@@ -102,7 +108,7 @@ class CrisisNoPlanCard extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
           // Ações Secundárias Seguras
           Row(
@@ -111,14 +117,14 @@ class CrisisNoPlanCard extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: isDark ? HCColors.primary300 : HCColors.primary700,
-                      side: BorderSide(color: isDark ? HCColors.darkBorder : HCColors.neutral300),
+                      foregroundColor: theme.textPrimary,
+                      side: BorderSide(color: theme.border),
                       shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
                     ),
                     onPressed: onCallDoctor,
-                    icon: const Icon(Icons.call, size: 16),
+                    icon: Icon(Icons.call, color: theme.primary, size: 16),
                     label: const Text(
-                      'Contatar Médico',
+                      'Ligar Médico',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ),
@@ -128,14 +134,14 @@ class CrisisNoPlanCard extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? Colors.white : HCColors.neutral800,
-                    side: BorderSide(color: isDark ? HCColors.darkBorder : HCColors.neutral300),
+                    foregroundColor: theme.textPrimary,
+                    side: BorderSide(color: theme.border),
                     shape: RoundedRectangleBorder(borderRadius: HCRadii.radiusMd),
                   ),
                   onPressed: onOpenEmergencySummary,
                   icon: const Icon(Icons.medical_information_outlined, size: 16),
                   label: const Text(
-                    'Ver Ficha Médica',
+                    'Ver Ficha Clínica',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   ),
                 ),

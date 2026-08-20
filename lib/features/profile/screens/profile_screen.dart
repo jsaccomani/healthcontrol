@@ -1,11 +1,12 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:clinical_core/clinical_core.dart';
 import '../../../core/storage/health_storage_service.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../core/design_system/design_system.dart';
+import '../../prescription/screens/prescription_scan_screen.dart';
 
+/// Tela de Perfil Clínico Vivo (Prontuário Pessoal Pediátrico Moderno).
+/// Substitui o formulário monolítico por uma visão de resumo escaneável com edições focadas por intenção.
 class ProfileScreen extends StatefulWidget {
   final String? patientId;
   const ProfileScreen({super.key, this.patientId});
@@ -14,689 +15,1179 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen> {
   final HealthStorageService _storageService = HealthStorageService();
-  late TabController _tabController;
 
   List<PatientProfile> _allProfiles = [];
   PatientProfile? _activeProfile;
   List<PrescriptionRecord> _prescriptions = [];
   bool _isLoading = true;
 
-  // Debounce para Salvamento Automático do Histórico
-  Timer? _autoSaveDebounce;
-  String _autoSaveStatus = 'Salvo automaticamente';
-
-  // 1. Controladores - Criança & Nascimento
-  late TextEditingController _nameCtrl;
-  late TextEditingController _heightCtrl;
-  late TextEditingController _weightCtrl;
-  late TextEditingController _pefCtrl;
-  late TextEditingController _susCtrl;
-  late TextEditingController _insuranceCtrl;
-  late TextEditingController _insuranceCardCtrl;
-  late TextEditingController _gestationalWeeksCtrl;
-  late TextEditingController _birthWeightCtrl;
-  bool _neonatalIcuOrOxygen = false;
-  String _gender = 'Masculino';
-  String _bloodType = 'A+';
-  String _selectedAvatar = 'boy_1';
-  DateTime _birthDate = DateTime(2021, 5, 15);
-
-  // 2. Controladores - Dados dos Pais
-  late TextEditingController _motherNameCtrl;
-  late TextEditingController _motherPhoneCtrl;
-  late TextEditingController _motherEmailCtrl;
-  late TextEditingController _fatherNameCtrl;
-  late TextEditingController _fatherPhoneCtrl;
-  late TextEditingController _emergencyContactNameCtrl;
-  late TextEditingController _emergencyContactPhoneCtrl;
-  late TextEditingController _addressCtrl;
-
-  // 3. Controladores - Triagem Médica & Perguntas Clínicas
-  late TextEditingController _symptomsStartAgeCtrl;
-  bool _hadIcuAdmission = false;
-  bool _intubatedPast = false;
-  late TextEditingController _icuCountCtrl;
-  late TextEditingController _erVisitsCtrl;
-  late TextEditingController _steroidCoursesCtrl;
-  late TextEditingController _nightAwakeningsCtrl;
-  String _activityLimitation = 'Normal - sem limitações para brincar';
-  bool _fluVaccineUpToDate = true;
-  bool _pneumoVaccineUpToDate = true;
-  bool _householdSmokers = false;
-  String _householdPets = 'Nenhum';
-
-  late TextEditingController _doctorNameCtrl;
-  late TextEditingController _doctorPhoneCtrl;
-  late TextEditingController _preferredHospitalCtrl;
-
-  List<String> _crisisTriggers = ['Resfriados / Gripes', 'Mudança brusca de temperatura', 'Tempo seco e poeira'];
-  List<String> _familyHistory = ['Mãe (Rinite/Asma)'];
-  List<String> _drugAllergies = [];
-  List<String> _foodAllergies = [];
-  List<String> _environmentalAllergies = ['Ácaros da poeira', 'Poeira', 'Tempo frio'];
-  List<String> _comorbidities = ['Rinite Alérgica Perene', 'Hiper-reatividade Brônquica'];
-
-  // 4. Histórico Contado pelos Pais (Espaço Amplo com Auto-Save)
-  late TextEditingController _familyNotesCtrl;
-
-  final List<String> _commonBloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Não informado'];
-
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
-    _loadAllData(targetId: widget.patientId);
+    _loadProfileData(targetId: widget.patientId);
   }
 
-  @override
-  void dispose() {
-    _autoSaveDebounce?.cancel();
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadAllData({String? targetId}) async {
+  Future<void> _loadProfileData({String? targetId}) async {
     setState(() => _isLoading = true);
     final profiles = await _storageService.getAllProfiles();
-    final current = await _storageService.getPatientProfile(patientId: targetId);
-    final prescriptions = await _storageService.getPrescriptions(current.id);
+    final currentId = targetId ?? await _storageService.getSelectedProfileId();
 
-    _allProfiles = profiles;
-    _activeProfile = current;
-    _prescriptions = prescriptions;
-    _populateControllers(current);
-
-    setState(() => _isLoading = false);
-  }
-
-  Future<void> _switchChild(PatientProfile target) async {
-    await _silentSaveProfile();
-    await _loadAllData(targetId: target.id);
-  }
-
-  void _openChildSelectorSheet() {
-    HCChildSelectorSheet.show(
-      context: context,
-      profiles: _allProfiles,
-      selectedProfileId: _activeProfile!.id,
-      onSelect: _switchChild,
-      onAddNew: _showAddChildDialog,
-    );
-  }
-
-  Future<void> _showAddChildDialog() async {
-    final newChild = await HCAddChildDialog.show(
-      context: context,
-      onChildCreated: (child) {},
-    );
-    if (newChild != null) {
-      await _loadAllData(targetId: newChild.id);
-    }
-  }
-
-  Future<void> _deleteCurrentChild() async {
-    if (_allProfiles.length <= 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não é possível excluir o único filho cadastrado.')),
+    PatientProfile active;
+    if (profiles.isEmpty) {
+      active = await _storageService.getPatientProfile();
+    } else {
+      active = profiles.firstWhere(
+        (p) => p.id == currentId,
+        orElse: () => profiles.first,
       );
-      return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Excluir Perfil do Filho?'),
-        content: Text('Tem certeza que deseja excluir os dados de ${_activeProfile!.name}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: HCColors.redMain),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Excluir', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+    final presc = await _storageService.getPrescriptions(active.id);
 
-    if (confirmed == true) {
-      await _storageService.deleteChildProfile(_activeProfile!.id);
-      await _loadAllData();
-    }
-  }
-
-  void _populateControllers(PatientProfile p) {
-    // 1. Criança & Nascimento
-    _nameCtrl = TextEditingController(text: p.name);
-    _heightCtrl = TextEditingController(text: p.heightCm.toStringAsFixed(0));
-    _weightCtrl = TextEditingController(text: p.weightKg.toStringAsFixed(1));
-    _pefCtrl = TextEditingController(text: p.personalBestPef.toString());
-    _susCtrl = TextEditingController(text: p.susCardNumber);
-    _insuranceCtrl = TextEditingController(text: p.healthInsurance);
-    _insuranceCardCtrl = TextEditingController(text: p.insuranceCardNumber);
-    _gestationalWeeksCtrl = TextEditingController(text: p.gestationalAgeWeeks.toString());
-    _birthWeightCtrl = TextEditingController(text: p.birthWeightGrams.toString());
-    _neonatalIcuOrOxygen = p.neonatalIcuOrOxygen;
-    _gender = p.gender;
-    _bloodType = p.bloodType;
-    _selectedAvatar = p.avatarId;
-    _birthDate = p.birthDate;
-
-    // 2. Pais
-    _motherNameCtrl = TextEditingController(text: p.motherName);
-    _motherPhoneCtrl = TextEditingController(text: p.motherPhone);
-    _motherEmailCtrl = TextEditingController(text: p.motherEmail);
-    _fatherNameCtrl = TextEditingController(text: p.fatherName);
-    _fatherPhoneCtrl = TextEditingController(text: p.fatherPhone);
-    _emergencyContactNameCtrl = TextEditingController(text: p.emergencyContactName);
-    _emergencyContactPhoneCtrl = TextEditingController(text: p.emergencyContactPhone);
-    _addressCtrl = TextEditingController(text: p.addressCityState);
-
-    // 3. Triagem Médica
-    _symptomsStartAgeCtrl = TextEditingController(text: p.symptomsStartAge);
-    _hadIcuAdmission = p.hadIcuAdmission;
-    _intubatedPast = p.intubatedPast;
-    _icuCountCtrl = TextEditingController(text: p.icuAdmissionsCount.toString());
-    _erVisitsCtrl = TextEditingController(text: p.erVisitsLast12Months.toString());
-    _steroidCoursesCtrl = TextEditingController(text: p.oralSteroidCoursesLastYear.toString());
-    _nightAwakeningsCtrl = TextEditingController(text: p.nightAwakeningsPerMonth.toString());
-    _activityLimitation = p.activityLimitation;
-    _fluVaccineUpToDate = p.fluVaccineUpToDate;
-    _pneumoVaccineUpToDate = p.pneumococcalVaccine;
-    _householdSmokers = p.householdSmokers;
-    _householdPets = p.householdPets;
-    _doctorNameCtrl = TextEditingController(text: p.doctorName);
-    _doctorPhoneCtrl = TextEditingController(text: p.doctorPhone);
-    _preferredHospitalCtrl = TextEditingController(text: p.preferredHospital);
-
-    _crisisTriggers = List.from(p.crisisTriggers);
-    _familyHistory = List.from(p.familyAsthmaHistory);
-    _drugAllergies = List.from(p.drugAllergies);
-    _foodAllergies = List.from(p.foodAllergies);
-    _environmentalAllergies = List.from(p.environmentalAllergies);
-    _comorbidities = List.from(p.comorbidities);
-
-    // 4. Histórico da Família
-    _familyNotesCtrl = TextEditingController(text: p.familyNotesAndHistory);
-  }
-
-  void _onFamilyHistoryChanged(String text) {
-    setState(() => _autoSaveStatus = 'Salvando alterações...');
-    _autoSaveDebounce?.cancel();
-    _autoSaveDebounce = Timer(const Duration(milliseconds: 900), () async {
-      await _silentSaveProfile();
-      if (mounted) {
-        setState(() => _autoSaveStatus = 'Salvo às ${DateFormat('HH:mm:ss').format(DateTime.now())}');
-      }
+    if (!mounted) return;
+    setState(() {
+      _allProfiles = profiles;
+      _activeProfile = active;
+      _prescriptions = presc;
+      _isLoading = false;
     });
   }
 
-  Future<void> _silentSaveProfile() async {
-    if (_activeProfile == null) return;
-    final updated = _buildCurrentProfileObject();
+  Future<void> _saveUpdatedProfile(PatientProfile updated) async {
     await _storageService.savePatientProfile(updated);
-    _activeProfile = updated;
-  }
-
-  PatientProfile _buildCurrentProfileObject() {
-    final height = double.tryParse(_heightCtrl.text.trim()) ?? 110.0;
-    final weight = double.tryParse(_weightCtrl.text.trim()) ?? 19.5;
-    final pef = int.tryParse(_pefCtrl.text.trim()) ?? 220;
-    final icuCount = int.tryParse(_icuCountCtrl.text.trim()) ?? 0;
-    final erVisits = int.tryParse(_erVisitsCtrl.text.trim()) ?? 1;
-    final steroidCourses = int.tryParse(_steroidCoursesCtrl.text.trim()) ?? 2;
-    final nightAwakenings = int.tryParse(_nightAwakeningsCtrl.text.trim()) ?? 1;
-    final gestWeeks = int.tryParse(_gestationalWeeksCtrl.text.trim()) ?? 39;
-    final birthWeight = int.tryParse(_birthWeightCtrl.text.trim()) ?? 3200;
-
-    return PatientProfile(
-      id: _activeProfile!.id,
-      name: _nameCtrl.text.trim(),
-      photoBase64: _activeProfile!.photoBase64,
-      avatarId: _selectedAvatar,
-      birthDate: _birthDate,
-      gender: _gender,
-      bloodType: _bloodType,
-      heightCm: height,
-      weightKg: weight,
-      personalBestPef: pef,
-      susCardNumber: _susCtrl.text.trim(),
-      healthInsurance: _insuranceCtrl.text.trim(),
-      insuranceCardNumber: _insuranceCardCtrl.text.trim(),
-      gestationalAgeWeeks: gestWeeks,
-      birthWeightGrams: birthWeight,
-      neonatalIcuOrOxygen: _neonatalIcuOrOxygen,
-      motherName: _motherNameCtrl.text.trim(),
-      motherPhone: _motherPhoneCtrl.text.trim(),
-      motherEmail: _motherEmailCtrl.text.trim(),
-      fatherName: _fatherNameCtrl.text.trim(),
-      fatherPhone: _fatherPhoneCtrl.text.trim(),
-      emergencyContactName: _emergencyContactNameCtrl.text.trim(),
-      emergencyContactPhone: _emergencyContactPhoneCtrl.text.trim(),
-      addressCityState: _addressCtrl.text.trim(),
-      symptomsStartAge: _symptomsStartAgeCtrl.text.trim(),
-      hadIcuAdmission: _hadIcuAdmission,
-      icuAdmissionsCount: icuCount,
-      intubatedPast: _intubatedPast,
-      erVisitsLast12Months: erVisits,
-      oralSteroidCoursesLastYear: steroidCourses,
-      hospitalizationsCount: _activeProfile!.hospitalizationsCount,
-      lastHospitalizationInfo: _activeProfile!.lastHospitalizationInfo,
-      nightAwakeningsPerMonth: nightAwakenings,
-      activityLimitation: _activityLimitation,
-      crisisTriggers: _crisisTriggers,
-      fluVaccineUpToDate: _fluVaccineUpToDate,
-      pneumococcalVaccine: _pneumoVaccineUpToDate,
-      householdSmokers: _householdSmokers,
-      householdPets: _householdPets,
-      familyAsthmaHistory: _familyHistory,
-      drugAllergies: _drugAllergies,
-      foodAllergies: _foodAllergies,
-      environmentalAllergies: _environmentalAllergies,
-      comorbidities: _comorbidities,
-      continuousMedications: _activeProfile!.continuousMedications,
-      igeLevel: _activeProfile!.igeLevel,
-      eosinophilsCount: _activeProfile!.eosinophilsCount,
-      doctorName: _doctorNameCtrl.text.trim(),
-      doctorPhone: _doctorPhoneCtrl.text.trim(),
-      preferredHospital: _preferredHospitalCtrl.text.trim(),
-      familyNotesAndHistory: _familyNotesCtrl.text,
-    );
-  }
-
-  Future<void> _saveAll() async {
-    final updated = _buildCurrentProfileObject();
-    await _storageService.savePatientProfile(updated);
-    await _loadAllData();
     if (!mounted) return;
+    setState(() {
+      _activeProfile = updated;
+    });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ficha completa da criança salva com sucesso!'), backgroundColor: HCColors.greenMain),
+      const SnackBar(
+        content: Text('Ficha clínica atualizada com sucesso!'),
+        backgroundColor: HCColors.greenMain,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading || _activeProfile == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppTheme.primaryTeal)),
-      );
-    }
+  void _switchChild(PatientProfile profile) async {
+    await _storageService.setSelectedProfileId(profile.id);
+    _loadProfileData(targetId: profile.id);
+  }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text('Ficha Médica & Anamnese', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        actions: [
-          HCChildContextBadge(
-            profile: _activeProfile!,
-            isCompact: true,
-            onSwitchTap: _openChildSelectorSheet,
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Opções da Família',
-            icon: const Icon(Icons.more_vert, color: Color(0xFF475569)),
-            onSelected: (val) {
-              if (val == 'add') {
-                _showAddChildDialog();
-              } else if (val == 'delete') {
-                _deleteCurrentChild();
-              }
-            },
-            itemBuilder: (ctx) => [
-              const PopupMenuItem(
-                value: 'add',
-                child: Row(
-                  children: [
-                    Icon(Icons.person_add_alt_1, size: 18, color: AppTheme.primaryTeal),
-                    SizedBox(width: 8),
-                    Text('Cadastrar Outro Filho'),
-                  ],
-                ),
-              ),
-              if (_allProfiles.length > 1)
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline, size: 18, color: HCColors.redMain),
-                      SizedBox(width: 8),
-                      Text('Excluir Este Filho', style: TextStyle(color: HCColors.redMain)),
-                    ],
+  void _showAddChildDialog() async {
+    final created = await HCAddChildDialog.show(
+      context: context,
+      onChildCreated: (c) {},
+    );
+    if (created != null) {
+      await _storageService.setSelectedProfileId(created.id);
+      _loadProfileData(targetId: created.id);
+    }
+  }
+
+  // ===========================================================================
+  // MODAIS DE EDIÇÃO FOCADA (Progressive Disclosure)
+  // ===========================================================================
+
+  // 1. Edição de Identidade & Antropometria
+  void _editIdentityModal() {
+    final p = _activeProfile!;
+    final nameCtrl = TextEditingController(text: p.name);
+    final weightCtrl = TextEditingController(text: p.weightKg > 0 ? p.weightKg.toString() : '');
+    final heightCtrl = TextEditingController(text: p.heightCm > 0 ? p.heightCm.toString() : '');
+    final pefCtrl = TextEditingController(text: p.personalBestPef > 0 ? p.personalBestPef.toString() : '');
+    final susCtrl = TextEditingController(text: p.susCardNumber);
+    final insuranceCtrl = TextEditingController(text: p.healthInsurance);
+    final cardCtrl = TextEditingController(text: p.insuranceCardNumber);
+    String bloodType = p.bloodType;
+
+    final theme = context.hcTheme;
+
+    HCBottomSheet.show(
+      context: context,
+      title: 'Editar Identidade da Criança',
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            HCTextField(
+              controller: nameCtrl,
+              labelText: 'Nome Completo da Criança',
+              prefixIcon: Icons.person_outline,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: HCTextField(
+                    controller: weightCtrl,
+                    labelText: 'Peso Atual',
+                    suffixUnit: 'kg',
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(width: 8),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          labelColor: AppTheme.primaryTeal,
-          unselectedLabelColor: const Color(0xFF64748B),
-          indicatorColor: AppTheme.primaryTeal,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          tabs: const [
-            Tab(icon: Icon(Icons.child_care, size: 18), text: '1. Criança'),
-            Tab(icon: Icon(Icons.family_restroom, size: 18), text: '2. Pais'),
-            Tab(icon: Icon(Icons.medication, size: 18), text: '3. Remédios'),
-            Tab(icon: Icon(Icons.local_hospital, size: 18), text: '4. Triagem Médica'),
-            Tab(icon: Icon(Icons.menu_book, size: 18), text: '5. História da Família'),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: HCTextField(
+                    controller: heightCtrl,
+                    labelText: 'Altura',
+                    suffixUnit: 'cm',
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: HCTextField(
+                    controller: pefCtrl,
+                    labelText: 'Melhor PFE Base',
+                    suffixUnit: 'L/min',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: StatefulBuilder(
+                    builder: (ctx, setLocal) => DropdownButtonFormField<String>(
+                      initialValue: bloodType,
+                      decoration: InputDecoration(
+                        labelText: 'Tipo Sanguíneo',
+                        filled: true,
+                        fillColor: theme.elevatedSurface,
+                        border: OutlineInputBorder(borderRadius: HCRadii.radiusMd),
+                      ),
+                      items: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Não informado']
+                          .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                          .toList(),
+                      onChanged: (val) => setLocal(() => bloodType = val ?? 'Não informado'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            HCTextField(
+              controller: susCtrl,
+              labelText: 'Cartão Nacional de Saúde (SUS)',
+              prefixIcon: Icons.badge_outlined,
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: HCTextField(
+                    controller: insuranceCtrl,
+                    labelText: 'Convênio / Plano de Saúde',
+                    prefixIcon: Icons.health_and_safety_outlined,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: HCTextField(
+                    controller: cardCtrl,
+                    labelText: 'Matrícula / Carteirinha',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            HCPrimaryButton(
+              label: 'Salvar Identidade',
+              icon: Icons.check,
+              width: double.infinity,
+              onPressed: () {
+                final updated = p.copyWith(
+                  name: nameCtrl.text.trim(),
+                  weightKg: double.tryParse(weightCtrl.text.replaceAll(',', '.')) ?? p.weightKg,
+                  heightCm: double.tryParse(heightCtrl.text.replaceAll(',', '.')) ?? p.heightCm,
+                  personalBestPef: int.tryParse(pefCtrl.text) ?? p.personalBestPef,
+                  bloodType: bloodType,
+                  susCardNumber: susCtrl.text.trim(),
+                  healthInsurance: insuranceCtrl.text.trim(),
+                  insuranceCardNumber: cardCtrl.text.trim(),
+                );
+                Navigator.pop(context);
+                _saveUpdatedProfile(updated);
+              },
+            ),
           ],
         ),
       ),
-      body: HCResponsiveContainer(
-        maxWidth: 840,
+    );
+  }
+
+  // 2. Edição de Rede de Cuidado (Responsáveis Legais, Cuidadores, Contatos de Emergência)
+  void _editCareNetworkModal() {
+    final p = _activeProfile!;
+    final theme = context.hcTheme;
+
+    HCBottomSheet.show(
+      context: context,
+      title: 'Gerenciar Rede de Cuidado',
+      child: SingleChildScrollView(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Conteúdo das 5 Abas
-            Expanded(
-              child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildChildDataTab(),
-                _buildParentsDataTab(),
-                _buildMedicationsTab(),
-                _buildMedicalTriageTab(),
-                _buildFamilyHistoryFreeTextTab(),
-              ],
+            Text(
+              'O Health Control permite múltiplos responsáveis legais, cuidadores do dia a dia e contatos de emergência.',
+              style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
             ),
-          ),
+            const SizedBox(height: 16),
 
-          // Barra Inferior de Ação
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+            // A. Responsáveis Legais
+            Text(
+              'RESPONSÁVEIS LEGAIS (PODER FAMILIAR / TUTELA)',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5, color: theme.primary),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _autoSaveStatus,
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF059669), fontWeight: FontWeight.w600),
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _saveAll,
-                  icon: const Icon(Icons.save, size: 16),
-                  label: const Text('Salvar Tudo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-  // 1. Aba Criança & Nascimento
-  Widget _buildChildDataTab() {
-    final double weight = double.tryParse(_weightCtrl.text) ?? _activeProfile!.weightKg;
-    final double height = double.tryParse(_heightCtrl.text) ?? _activeProfile!.heightCm;
-    final bmi = (height > 0) ? weight / ((height / 100) * (height / 100)) : 0.0;
-    final initials = _activeProfile!.name.trim().isNotEmpty
-        ? _activeProfile!.name.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
-        : 'HC';
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Identificação
-          Center(
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 36,
-                  backgroundColor: HCColors.primary500,
-                  child: Text(
-                    initials,
-                    style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '${_activeProfile!.name} • ${_activeProfile!.ageDisplay}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A)),
-                ),
-                Text(
-                  'IMC: ${bmi.toStringAsFixed(1)} kg/m² • Sangue: $_bloodType',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          _buildCardSection(
-            title: '1. Dados Pessoais da Criança',
-            children: [
-              TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: 'Nome Completo da Criança')),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _gender,
-                      decoration: const InputDecoration(labelText: 'Sexo'),
-                      items: const [
-                        DropdownMenuItem(value: 'Masculino', child: Text('Menino')),
-                        DropdownMenuItem(value: 'Feminino', child: Text('Menina')),
+            const SizedBox(height: 8),
+            if (p.legalGuardians.isEmpty)
+              Text('Nenhum responsável cadastrado', style: HCTypography.caption.copyWith(color: theme.textTertiary))
+            else
+              ...p.legalGuardians.map((g) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.elevatedSurface,
+                      borderRadius: HCRadii.radiusMd,
+                      border: Border.all(color: theme.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.shield_outlined, color: theme.primary, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(g.fullName, style: TextStyle(fontWeight: FontWeight.bold, color: theme.textPrimary)),
+                              Text('${g.displayRelationship} • ${g.phone}', style: TextStyle(fontSize: 12, color: theme.textSecondary)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete_outline, color: theme.critical, size: 18),
+                          onPressed: () {
+                            final list = List<LegalGuardian>.from(p.legalGuardians)..remove(g);
+                            Navigator.pop(context);
+                            _saveUpdatedProfile(p.copyWith(legalGuardians: list));
+                          },
+                        ),
                       ],
-                      onChanged: (v) {
-                        if (v != null) setState(() => _gender = v);
-                      },
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _bloodType,
-                      decoration: const InputDecoration(labelText: 'Tipo Sanguíneo'),
-                      items: _commonBloodTypes.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
-                      onChanged: (v) {
-                        if (v != null) setState(() => _bloodType = v);
-                      },
+                  )),
+            OutlinedButton.icon(
+              onPressed: () => _showAddGuardianDialog(p),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Adicionar Responsável Legal'),
+            ),
+
+            const SizedBox(height: 20),
+
+            // B. Cuidadores
+            Text(
+              'CUIDADORES (FAMILIARES, BABÁS, ESCOLA)',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.5, color: theme.primary),
+            ),
+            const SizedBox(height: 8),
+            if (p.caregivers.isEmpty)
+              Text('Nenhum cuidador cadastrado', style: HCTypography.caption.copyWith(color: theme.textTertiary))
+            else
+              ...p.caregivers.map((c) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.elevatedSurface,
+                      borderRadius: HCRadii.radiusMd,
+                      border: Border.all(color: theme.border),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _weightCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Peso Atual (kg)', hintText: '19.5'),
-                      onChanged: (_) => setState(() {}),
+                    child: Row(
+                      children: [
+                        Icon(Icons.people_outline, color: theme.primary, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(c.fullName, style: TextStyle(fontWeight: FontWeight.bold, color: theme.textPrimary)),
+                              Text('${c.displayRelationship} • ${c.accessLevel.displayName}', style: TextStyle(fontSize: 11, color: theme.textSecondary)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete_outline, color: theme.critical, size: 18),
+                          onPressed: () {
+                            final list = List<Caregiver>.from(p.caregivers)..remove(c);
+                            Navigator.pop(context);
+                            _saveUpdatedProfile(p.copyWith(caregivers: list));
+                          },
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _heightCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Altura (cm)', hintText: '110'),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _pefCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Melhor Sopro Pessoal (Pico de Fluxo - L/min)',
-                  hintText: 'ex: 220 (valor de referência quando está bem)',
-                ),
+                  )),
+            OutlinedButton.icon(
+              onPressed: () => _showAddCaregiverDialog(p),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Adicionar Cuidador'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddGuardianDialog(PatientProfile p) {
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    LegalGuardianRelationshipType rel = LegalGuardianRelationshipType.mother;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Novo Responsável Legal'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nome Completo')),
+              const SizedBox(height: 8),
+              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Telefone / WhatsApp')),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<LegalGuardianRelationshipType>(
+                initialValue: rel,
+                decoration: const InputDecoration(labelText: 'Vínculo / Parentesco'),
+                items: LegalGuardianRelationshipType.values
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r.displayName)))
+                    .toList(),
+                onChanged: (val) => setLocal(() => rel = val ?? LegalGuardianRelationshipType.mother),
               ),
             ],
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            ElevatedButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+                final newG = LegalGuardian(
+                  id: 'guardian_${DateTime.now().millisecondsSinceEpoch}',
+                  fullName: nameCtrl.text.trim(),
+                  relationshipType: rel,
+                  phone: phoneCtrl.text.trim(),
+                );
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+                _saveUpdatedProfile(p.copyWith(legalGuardians: [...p.legalGuardians, newG]));
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          const SizedBox(height: 12),
+  void _showAddCaregiverDialog(PatientProfile p) {
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    CaregiverRelationshipType rel = CaregiverRelationshipType.babysitter;
+    CaregiverAccessLevel access = CaregiverAccessLevel.caregiverFull;
 
-          _buildCardSection(
-            title: '2. Histórico de Nascimento & Perinatal',
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Novo Cuidador'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _gestationalWeeksCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Idade Gestacional (Semanas)', hintText: '39'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _birthWeightCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Peso ao Nascer (gramas)', hintText: '3200'),
-                    ),
-                  ),
-                ],
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nome Completo')),
+              const SizedBox(height: 8),
+              TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Telefone')),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<CaregiverRelationshipType>(
+                initialValue: rel,
+                decoration: const InputDecoration(labelText: 'Relação'),
+                items: CaregiverRelationshipType.values
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r.displayName)))
+                    .toList(),
+                onChanged: (val) => setLocal(() => rel = val ?? CaregiverRelationshipType.babysitter),
               ),
               const SizedBox(height: 8),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Precisou de Oxigênio ou UTI Neonatal ao nascer?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                value: _neonatalIcuOrOxygen,
-                activeThumbColor: AppTheme.primaryTeal,
-                onChanged: (v) => setState(() => _neonatalIcuOrOxygen = v),
+              DropdownButtonFormField<CaregiverAccessLevel>(
+                initialValue: access,
+                decoration: const InputDecoration(labelText: 'Permissão'),
+                items: CaregiverAccessLevel.values
+                    .map((a) => DropdownMenuItem(value: a, child: Text(a.displayName)))
+                    .toList(),
+                onChanged: (val) => setLocal(() => access = val ?? CaregiverAccessLevel.caregiverFull),
               ),
             ],
           ),
-
-          const SizedBox(height: 12),
-
-          _buildCardSection(
-            title: '3. Cartão SUS & Convênio Médico',
-            children: [
-              TextField(controller: _susCtrl, decoration: const InputDecoration(labelText: 'Nº do Cartão Nacional de Saúde (SUS)', hintText: '898 0000 1234 5678')),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: _insuranceCtrl, decoration: const InputDecoration(labelText: 'Plano de Saúde', hintText: 'Bradesco / Unimed'))),
-                  const SizedBox(width: 8),
-                  Expanded(child: TextField(controller: _insuranceCardCtrl, decoration: const InputDecoration(labelText: 'Nº da Carteirinha', hintText: '987654321'))),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  // 2. Aba Pais
-  Widget _buildParentsDataTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildCardSection(
-            title: 'Dados da Mãe / Responsável',
-            children: [
-              TextField(controller: _motherNameCtrl, decoration: const InputDecoration(labelText: 'Nome da Mãe', hintText: 'Juliana Saccomani')),
-              const SizedBox(height: 10),
-              TextField(controller: _motherPhoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'WhatsApp / Celular da Mãe', hintText: '(11) 98765-4321')),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildCardSection(
-            title: 'Dados do Pai / 2º Responsável',
-            children: [
-              TextField(controller: _fatherNameCtrl, decoration: const InputDecoration(labelText: 'Nome do Pai', hintText: 'Pai')),
-              const SizedBox(height: 10),
-              TextField(controller: _fatherPhoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'WhatsApp / Celular do Pai', hintText: '(11) 91234-5678')),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildCardSection(
-            title: 'Endereço & Contato de Emergência Imediata',
-            children: [
-              TextField(controller: _addressCtrl, decoration: const InputDecoration(labelText: 'Cidade / Endereço Completo', hintText: 'São Paulo - SP')),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: _emergencyContactNameCtrl, decoration: const InputDecoration(labelText: 'Contato de Emergência', hintText: 'Mãe (Juliana)'))),
-                  const SizedBox(width: 8),
-                  Expanded(child: TextField(controller: _emergencyContactPhoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Telefone', hintText: '(11) 98765-4321'))),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  // 3. Aba Remédios
-  Widget _buildMedicationsTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF0F766E), Color(0xFF0D9488)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            ElevatedButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+                final newC = Caregiver(
+                  id: 'caregiver_${DateTime.now().millisecondsSinceEpoch}',
+                  fullName: nameCtrl.text.trim(),
+                  relationshipType: rel,
+                  phone: phoneCtrl.text.trim(),
+                  accessLevel: access,
+                );
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+                _saveUpdatedProfile(p.copyWith(caregivers: [...p.caregivers, newC]));
+              },
+              child: const Text('Salvar'),
             ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 3. Edição de Alergias (Medicamentosas, Alimentares, Ambientais)
+  void _editAllergiesModal() {
+    final p = _activeProfile!;
+    final drugCtrl = TextEditingController(text: p.drugAllergies.join(', '));
+    final foodCtrl = TextEditingController(text: p.foodAllergies.join(', '));
+    final envCtrl = TextEditingController(text: p.environmentalAllergies.join(', '));
+
+    HCBottomSheet.show(
+      context: context,
+      title: 'Editar Alergias da Criança',
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            HCTextField(
+              controller: drugCtrl,
+              labelText: 'Alergias a Medicamentos',
+              hintText: 'Ex: Amoxicilina (Grave), Dipirona (Moderada)',
+              prefixIcon: Icons.medication_outlined,
+            ),
+            const SizedBox(height: 12),
+            HCTextField(
+              controller: foodCtrl,
+              labelText: 'Alergias Alimentares',
+              hintText: 'Ex: Leite (APLV), Ovo, Castanhas',
+              prefixIcon: Icons.restaurant_outlined,
+            ),
+            const SizedBox(height: 12),
+            HCTextField(
+              controller: envCtrl,
+              labelText: 'Alergias Ambientais & Respiratórias',
+              hintText: 'Ex: Ácaros, Poeira doméstica, Mofo, Pelo de gato',
+              prefixIcon: Icons.air_outlined,
+            ),
+            const SizedBox(height: 20),
+            HCPrimaryButton(
+              label: 'Salvar Alergias',
+              icon: Icons.check,
+              width: double.infinity,
+              onPressed: () {
+                final updated = p.copyWith(
+                  drugAllergies: drugCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+                  foodAllergies: foodCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+                  environmentalAllergies: envCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+                );
+                Navigator.pop(context);
+                _saveUpdatedProfile(updated);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 4. Edição de Profissionais de Saúde (Múltiplos Médicos, Fisioterapeutas, Especialidades)
+  void _editHealthcareProfessionalsModal() {
+    final p = _activeProfile!;
+    final theme = context.hcTheme;
+
+    HCBottomSheet.show(
+      context: context,
+      title: 'Profissionais de Saúde & Médicos',
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Cadastre os médicos assistentes, pneumopediatras e fisioterapeutas que acompanham a criança.',
+              style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            if (p.healthcareProfessionals.isEmpty)
+              Text('Nenhum profissional cadastrado', style: HCTypography.caption.copyWith(color: theme.textTertiary))
+            else
+              ...p.healthcareProfessionals.map((doc) => Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: theme.elevatedSurface,
+                      borderRadius: HCRadii.radiusMd,
+                      border: Border.all(color: theme.border),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: theme.primarySubtle,
+                          child: Icon(Icons.local_hospital_outlined, color: theme.primary, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(doc.fullName, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.textPrimary)),
+                              Text('${doc.displaySpecialty}${doc.licenseNumber != null ? " • ${doc.licenseNumber}" : ""}', style: TextStyle(fontSize: 12, color: theme.textSecondary)),
+                              if (doc.clinicOrHospital != null && doc.clinicOrHospital!.isNotEmpty)
+                                Text(doc.clinicOrHospital!, style: TextStyle(fontSize: 11, color: theme.textTertiary)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.delete_outline, color: theme.critical, size: 18),
+                          onPressed: () {
+                            final list = List<HealthcareProfessional>.from(p.healthcareProfessionals)..remove(doc);
+                            Navigator.pop(context);
+                            _saveUpdatedProfile(p.copyWith(healthcareProfessionals: list));
+                          },
+                        ),
+                      ],
+                    ),
+                  )),
+            const SizedBox(height: 12),
+            HCPrimaryButton(
+              label: 'Adicionar Profissional de Saúde',
+              icon: Icons.person_add_alt,
+              width: double.infinity,
+              onPressed: () => _showAddDoctorDialog(p),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddDoctorDialog(PatientProfile p) {
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final crmCtrl = TextEditingController();
+    final rqeCtrl = TextEditingController();
+    final clinicCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    HealthcareSpecialty specialty = HealthcareSpecialty.pediatricPulmonologist;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Cadastrar Profissional'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nome Completo (ex: Dr. João) *')),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<HealthcareSpecialty>(
+                  initialValue: specialty,
+                  decoration: const InputDecoration(labelText: 'Especialidade *'),
+                  items: HealthcareSpecialty.values
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s.displayName)))
+                      .toList(),
+                  onChanged: (val) => setLocal(() => specialty = val ?? HealthcareSpecialty.pediatricPulmonologist),
+                ),
+                const SizedBox(height: 8),
+                TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Telefone / WhatsApp *')),
+                const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.document_scanner, color: Colors.white, size: 20),
-                    SizedBox(width: 8),
-                    Text('Escanear Receita do Médico', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                    Expanded(child: TextField(controller: crmCtrl, decoration: const InputDecoration(labelText: 'CRM / Registro'))),
+                    const SizedBox(width: 8),
+                    Expanded(child: TextField(controller: rqeCtrl, decoration: const InputDecoration(labelText: 'RQE'))),
                   ],
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 8),
+                TextField(controller: clinicCtrl, decoration: const InputDecoration(labelText: 'Clínica / Hospital')),
+                const SizedBox(height: 8),
+                TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'E-mail de Contato')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            ElevatedButton(
+              onPressed: () {
+                if (nameCtrl.text.trim().isEmpty) return;
+                final doc = HealthcareProfessional(
+                  id: 'doc_${DateTime.now().millisecondsSinceEpoch}',
+                  fullName: nameCtrl.text.trim(),
+                  specialty: specialty,
+                  primaryPhone: phoneCtrl.text.trim(),
+                  licenseNumber: crmCtrl.text.trim().isNotEmpty ? crmCtrl.text.trim() : null,
+                  rqeNumber: rqeCtrl.text.trim().isNotEmpty ? rqeCtrl.text.trim() : null,
+                  clinicOrHospital: clinicCtrl.text.trim().isNotEmpty ? clinicCtrl.text.trim() : null,
+                  email: emailCtrl.text.trim().isNotEmpty ? emailCtrl.text.trim() : null,
+                );
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+                _saveUpdatedProfile(p.copyWith(healthcareProfessionals: [...p.healthcareProfessionals, doc]));
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 5. Edição de Condições Especiais & Acessibilidade
+  void _editSpecialConditionsModal() {
+    final p = _activeProfile!;
+    final condCtrl = TextEditingController(text: p.specialConditions.map((c) => c.name).join(', '));
+    final limitCtrl = TextEditingController(
+        text: p.functionalLimitations.map((l) => l.description.isNotEmpty ? l.description : l.type.displayName).join(', '));
+
+    HCBottomSheet.show(
+      context: context,
+      title: 'Condições Especiais & Acessibilidade',
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            HCTextField(
+              controller: condCtrl,
+              labelText: 'Diagnósticos e Condições Especiais',
+              hintText: 'Ex: Asma Grave, Rinite, TEA',
+              prefixIcon: Icons.medical_services_outlined,
+            ),
+            const SizedBox(height: 12),
+            HCTextField(
+              controller: limitCtrl,
+              labelText: 'Acessibilidade & Interação no Atendimento',
+              hintText: 'Ex: Comunicação não-verbal, Hipersensibilidade a ruídos',
+              prefixIcon: Icons.accessibility_new_outlined,
+            ),
+            const SizedBox(height: 20),
+            HCPrimaryButton(
+              label: 'Salvar Condições',
+              icon: Icons.check,
+              width: double.infinity,
+              onPressed: () {
+                final condNames = condCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+                final conditions = condNames.map((name) => SpecialCondition(
+                      id: 'cond_${name.hashCode}',
+                      name: name,
+                      category: ConditionCategory.respiratory,
+                      isConfirmed: true,
+                    )).toList();
+
+                final limitDescs = limitCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+                final limitations = limitDescs.map((desc) => FunctionalLimitation(
+                      id: 'lim_${desc.hashCode}',
+                      type: desc.toLowerCase().contains('não') ? LimitationType.nonVerbal : LimitationType.sensorySensitivity,
+                      description: desc,
+                    )).toList();
+
+                final updated = p.copyWith(
+                  specialConditions: conditions,
+                  functionalLimitations: limitations,
+                );
+                Navigator.pop(context);
+                _saveUpdatedProfile(updated);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 6. Edição de Histórico & Anamnese Respiratória
+  void _editClinicalHistoryModal() {
+    final p = _activeProfile!;
+    final ageCtrl = TextEditingController(text: p.symptomsStartAge);
+    final triggersCtrl = TextEditingController(text: p.crisisTriggers.join(', '));
+    final familyCtrl = TextEditingController(text: p.familyAsthmaHistory.join(', '));
+    bool hadIcu = p.hadIcuAdmission;
+    bool intubated = p.intubatedPast;
+
+    HCBottomSheet.show(
+      context: context,
+      title: 'Editar Histórico Clínico',
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            HCTextField(
+              controller: ageCtrl,
+              labelText: 'Idade de Início dos Sintomas',
+              hintText: 'Ex: Aos 8 meses de vida',
+              prefixIcon: Icons.history_edu_outlined,
+            ),
+            const SizedBox(height: 12),
+            HCTextField(
+              controller: triggersCtrl,
+              labelText: 'Gatilhos Principais de Crise',
+              hintText: 'Ex: Gripe, Frio, Poeira, Fumaça, Exercício',
+              prefixIcon: Icons.warning_amber_outlined,
+            ),
+            const SizedBox(height: 12),
+            HCTextField(
+              controller: familyCtrl,
+              labelText: 'Histórico Familiar de Asma / Atopia',
+              hintText: 'Ex: Mãe (Rinite/Asma), Pai (Bronquite)',
+              prefixIcon: Icons.family_restroom_outlined,
+            ),
+            const SizedBox(height: 12),
+            StatefulBuilder(
+              builder: (ctx, setLocal) => Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('Já precisou de internação em UTI?'),
+                    value: hadIcu,
+                    onChanged: (val) => setLocal(() => hadIcu = val),
+                  ),
+                  SwitchListTile(
+                    title: const Text('Já precisou de intubação prévia?'),
+                    value: intubated,
+                    onChanged: (val) => setLocal(() => intubated = val),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            HCPrimaryButton(
+              label: 'Salvar Histórico',
+              icon: Icons.check,
+              width: double.infinity,
+              onPressed: () {
+                final updated = p.copyWith(
+                  symptomsStartAge: ageCtrl.text.trim(),
+                  crisisTriggers: triggersCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+                  familyAsthmaHistory: familyCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+                  hadIcuAdmission: hadIcu,
+                  intubatedPast: intubated,
+                );
+                Navigator.pop(context);
+                _saveUpdatedProfile(updated);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 7. Edição de Tratamento & Medicamentos Contínuos
+  void _editTreatmentModal() {
+    final p = _activeProfile!;
+    final medsCtrl = TextEditingController(text: p.continuousMedications.join(', '));
+
+    HCBottomSheet.show(
+      context: context,
+      title: 'Editar Tratamento Contínuo',
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            HCTextField(
+              controller: medsCtrl,
+              labelText: 'Medicamentos de Uso Diário / Manutenção',
+              hintText: 'Ex: Clenil HFA 250mcg (1 jato 12/12h com espaçador), Singulair Baby',
+              prefixIcon: Icons.medication_liquid_outlined,
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PrescriptionScanScreen(
+                      patientId: p.id,
+                      patientName: p.name,
+                    ),
+                  ),
+                ).then((_) => _loadProfileData());
+              },
+              icon: const Icon(Icons.document_scanner_outlined, size: 18),
+              label: const Text('Digitalizar Nova Receita Médica'),
+            ),
+            const SizedBox(height: 20),
+            HCPrimaryButton(
+              label: 'Salvar Tratamento',
+              icon: Icons.check,
+              width: double.infinity,
+              onPressed: () {
+                final updated = p.copyWith(
+                  continuousMedications: medsCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList(),
+                );
+                Navigator.pop(context);
+                _saveUpdatedProfile(updated);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 8. Edição de Hospital & Emergência
+  void _editEmergencyHospitalModal() {
+    final p = _activeProfile!;
+    final hospCtrl = TextEditingController(text: p.preferredHospital);
+
+    HCBottomSheet.show(
+      context: context,
+      title: 'Hospital de Referência & Emergência',
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            HCTextField(
+              controller: hospCtrl,
+              labelText: 'Pronto-Socorro ou Hospital de Referência',
+              hintText: 'Ex: Hospital Infantil Sabará / Samaritano',
+              prefixIcon: Icons.local_hospital_outlined,
+            ),
+            const SizedBox(height: 20),
+            HCPrimaryButton(
+              label: 'Salvar Hospital',
+              icon: Icons.check,
+              width: double.infinity,
+              onPressed: () {
+                final updated = p.copyWith(
+                  preferredHospital: hospCtrl.text.trim(),
+                );
+                Navigator.pop(context);
+                _saveUpdatedProfile(updated);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // CONSTRUÇÃO VISUAL DO "PERFIL CLÍNICO VIVO"
+  // ===========================================================================
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+
+    if (_isLoading || _activeProfile == null) {
+      return Scaffold(
+        backgroundColor: theme.background,
+        appBar: AppBar(title: const Text('Ficha Médica')),
+        body: const Center(child: HCLoadingState(message: 'Carregando ficha clínica...')),
+      );
+    }
+
+    final p = _activeProfile!;
+
+    return Scaffold(
+      backgroundColor: theme.background,
+      appBar: AppBar(
+        title: Text(
+          'Perfil Clínico do Paciente',
+          style: HCTypography.heading.copyWith(fontSize: 16, color: theme.textPrimary),
+        ),
+        actions: [
+          HCChildContextBadge(
+            profile: p,
+            isCompact: true,
+            onSwitchTap: _openChildSelectorSheet,
+          ),
+          IconButton(
+            icon: Icon(Icons.person_add_alt_1, color: theme.textSecondary),
+            tooltip: 'Adicionar Outra Criança',
+            onPressed: _showAddChildDialog,
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: HCResponsiveContainer(
+          maxWidth: 720,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. HEADER DO PERFIL CLÍNICO VIVO
+              _buildClinicalHeader(p, theme),
+
+              const SizedBox(height: 20),
+
+              // 2. SEÇÕES VISUALMENTE INDEPENDENTES (RESUMOS COM CTA DE EDIÇÃO FOCADA)
+
+              // SEÇÃO 1: Identidade & Antropometria
+              _buildSectionCard(
+                theme: theme,
+                title: 'Identidade & Antropometria',
+                icon: Icons.person_outline,
+                onEdit: _editIdentityModal,
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDataGrid([
+                      {'label': 'Data de Nascimento', 'value': DateFormat('dd/MM/yyyy').format(p.birthDate)},
+                      {'label': 'Tipo Sanguíneo', 'value': p.bloodType},
+                      {'label': 'Peso / Altura', 'value': '${p.weightKg.toString().replaceAll('.', ',')} kg • ${p.heightCm.toString().replaceAll('.', ',')} cm'},
+                      {'label': 'Melhor PFE Base', 'value': '${p.personalBestPef} L/min'},
+                      {'label': 'Convênio', 'value': p.healthInsurance.isNotEmpty ? p.healthInsurance : 'SUS'},
+                      {'label': 'Cartão SUS', 'value': p.susCardNumber.isNotEmpty ? p.susCardNumber : 'Não informado'},
+                    ]),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // SEÇÃO 2: Rede de Cuidado & Responsáveis (Múltiplos)
+              _buildSectionCard(
+                theme: theme,
+                title: 'Rede de Cuidado & Responsáveis',
+                icon: Icons.family_restroom_outlined,
+                onEdit: _editCareNetworkModal,
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (p.legalGuardians.isNotEmpty) ...[
+                      Text('Responsáveis Legais:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textSecondary)),
+                      const SizedBox(height: 4),
+                      ...p.legalGuardians.map((g) => Text('• ${g.fullName} (${g.displayRelationship}) — ${g.phone}', style: HCTypography.bodySmall)),
+                      const SizedBox(height: 8),
+                    ],
+                    if (p.caregivers.isNotEmpty) ...[
+                      Text('Cuidadores Autorizados:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textSecondary)),
+                      const SizedBox(height: 4),
+                      ...p.caregivers.map((c) => Text('• ${c.fullName} (${c.displayRelationship}) — ${c.accessLevel.displayName.split("(").first.trim()}', style: HCTypography.bodySmall)),
+                    ],
+                    if (p.legalGuardians.isEmpty && p.caregivers.isEmpty)
+                      Text('Toque em gerenciar para cadastrar responsáveis e cuidadores.', style: HCTypography.caption.copyWith(color: theme.textTertiary)),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // SEÇÃO 3: Histórico Clínico & Anamnese Respiratória
+              _buildSectionCard(
+                theme: theme,
+                title: 'Histórico Clínico & Anamnese',
+                icon: Icons.history_edu_outlined,
+                onEdit: _editClinicalHistoryModal,
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInlineField('Início dos Sintomas', p.symptomsStartAge.isNotEmpty ? p.symptomsStartAge : 'Não informado'),
+                    _buildInlineField('Gatilhos de Crise', p.crisisTriggers.isNotEmpty ? p.crisisTriggers.join(', ') : 'Não informado'),
+                    _buildInlineField('Histórico Familiar', p.familyAsthmaHistory.isNotEmpty ? p.familyAsthmaHistory.join(', ') : 'Não informado'),
+                    _buildInlineField('Antecedentes Graves', '${p.hadIcuAdmission ? "Internação em UTI (${p.icuAdmissionsCount}x)" : "Sem internação em UTI"}${p.intubatedPast ? " • Intubação prévia" : ""}'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // SEÇÃO 4: Alergias (Medicamentosas, Alimentares, Ambientais)
+              _buildSectionCard(
+                theme: theme,
+                title: 'Alergias',
+                icon: Icons.medical_services_outlined,
+                onEdit: _editAllergiesModal,
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInlineField('Medicamentos', p.drugAllergies.isNotEmpty ? p.drugAllergies.join(', ') : 'Nenhuma conhecida'),
+                    _buildInlineField('Alimentares', p.foodAllergies.isNotEmpty ? p.foodAllergies.join(', ') : 'Nenhuma conhecida'),
+                    _buildInlineField('Ambientais', p.environmentalAllergies.isNotEmpty ? p.environmentalAllergies.join(', ') : 'Nenhuma conhecida'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // SEÇÃO 5: Condições Especiais & Acessibilidade
+              _buildSectionCard(
+                theme: theme,
+                title: 'Condições Especiais & Acessibilidade',
+                icon: Icons.accessibility_new_outlined,
+                onEdit: _editSpecialConditionsModal,
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInlineField('Diagnósticos', p.specialConditions.isNotEmpty ? p.specialConditions.map((c) => c.name).join(', ') : 'Asma Pediátrica'),
+                    if (p.functionalLimitations.isNotEmpty)
+                      _buildInlineField('Acessibilidade / Interação', p.functionalLimitations.map((l) => l.description.isNotEmpty ? l.description : l.type.displayName).join(', ')),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // SEÇÃO 6: Tratamento & Uso Contínuo
+              _buildSectionCard(
+                theme: theme,
+                title: 'Tratamento & Uso Contínuo',
+                icon: Icons.medication_liquid_outlined,
+                onEdit: _editTreatmentModal,
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInlineField('Medicamentos Diários', p.continuousMedications.isNotEmpty ? p.continuousMedications.join(' • ') : 'Conforme prescrição'),
+                    _buildInlineField('Receitas Cadastradas', '${_prescriptions.length} prescrição(ões) ativa(s)'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // SEÇÃO 7: Profissionais de Saúde & Médicos
+              _buildSectionCard(
+                theme: theme,
+                title: 'Profissionais de Saúde',
+                icon: Icons.local_hospital_outlined,
+                onEdit: _editHealthcareProfessionalsModal,
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (p.healthcareProfessionals.isEmpty)
+                      Text('Nenhum médico cadastrado. Toque para adicionar.', style: HCTypography.caption.copyWith(color: theme.textTertiary))
+                    else
+                      ...p.healthcareProfessionals.map((doc) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Icon(Icons.verified, size: 14, color: theme.primary),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    '${doc.fullName} (${doc.displaySpecialty})${doc.licenseNumber != null ? " • ${doc.licenseNumber}" : ""}',
+                                    style: HCTypography.bodySmall.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // SEÇÃO 8: Emergência & Hospital de Referência
+              _buildSectionCard(
+                theme: theme,
+                title: 'Hospital de Referência & Emergência',
+                icon: Icons.emergency_outlined,
+                onEdit: _editEmergencyHospitalModal,
+                content: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildInlineField('Hospital Preferencial', p.preferredHospital.isNotEmpty ? p.preferredHospital : 'Pronto-Socorro Infantil mais próximo'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClinicalHeader(PatientProfile p, HCSemanticTheme theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: HCRadii.radiusLg,
+        border: Border.all(color: theme.border),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: theme.primarySubtle,
+            child: Text(
+              p.name.isNotEmpty ? p.name[0].toUpperCase() : 'C',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: theme.primary),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  'Tire foto da receita para o app ler os nomes das bombinhas e horários automaticamente.',
-                  style: TextStyle(color: Colors.white70, fontSize: 11, height: 1.3),
+                  p.name,
+                  style: HCTypography.heading.copyWith(fontSize: 18, color: theme.textPrimary),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${p.ageDisplay} • ${p.weightKg.toString().replaceAll('.', ',')} kg • ${p.heightCm.toString().replaceAll('.', ',')} cm',
+                  style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: theme.successBg,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: theme.successBorder, width: 0.8),
+                      ),
+                      child: Text(
+                        'Asma Pediátrica • Plano Ativo',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.successText),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 14),
-          const Text('Bombinhas & Remédios Cadastrados', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-          const SizedBox(height: 8),
-          if (_prescriptions.isEmpty)
-            const Text('Nenhum remédio cadastrado.', style: TextStyle(fontSize: 12, color: Color(0xFF64748B)))
-          else
-            ..._prescriptions.map((p) => _buildPrescriptionCard(p)),
-          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  Widget _buildPrescriptionCard(PrescriptionRecord p) {
+  Widget _buildSectionCard({
+    required HCSemanticTheme theme,
+    required String title,
+    required IconData icon,
+    required VoidCallback onEdit,
+    required Widget content,
+  }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: theme.surface,
+        borderRadius: HCRadii.radiusLg,
+        border: Border.all(color: theme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -704,289 +1195,111 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Receita: ${p.doctorName}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
-              Text('Válida (${p.daysUntilExpiration} dias)', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
-            ],
-          ),
-          const Divider(height: 12),
-          ...p.medications.map((m) => Text('• ${m.commercialName} - ${m.dosage} (${m.frequency})', style: const TextStyle(fontSize: 11, color: Color(0xFF334155)))),
-        ],
-      ),
-    );
-  }
-
-  // 4. Aba Triagem Médica & Perguntas de Consultório
-  Widget _buildMedicalTriageTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _buildCardSection(
-            title: '1. Gravidade das Crises & Histórico de Pronto-Socorro',
-            children: [
               Row(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _erVisitsCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Idas ao PS (Últimos 12 meses)', hintText: '1'),
-                    ),
-                  ),
+                  Icon(icon, size: 18, color: theme.primary),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _steroidCoursesCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Ciclos de Prednisolona/ano', hintText: '2'),
-                    ),
+                  Text(
+                    title,
+                    style: HCTypography.title.copyWith(fontSize: 14, color: theme.textPrimary),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Já precisou ficar internado em UTI por crise de falta de ar?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                value: _hadIcuAdmission,
-                activeThumbColor: const Color(0xFFEF4444),
-                onChanged: (v) => setState(() => _hadIcuAdmission = v),
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Já precisou de intubação endotraqueal no passado?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                value: _intubatedPast,
-                activeThumbColor: const Color(0xFFEF4444),
-                onChanged: (v) => setState(() => _intubatedPast = v),
+              TextButton(
+                onPressed: onEdit,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  'Editar',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: theme.primary),
+                ),
               ),
             ],
           ),
-
+          const SizedBox(height: 10),
+          Divider(height: 1, color: theme.borderSubtle),
           const SizedBox(height: 12),
-
-          _buildCardSection(
-            title: '2. Sintomas Noturnos & Limitação nas Brincadeiras',
-            children: [
-              TextField(
-                controller: _nightAwakeningsCtrl,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Quantas noites por mês acorda tossindo ou chiando?', hintText: '1'),
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                initialValue: _activityLimitation,
-                decoration: const InputDecoration(labelText: 'Limitação nas Atividades / Brincadeiras da Escola'),
-                items: const [
-                  DropdownMenuItem(value: 'Normal - sem limitações para brincar', child: Text('Normal - corre e brinca normalmente')),
-                  DropdownMenuItem(value: 'Leve - tosse apenas em corrida intensa', child: Text('Leve - tosse em corrida intensa')),
-                  DropdownMenuItem(value: 'Moderada - cansa antes dos coleguinhas', child: Text('Moderada - cansa antes dos amigos')),
-                  DropdownMenuItem(value: 'Severa - evita brincadeiras ativas', child: Text('Severa - evita brincadeiras ativas')),
-                ],
-                onChanged: (v) {
-                  if (v != null) setState(() => _activityLimitation = v);
-                },
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          _buildCardSection(
-            title: '3. O que costuma desencadear as crises dele (Gatilhos):',
-            children: [
-              _buildMultiTagSelector('Gatilhos Principais:', _crisisTriggers, [
-                'Resfriados / Gripes', 'Mudança brusca de temperatura', 'Tempo seco e poeira',
-                'Fumaça / Queimadas', 'Cheiros fortes / Perfumes', 'Exercício físico intenso', 'Riso ou choro forte'
-              ]),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          _buildCardSection(
-            title: '4. Vacinação & Ambiente da Casa',
-            children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Vacina da Gripe (Influenza) anual em dia?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                value: _fluVaccineUpToDate,
-                activeThumbColor: const Color(0xFF059669),
-                onChanged: (v) => setState(() => _fluVaccineUpToDate = v),
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Há fumantes no ambiente da casa ou carro?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                value: _householdSmokers,
-                activeThumbColor: const Color(0xFFEF4444),
-                onChanged: (v) => setState(() => _householdSmokers = v),
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: _householdPets,
-                decoration: const InputDecoration(labelText: 'Animais de Estimação em Casa'),
-                items: const [
-                  DropdownMenuItem(value: 'Nenhum', child: Text('Nenhum')),
-                  DropdownMenuItem(value: 'Cachorro', child: Text('Cachorro')),
-                  DropdownMenuItem(value: 'Gato', child: Text('Gato')),
-                  DropdownMenuItem(value: 'Cachorro e Gato', child: Text('Cachorro e Gato')),
-                  DropdownMenuItem(value: 'Outros', child: Text('Outros')),
-                ],
-                onChanged: (v) {
-                  if (v != null) setState(() => _householdPets = v);
-                },
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          _buildCardSection(
-            title: '5. Médico Assistente & Hospital de Emergência',
-            children: [
-              TextField(controller: _doctorNameCtrl, decoration: const InputDecoration(labelText: 'Nome do Pediatra / Pneumopediatra', hintText: 'Dr. Marco Aurélio Valente')),
-              const SizedBox(height: 10),
-              TextField(controller: _doctorPhoneCtrl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Telefone / WhatsApp do Consultório', hintText: '(11) 98888-7777')),
-              const SizedBox(height: 10),
-              TextField(controller: _preferredHospitalCtrl, decoration: const InputDecoration(labelText: 'Hospital de Preferência para Emergência', hintText: 'Hospital Infantil Sabará / Samaritano')),
-            ],
-          ),
-          const SizedBox(height: 20),
+          content,
         ],
       ),
     );
   }
 
-  // 5. Aba História Contada pelos Pais (Auto-Save Amplo)
-  Widget _buildFamilyHistoryFreeTextTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
+  Widget _buildDataGrid(List<Map<String, String>> items) {
+    final theme = context.hcTheme;
+    return Wrap(
+      spacing: 16,
+      runSpacing: 10,
+      children: items.map((item) {
+        return SizedBox(
+          width: 140,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(item['label'] ?? '', style: TextStyle(fontSize: 11, color: theme.textSecondary)),
+              const SizedBox(height: 2),
+              Text(item['value'] ?? '', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.textPrimary)),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildInlineField(String label, String value) {
+    final theme = context.hcTheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFBBF7D0)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.edit_note, size: 20, color: Color(0xFF166534)),
-                        SizedBox(width: 6),
-                        Text('História do Filho Contada pelos Pais', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF166534))),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
-                      child: Text(_autoSaveStatus, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Este espaço é livre para você escrever a história da respiração do seu filho, detalhes que os médicos precisam saber, como foram os primeiros sintomas e dicas especiais para quem for cuidar dele.',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF166534), height: 1.3),
-                ),
-              ],
-            ),
+          SizedBox(
+            width: 130,
+            child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: theme.textSecondary)),
           ),
-
-          const SizedBox(height: 14),
-
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Relato Livre dos Pais (Salva automaticamente ao digitar):',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A)),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _familyNotesCtrl,
-                  maxLines: 15,
-                  maxLength: 5000,
-                  onChanged: _onFamilyHistoryChanged,
-                  style: const TextStyle(fontSize: 13, height: 1.4, color: Color(0xFF1E293B)),
-                  decoration: const InputDecoration(
-                    hintText: 'Escreva aqui com calma...\nExemplo:\n- "O Arthur começou a chiar com 7 meses durante um resfriado no berçário."\n- "Notamos que quando esfria de repente, a tosse piora à noite."\n- "Ele aceita muito bem o espaçador quando contamos uma historinha."\n- "Em caso de crise, o hospital mais perto de casa é o Sabará."',
-                    border: OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Color(0xFFF8FAFC),
-                  ),
-                ),
-              ],
-            ),
+          Expanded(
+            child: Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: theme.textPrimary)),
           ),
-          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  Widget _buildCardSection({required String title, required List<Widget> children}) {
-    return Material(
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Color(0xFFE2E8F0)),
-      ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-            const Divider(height: 14, color: Color(0xFFF1F5F9)),
-            ...children,
-          ],
-        ),
-      ),
-    );
-  }
+  void _openChildSelectorSheet() {
+    final theme = context.hcTheme;
 
-  Widget _buildMultiTagSelector(String label, List<String> selectedList, List<String> availableOptions) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11, color: Color(0xFF334155))),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 6,
-          runSpacing: 4,
-          children: availableOptions.map((opt) {
-            final isSel = selectedList.contains(opt);
-            return FilterChip(
-              label: Text(opt, style: const TextStyle(fontSize: 11)),
-              selected: isSel,
-              selectedColor: AppTheme.primaryLight,
-              checkmarkColor: AppTheme.primaryTeal,
-              onSelected: (sel) {
-                setState(() {
-                  if (sel) {
-                    selectedList.add(opt);
-                  } else {
-                    selectedList.remove(opt);
-                  }
-                });
-              },
-            );
-          }).toList(),
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Material(
+        color: theme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Alternar Paciente', style: HCTypography.heading.copyWith(fontSize: 16)),
+                const SizedBox(height: 12),
+                ..._allProfiles.map((p) => ListTile(
+                      leading: CircleAvatar(child: Text(p.name.isNotEmpty ? p.name[0] : 'C')),
+                      title: Text(p.name, style: TextStyle(fontWeight: p.id == _activeProfile?.id ? FontWeight.bold : FontWeight.normal)),
+                      trailing: p.id == _activeProfile?.id ? Icon(Icons.check, color: theme.primary) : null,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _switchChild(p);
+                      },
+                    )),
+              ],
+            ),
+          ),
         ),
-      ],
+      ),
     );
   }
 }

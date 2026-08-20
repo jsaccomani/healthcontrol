@@ -2,8 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:clinical_core/clinical_core.dart';
 import '../../../core/design_system/design_system.dart';
 
-/// Resumo Clínico Estruturado para Atendimento de Emergência (Nível 2 — Expansível).
-/// Inclui Alergias, Condições Especiais, Limitações Funcionais, Médicos e Contatos.
+/// Resumo Clínico Estruturado para Atendimento de Emergência (Accordion).
+/// Título: "Informações importantes para atendimento"
+///
+/// Apresenta:
+/// - Alergias Medicamentosas
+/// - Condições Especiais / Diagnósticos
+/// - Medicamentos Contínuos
+/// - Médico Assistente
+/// - Responsável / Contato de Urgência
+/// - Hospital de Referência e SUS/Convênio
 class CrisisClinicalSummary extends StatefulWidget {
   final PatientProfile profile;
   final void Function(String phone) onCallPhone;
@@ -23,213 +31,263 @@ class _CrisisClinicalSummaryState extends State<CrisisClinicalSummary> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
     final p = widget.profile;
     final doc = p.primaryDoctor;
     final docPhone = doc?.primaryPhone ?? p.doctorPhone;
     final emergency = p.primaryEmergencyContact;
     final emPhone = emergency?.phone ?? p.emergencyContactPhone;
 
-    return Material(
-      color: isDark ? HCColors.darkSurface : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: HCRadii.radiusLg,
-        side: BorderSide(
-          color: isDark ? HCColors.darkBorder : HCColors.neutral200,
-        ),
-      ),
-      child: ExpansionTile(
-        initiallyExpanded: _isExpanded,
-        onExpansionChanged: (exp) => setState(() => _isExpanded = exp),
-        shape: const Border(),
-        collapsedShape: const Border(),
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.white10 : HCColors.neutral100,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            Icons.medical_information_outlined,
-            color: isDark ? HCColors.primary300 : HCColors.neutral800,
-            size: 20,
-          ),
-        ),
-        title: Text(
-          'Resumo Clínico para o Plantonista',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: isDark ? HCColors.darkText : HCColors.neutral900,
-          ),
-        ),
-        subtitle: Text(
-          _isExpanded
-              ? 'Toque para recolher'
-              : 'Alergias, UTI, Limitações e Contatos Médicos',
-          style: TextStyle(
-            fontSize: 11,
-            color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
-          ),
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
+    // Identifica condições que afetam a interação (comunicação, sensorial, TEA, etc.)
+    final interactionConditions = p.functionalLimitations.where((l) =>
+        l.type == LimitationType.nonVerbal ||
+        l.type == LimitationType.sensorySensitivity ||
+        l.type == LimitationType.cognitiveDifficulty ||
+        l.type == LimitationType.communicationDifficulty).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Destaque Contextual para Condições Especiais de Interação (Não Alarmista)
+        if (interactionConditions.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.infoBg,
+              borderRadius: HCRadii.radiusMd,
+              border: Border.all(color: theme.infoBorder),
+            ),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Divider(height: 16),
-
-                // 1. Alergias Medicamentosas
-                _buildSummaryRow(
-                  label: 'Alergias:',
-                  value: p.drugAllergies.isNotEmpty ? p.drugAllergies.join(', ') : 'Nenhuma relatada',
-                  isDark: isDark,
-                  isWarning: p.drugAllergies.isNotEmpty,
+                Icon(
+                  Icons.info_outline,
+                  color: theme.primary,
+                  size: 20,
                 ),
-
-                // 2. Condições Especiais Estruturadas
-                if (p.specialConditions.isNotEmpty) ...[
-                  _buildSummaryRow(
-                    label: 'Condições Especiais:',
-                    value: p.specialConditions.map((c) => c.name).join(', '),
-                    isDark: isDark,
-                  ),
-                ],
-
-                // 3. Limitações Funcionais / Comunicação
-                if (p.functionalLimitations.isNotEmpty) ...[
-                  _buildSummaryRow(
-                    label: 'Acessibilidade / Comunicação:',
-                    value: p.functionalLimitations
-                        .map((l) => l.description.isNotEmpty ? l.description : l.type.displayName)
-                        .join(', '),
-                    isDark: isDark,
-                    isWarning: true,
-                  ),
-                ],
-
-                // 4. Antecedentes Graves (UTI / Intubação)
-                _buildSummaryRow(
-                  label: 'Histórico de UTI:',
-                  value: p.hadIcuAdmission ? 'SIM (${p.icuAdmissionsCount}x)' : 'Não',
-                  isDark: isDark,
-                  isWarning: p.hadIcuAdmission,
-                ),
-                _buildSummaryRow(
-                  label: 'Intubação Prévia:',
-                  value: p.intubatedPast ? 'SIM (Alto Risco)' : 'Não',
-                  isDark: isDark,
-                  isWarning: p.intubatedPast,
-                ),
-
-                // 5. Dados de Identificação Hospitalar
-                _buildSummaryRow(
-                  label: 'Tipo Sanguíneo:',
-                  value: p.bloodType,
-                  isDark: isDark,
-                ),
-                _buildSummaryRow(
-                  label: 'Convênio / Cartão SUS:',
-                  value: '${p.healthInsurance} ${p.susCardNumber.isNotEmpty ? "• SUS: ${p.susCardNumber}" : ""}',
-                  isDark: isDark,
-                ),
-                _buildSummaryRow(
-                  label: 'Hospital Preferencial:',
-                  value: p.preferredHospital,
-                  isDark: isDark,
-                ),
-
-                const SizedBox(height: 8),
-                const Divider(height: 16),
-
-                // 6. Contatos Diretos
-                Text(
-                  'CONTATOS DE URGÊNCIA',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                    color: isDark ? HCColors.darkTextMuted : HCColors.neutral700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-
-                if (docPhone.isNotEmpty) ...[
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: const CircleAvatar(
-                      backgroundColor: HCColors.primary50,
-                      radius: 16,
-                      child: Icon(Icons.local_hospital, color: HCColors.primary600, size: 16),
-                    ),
-                    title: Text(
-                      doc?.fullName ?? p.doctorName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: isDark ? Colors.white : HCColors.neutral900,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Informação importante para atendimento',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: theme.textPrimary,
+                        ),
                       ),
-                    ),
-                    subtitle: Text(
-                      '${doc?.displaySpecialty ?? "Médico Assistente"} • $docPhone',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
+                      const SizedBox(height: 2),
+                      Text(
+                        interactionConditions
+                            .map((c) => c.description.isNotEmpty ? '${c.type.displayName}: ${c.description}' : c.type.displayName)
+                            .join(' • '),
+                        style: HCTypography.caption.copyWith(
+                          color: theme.textSecondary,
+                        ),
                       ),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.phone, color: HCColors.primary500),
-                      onPressed: () => widget.onCallPhone(docPhone),
-                    ),
+                    ],
                   ),
-                ],
-
-                if (emPhone.isNotEmpty) ...[
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: const CircleAvatar(
-                      backgroundColor: Color(0xFFFEF2F2),
-                      radius: 16,
-                      child: Icon(Icons.contact_phone, color: HCColors.redMain, size: 16),
-                    ),
-                    title: Text(
-                      emergency?.fullName ?? p.emergencyContactName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: isDark ? Colors.white : HCColors.neutral900,
-                      ),
-                    ),
-                    subtitle: Text(
-                      '${emergency?.relationship ?? "Responsável"} • $emPhone',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? HCColors.darkTextMuted : HCColors.neutral600,
-                      ),
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.phone, color: HCColors.redMain),
-                      onPressed: () => widget.onCallPhone(emPhone),
-                    ),
-                  ),
-                ],
+                ),
               ],
             ),
           ),
         ],
-      ),
+
+        // Accordion: Informações importantes para atendimento
+        Material(
+          color: theme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: HCRadii.radiusLg,
+            side: BorderSide(
+              color: theme.border,
+            ),
+          ),
+          child: ExpansionTile(
+            initiallyExpanded: _isExpanded,
+            onExpansionChanged: (exp) => setState(() => _isExpanded = exp),
+            shape: const Border(),
+            collapsedShape: const Border(),
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            leading: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: theme.elevatedSurface,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.medical_information_outlined,
+                color: theme.primary,
+                size: 20,
+              ),
+            ),
+            title: Text(
+              'Informações importantes para atendimento',
+              style: HCTypography.title.copyWith(
+                fontSize: 14,
+                color: theme.textPrimary,
+              ),
+            ),
+            subtitle: Text(
+              _isExpanded
+                  ? 'Toque para recolher'
+                  : 'Alergias, medicações de uso contínuo e contatos',
+              style: HCTypography.caption.copyWith(
+                color: theme.textSecondary,
+              ),
+            ),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Divider(height: 16, color: theme.border),
+
+                    // 1. Alergias Medicamentosas
+                    _buildSummaryRow(
+                      theme: theme,
+                      label: 'Alergias:',
+                      value: p.drugAllergies.isNotEmpty ? p.drugAllergies.join(', ') : 'Nenhuma relatada',
+                      isCritical: p.drugAllergies.isNotEmpty,
+                    ),
+
+                    // 2. Condições Especiais & Diagnósticos
+                    if (p.specialConditions.isNotEmpty) ...[
+                      _buildSummaryRow(
+                        theme: theme,
+                        label: 'Condições / Diagnósticos:',
+                        value: p.specialConditions.map((c) => c.name).join(', '),
+                      ),
+                    ],
+
+                    // 3. Medicamentos de Uso Contínuo
+                    _buildSummaryRow(
+                      theme: theme,
+                      label: 'Uso Contínuo:',
+                      value: p.continuousMedications.isNotEmpty
+                          ? p.continuousMedications.join(', ')
+                          : 'Conforme receituário',
+                    ),
+
+                    // 4. Antecedentes Graves (UTI / Intubação)
+                    if (p.hadIcuAdmission || p.intubatedPast) ...[
+                      _buildSummaryRow(
+                        theme: theme,
+                        label: 'Histórico Grave:',
+                        value: '${p.hadIcuAdmission ? "Internação em UTI (${p.icuAdmissionsCount}x)" : ""}${p.intubatedPast ? " • Intubação Prévia" : ""}',
+                        isCritical: true,
+                      ),
+                    ],
+
+                    // 5. Hospital Preferencial / SUS / Convênio
+                    _buildSummaryRow(
+                      theme: theme,
+                      label: 'Hospital de Referência:',
+                      value: p.preferredHospital.isNotEmpty ? p.preferredHospital : 'Pronto-Socorro Infantil mais próximo',
+                    ),
+                    if (p.healthInsurance.isNotEmpty || p.susCardNumber.isNotEmpty) ...[
+                      _buildSummaryRow(
+                        theme: theme,
+                        label: 'Convênio / SUS:',
+                        value: '${p.healthInsurance} ${p.susCardNumber.isNotEmpty ? "• CNS: ${p.susCardNumber}" : ""}',
+                      ),
+                    ],
+
+                    const SizedBox(height: 8),
+                    Divider(height: 16, color: theme.border),
+
+                    // 6. Médico Assistente & Responsável
+                    Text(
+                      'CONTATOS MÉDICO E FAMILIAR',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                        color: theme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+
+                    if (docPhone.isNotEmpty) ...[
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: theme.primarySubtle,
+                          radius: 16,
+                          child: Icon(Icons.local_hospital, color: theme.primary, size: 16),
+                        ),
+                        title: Text(
+                          doc?.fullName ?? p.doctorName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: theme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${doc?.displaySpecialty ?? "Médico Assistente"} • $docPhone',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.textSecondary,
+                          ),
+                        ),
+                        trailing: IconButton(
+                          icon: Icon(Icons.phone, color: theme.primary),
+                          onPressed: () => widget.onCallPhone(docPhone),
+                        ),
+                      ),
+                    ],
+
+                    if (emPhone.isNotEmpty) ...[
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: theme.criticalBg,
+                          radius: 16,
+                          child: Icon(Icons.contact_phone, color: theme.critical, size: 16),
+                        ),
+                        title: Text(
+                          emergency?.fullName ?? p.emergencyContactName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: theme.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${emergency?.relationship ?? "Responsável"} • $emPhone',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.textSecondary,
+                          ),
+                        ),
+                        trailing: IconButton(
+                          icon: Icon(Icons.phone, color: theme.critical),
+                          onPressed: () => widget.onCallPhone(emPhone),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildSummaryRow({
+    required HCSemanticTheme theme,
     required String label,
     required String value,
-    required bool isDark,
-    bool isWarning = false,
+    bool isCritical = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
@@ -242,10 +300,8 @@ class _CrisisClinicalSummaryState extends State<CrisisClinicalSummary> {
               label,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: isWarning ? FontWeight.bold : FontWeight.w500,
-                color: isWarning
-                    ? HCColors.redMain
-                    : (isDark ? HCColors.darkTextMuted : HCColors.neutral600),
+                fontWeight: isCritical ? FontWeight.bold : FontWeight.w500,
+                color: isCritical ? theme.criticalText : theme.textSecondary,
               ),
             ),
           ),
@@ -254,10 +310,8 @@ class _CrisisClinicalSummaryState extends State<CrisisClinicalSummary> {
               value,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: isWarning ? FontWeight.bold : FontWeight.w600,
-                color: isWarning
-                    ? HCColors.redMain
-                    : (isDark ? Colors.white : HCColors.neutral900),
+                fontWeight: isCritical ? FontWeight.bold : FontWeight.w600,
+                color: isCritical ? theme.criticalText : theme.textPrimary,
               ),
             ),
           ),

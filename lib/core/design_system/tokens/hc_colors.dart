@@ -77,8 +77,59 @@ class HCColors {
   static const Color darkSurface = Color(0xFF131B2E);
   static const Color darkSurfaceElevated = Color(0xFF1E293B);
   static const Color darkBorder = Color(0xFF23304B);
+  static const Color darkBorderSubtle = Color(0xFF1B2438);
   static const Color darkTextPrimary = Color(0xFFF8FAFC);
   static const Color darkText = darkTextPrimary;
   static const Color darkTextSecondary = Color(0xFF94A3B8);
   static const Color darkTextMuted = Color(0xFF64748B);
+}
+
+/// Helper semântico que resolve cores de tema automaticamente a partir do contexto.
+class HCSemanticTheme {
+  final bool isDark;
+
+  const HCSemanticTheme(this.isDark);
+
+  Color get background => isDark ? HCColors.darkBackground : HCColors.neutral50;
+  Color get surface => isDark ? HCColors.darkSurface : Colors.white;
+  Color get elevatedSurface => isDark ? HCColors.darkSurfaceElevated : HCColors.neutral100;
+  Color get border => isDark ? HCColors.darkBorder : HCColors.neutral200;
+  Color get borderSubtle => isDark ? HCColors.darkBorderSubtle : HCColors.neutral100;
+  
+  Color get textPrimary => isDark ? HCColors.darkTextPrimary : HCColors.neutral900;
+  Color get textSecondary => isDark ? HCColors.darkTextSecondary : HCColors.neutral700;
+  Color get textTertiary => isDark ? HCColors.darkTextMuted : HCColors.neutral500;
+  Color get textMuted => isDark ? HCColors.darkTextMuted : HCColors.neutral400;
+
+  Color get primary => isDark ? HCColors.primary400 : HCColors.primary500;
+  Color get primarySubtle => isDark ? HCColors.primary900.withAlpha(90) : HCColors.primary50;
+  Color get primaryBorder => isDark ? HCColors.primary700 : HCColors.primary200;
+
+  // Semânticos de Alerta
+  Color get success => HCColors.greenMain;
+  Color get successBg => isDark ? const Color(0xFF06281E) : HCColors.greenLight;
+  Color get successBorder => isDark ? const Color(0xFF0F5132) : HCColors.greenBorder;
+  Color get successText => isDark ? HCColors.greenBorder : HCColors.greenText;
+
+  Color get warning => HCColors.yellowMain;
+  Color get warningBg => isDark ? const Color(0xFF2E1A03) : HCColors.yellowLight;
+  Color get warningBorder => isDark ? const Color(0xFF78350F) : HCColors.yellowBorder;
+  Color get warningText => isDark ? const Color(0xFFFCD34D) : HCColors.yellowText;
+
+  Color get critical => HCColors.redMain;
+  Color get criticalBg => isDark ? const Color(0xFF2C0B0B) : HCColors.redLight;
+  Color get criticalBorder => isDark ? const Color(0xFF7F1D1D) : HCColors.redBorder;
+  Color get criticalText => isDark ? const Color(0xFFFCA5A5) : HCColors.redText;
+
+  Color get info => HCColors.blueMain;
+  Color get infoBg => isDark ? const Color(0xFF172554) : HCColors.blueLight;
+  Color get infoBorder => isDark ? const Color(0xFF1E40AF) : HCColors.blueBorder;
+  Color get infoText => isDark ? HCColors.blueBorder : HCColors.blueText;
+}
+
+extension HCSemanticThemeExtension on BuildContext {
+  HCSemanticTheme get hcTheme {
+    final isDark = Theme.of(this).brightness == Brightness.dark;
+    return HCSemanticTheme(isDark);
+  }
 }

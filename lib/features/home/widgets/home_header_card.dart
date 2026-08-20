@@ -3,7 +3,7 @@ import 'package:clinical_core/clinical_core.dart';
 import '../../../core/design_system/design_system.dart';
 
 /// Card de Identificação da Criança Selecionada na Home.
-/// Apresenta os dados vitais de contexto (idade, peso e PFE recorde) sem duplicar a seleção de filhos.
+/// Apresenta os dados vitais de contexto (idade, peso e PFE recorde) com alta escaneabilidade.
 class HomeHeaderCard extends StatelessWidget {
   final PatientProfile profile;
   final VoidCallback onOpenProfile;
@@ -18,7 +18,7 @@ class HomeHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
     final initials = profile.name.trim().isNotEmpty
         ? profile.name.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
         : 'HC';
@@ -26,10 +26,10 @@ class HomeHeaderCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: isDark ? HCColors.darkSurface : HCColors.surfaceWhite,
+        color: theme.surface,
         borderRadius: HCRadii.radiusLg,
-        border: Border.all(color: isDark ? HCColors.darkBorder : HCColors.neutral200),
-        boxShadow: isDark ? null : HCShadows.subtle,
+        border: Border.all(color: theme.border),
+        boxShadow: theme.isDark ? null : HCShadows.subtle,
       ),
       child: Row(
         children: [
@@ -39,11 +39,11 @@ class HomeHeaderCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             child: CircleAvatar(
               radius: 24,
-              backgroundColor: HCColors.primary500,
+              backgroundColor: theme.primary,
               child: Text(
                 initials,
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: 14,
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
@@ -64,7 +64,7 @@ class HomeHeaderCard extends StatelessWidget {
                         profile.name,
                         style: HCTypography.heading.copyWith(
                           fontSize: 16,
-                          color: isDark ? HCColors.darkTextPrimary : HCColors.neutral900,
+                          color: theme.textPrimary,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -73,28 +73,26 @@ class HomeHeaderCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isDark ? HCColors.darkSurfaceElevated : HCColors.neutral100,
+                        color: theme.elevatedSurface,
                         borderRadius: HCRadii.radiusSm,
-                        border: Border.all(
-                          color: isDark ? HCColors.darkBorder : HCColors.neutral200,
-                        ),
+                        border: Border.all(color: theme.border),
                       ),
                       child: Text(
                         profile.ageDisplay,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? HCColors.darkTextSecondary : HCColors.neutral700,
+                          color: theme.textSecondary,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   'Recorde PFE: ${profile.personalBestPef} L/min • Peso: ${profile.weightKg} kg',
                   style: HCTypography.bodySmall.copyWith(
-                    color: isDark ? HCColors.darkTextSecondary : HCColors.neutral600,
+                    color: theme.textSecondary,
                   ),
                 ),
               ],
@@ -107,8 +105,8 @@ class HomeHeaderCard extends StatelessWidget {
             onPressed: onOpenProfile,
             icon: Icon(
               Icons.arrow_forward_ios,
-              size: 16,
-              color: isDark ? HCColors.darkTextMuted : HCColors.neutral400,
+              size: 14,
+              color: theme.textMuted,
             ),
           ),
         ],

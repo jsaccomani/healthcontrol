@@ -1,45 +1,67 @@
 import 'package:flutter/material.dart';
 
-/// Design Tokens: Grade de Espaçamentos, Paddings e Gaps.
+/// Design Tokens: Grade de Espaçamentos Padronizada do Health Control.
+/// Escala consistente: 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40
 class HCSpacing {
-  static const double xxs = 2.0;
-  static const double xs = 4.0;
-  static const double sm = 8.0;
-  static const double md = 12.0;
-  static const double lg = 16.0;
-  static const double xl = 20.0;
-  static const double xxl = 24.0;
-  static const double xxxl = 32.0;
+  static const double space4 = 4.0;
+  static const double space8 = 8.0;
+  static const double space12 = 12.0;
+  static const double space16 = 16.0;
+  static const double space20 = 20.0;
+  static const double space24 = 24.0;
+  static const double space32 = 32.0;
+  static const double space40 = 40.0;
+
+  // Aliases de compatibilidade
+  static const double xxs = space4;
+  static const double xs = space4;
+  static const double sm = space8;
+  static const double md = space12;
+  static const double lg = space16;
+  static const double xl = space20;
+  static const double xxl = space24;
+  static const double xxxl = space32;
 
   // Insets comuns
-  static const EdgeInsets paddingScreen = EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0);
-  static const EdgeInsets paddingCard = EdgeInsets.all(14.0);
-  static const EdgeInsets paddingCompact = EdgeInsets.all(8.0);
-  static const EdgeInsets paddingButton = EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0);
-  static const EdgeInsets paddingBadge = EdgeInsets.symmetric(horizontal: 8.0, vertical: 3.0);
+  static const EdgeInsets paddingScreen = EdgeInsets.symmetric(horizontal: space16, vertical: space12);
+  static const EdgeInsets paddingCard = EdgeInsets.all(space16);
+  static const EdgeInsets paddingCardCompact = EdgeInsets.all(space12);
+  static const EdgeInsets paddingCompact = EdgeInsets.all(space8);
+  static const EdgeInsets paddingButton = EdgeInsets.symmetric(horizontal: space20, vertical: space12);
+  static const EdgeInsets paddingBadge = EdgeInsets.symmetric(horizontal: space8, vertical: space4);
 }
 
-/// Design Tokens: Raios de Borda (Border Radius).
+/// Design Tokens: Raios de Borda Padronizados (Border Radius).
+/// Escala consistente: 8 / 12 / 16 / 20 / 24 / pill
 class HCRadii {
-  static const double xs = 4.0;
-  static const double sm = 8.0;
-  static const double md = 12.0;
-  static const double lg = 16.0;
-  static const double xl = 20.0;
+  static const double r8 = 8.0;
+  static const double r12 = 12.0;
+  static const double r16 = 16.0;
+  static const double r20 = 20.0;
+  static const double r24 = 24.0;
   static const double pill = 999.0;
 
-  static BorderRadius get radiusSm => BorderRadius.circular(sm);
-  static BorderRadius get radiusMd => BorderRadius.circular(md);
-  static BorderRadius get radiusLg => BorderRadius.circular(lg);
-  static BorderRadius get radiusXl => BorderRadius.circular(xl);
+  // Aliases
+  static const double xs = 4.0;
+  static const double sm = r8;
+  static const double md = r12;
+  static const double lg = r16;
+  static const double xl = r20;
+  static const double xxl = r24;
+
+  static BorderRadius get radiusSm => BorderRadius.circular(r8);
+  static BorderRadius get radiusMd => BorderRadius.circular(r12);
+  static BorderRadius get radiusLg => BorderRadius.circular(r16);
+  static BorderRadius get radiusXl => BorderRadius.circular(r20);
+  static BorderRadius get radiusXxl => BorderRadius.circular(r24);
   static BorderRadius get radiusPill => BorderRadius.circular(pill);
 }
 
-/// Design Tokens: Sombras Sutis e Acessíveis.
+/// Design Tokens: Sombras Sutis, Limpas e Acessíveis.
 class HCShadows {
   static const List<BoxShadow> subtle = [
     BoxShadow(
-      color: Color(0x05000000),
+      color: Color(0x06000000),
       blurRadius: 6,
       offset: Offset(0, 2),
     ),
@@ -55,7 +77,7 @@ class HCShadows {
 
   static const List<BoxShadow> floating = [
     BoxShadow(
-      color: Color(0x12000000),
+      color: Color(0x10000000),
       blurRadius: 16,
       offset: Offset(0, 6),
     ),

@@ -3,50 +3,55 @@ import 'package:clinical_core/clinical_core.dart';
 import '../../../core/storage/health_storage_service.dart';
 import '../../../core/design_system/design_system.dart';
 
-/// Bottom Sheet Modular de Ações Rápidas (< 10 segundos).
-/// Permite ao cuidador registrar medicações, sopro, sintomas ou saturação sem fricção.
-class HCQuickActionsModalSheet extends StatefulWidget {
+/// Modal Bottom Sheet de Ações Rápidas (Registro com Menor Carga Cognitiva).
+class QuickActionsModalSheet extends StatefulWidget {
   final PatientProfile profile;
+  final String? initialAction;
   final VoidCallback onEntrySaved;
-  final String initialView;
 
-  const HCQuickActionsModalSheet({
+  const QuickActionsModalSheet({
     super.key,
     required this.profile,
+    this.initialAction,
     required this.onEntrySaved,
-    this.initialView = 'MENU',
   });
 
   static Future<void> show({
     required BuildContext context,
     required PatientProfile profile,
+    String? initialAction,
     required VoidCallback onEntrySaved,
-    String initialView = 'MENU',
   }) {
-    return showModalBottomSheet<void>(
+    final theme = context.hcTheme;
+
+    return showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => HCQuickActionsModalSheet(
-        profile: profile,
-        onEntrySaved: onEntrySaved,
-        initialView: initialView,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Material(
+        color: theme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: QuickActionsModalSheet(
+          profile: profile,
+          initialAction: initialAction,
+          onEntrySaved: onEntrySaved,
+        ),
       ),
     );
   }
 
   @override
-  State<HCQuickActionsModalSheet> createState() => _HCQuickActionsModalSheetState();
+  State<QuickActionsModalSheet> createState() => _QuickActionsModalSheetState();
 }
 
-class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
+class _QuickActionsModalSheetState extends State<QuickActionsModalSheet> {
   final HealthStorageService _storageService = HealthStorageService();
 
-  late String _currentView;
+  late String _currentView; // 'MENU', 'MEDICATION', 'PEAK_FLOW', 'SYMPTOMS', 'SPO2', 'NOTE'
   bool _isLoading = false;
 
-  // Medicações
-  List<PrescribedMedication> _prescriptions = [];
+  // Prescrições ativas
+  List<PrescriptionRecord> _prescriptions = [];
   final List<MedicationUsage> _selectedMeds = [];
   bool _mouthRinseDone = true;
 
@@ -62,12 +67,13 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
   final List<String> _selectedSymptoms = [];
   final List<String> _commonSymptoms = [
     'Sem sintomas aparentes',
-    'Tosse seca leve',
-    'Tosse carregada',
-    'Chiado no peito (sibilo)',
-    'Cansaço aos esforços',
-    'Falta de ar ao deitar',
-    'Respiração acelerada',
+    'Tosse seca',
+    'Tosse com secreção',
+    'Chiado / Ruído no peito',
+    'Falta de ar / Cansaço',
+    'Acordou à noite com tosse',
+    'Dificuldade para falar frases longas',
+    'Febre / Resfriado',
   ];
 
   // SpO2
@@ -75,89 +81,88 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
 
   // Observações
   final TextEditingController _noteCtrl = TextEditingController();
-  String _author = 'Mãe';
-  final List<String> _authors = ['Mãe', 'Pai', 'Avó / Avô', 'Babá / Cuidador', 'Próprio Paciente'];
+
+  // Autoria do registro
+  late String _author;
+  late List<String> _authors;
 
   @override
   void initState() {
     super.initState();
-    _currentView = widget.initialView;
+    _currentView = widget.initialAction ?? 'MENU';
+    _initAuthors();
     _loadPrescriptions();
   }
 
-  @override
-  void dispose() {
-    _b1Ctrl.dispose();
-    _b2Ctrl.dispose();
-    _b3Ctrl.dispose();
-    _spo2Ctrl.dispose();
-    _noteCtrl.dispose();
-    super.dispose();
+  void _initAuthors() {
+    final p = widget.profile;
+    final List<String> authorsList = [];
+    for (final g in p.legalGuardians) {
+      if (g.fullName.isNotEmpty && !authorsList.contains(g.fullName)) {
+        authorsList.add('${g.fullName} (${g.displayRelationship})');
+      }
+    }
+    for (final c in p.caregivers) {
+      if (c.fullName.isNotEmpty && !authorsList.contains(c.fullName)) {
+        authorsList.add('${c.fullName} (${c.displayRelationship})');
+      }
+    }
+    if (authorsList.isEmpty) {
+      authorsList.addAll(['Mãe', 'Pai', 'Cuidador(a)', 'Babá', 'Escola']);
+    }
+    _authors = authorsList;
+    _author = _authors.first;
   }
 
   Future<void> _loadPrescriptions() async {
     final list = await _storageService.getPrescriptions(widget.profile.id);
-    final List<PrescribedMedication> all = [];
-    for (final p in list) {
-      all.addAll(p.medications);
-    }
-    if (all.isEmpty) {
-      all.addAll([
-        const PrescribedMedication(
-          id: 'def_1',
-          commercialName: 'Clenil HFA 250mcg Spray',
-          activeIngredient: 'Beclometasona',
-          category: MedicationCategory.maintenanceInhaled,
-          dosage: '1 jato',
-          frequency: '12/12h',
-        ),
-        const PrescribedMedication(
-          id: 'def_2',
-          commercialName: 'Aerolin Spray 100mcg',
-          activeIngredient: 'Salbutamol',
-          category: MedicationCategory.rescueInhaled,
-          dosage: '2 jatos',
-          frequency: 'Resgate',
-        ),
-      ]);
-    }
-    if (mounted) {
-      setState(() => _prescriptions = all);
-    }
+    if (!mounted) return;
+    setState(() {
+      _prescriptions = list;
+    });
   }
 
-  void _recalcPeakFlow() {
-    final v1 = int.tryParse(_b1Ctrl.text.trim());
-    final v2 = int.tryParse(_b2Ctrl.text.trim());
-    final v3 = int.tryParse(_b3Ctrl.text.trim());
-    final list = [if (v1 != null) v1, if (v2 != null) v2, if (v3 != null) v3];
+  ActionZoneType? _calcZone;
 
-    if (list.isEmpty) {
+  void _recalcPeakFlow() {
+    final b1 = int.tryParse(_b1Ctrl.text.trim()) ?? 0;
+    final b2 = int.tryParse(_b2Ctrl.text.trim()) ?? 0;
+    final b3 = int.tryParse(_b3Ctrl.text.trim()) ?? 0;
+
+    final attempts = [b1, b2, b3].where((v) => v > 0).toList();
+    if (attempts.isEmpty) {
       setState(() {
         _calcBest = null;
         _calcVariance = null;
         _hasVarianceAlert = false;
+        _calcZone = null;
       });
       return;
     }
 
-    final maxVal = list.reduce((a, b) => a > b ? a : b);
-    final minVal = list.reduce((a, b) => a < b ? a : b);
-    final variance = maxVal - minVal;
+    final best = attempts.reduce((a, b) => a > b ? a : b);
+    final min = attempts.reduce((a, b) => a < b ? a : b);
+    final variance = attempts.length > 1 ? best - min : 0;
+    final alert = attempts.length > 1 && variance > 20;
+
+    final refPef = widget.profile.personalBestPef > 0 ? widget.profile.personalBestPef : 200;
+    final evaluation = ActionZoneEvaluator.evaluate(currentPef: best, personalBestPef: refPef);
+    final zone = evaluation.zone;
 
     setState(() {
-      _calcBest = maxVal;
+      _calcBest = best;
       _calcVariance = variance;
-      _hasVarianceAlert = list.length >= 2 && variance > 20;
+      _hasVarianceAlert = alert;
+      _calcZone = zone;
     });
   }
 
   Future<void> _saveQuickEntry({
-    List<int> peakFlowAttempts = const [],
-    int? spo2,
-    List<String> symptoms = const [],
-    List<MedicationUsage> medications = const [],
+    List<MedicationUsage>? medications,
     bool mouthRinse = true,
+    List<int>? peakFlowAttempts,
+    List<String>? symptoms,
+    int? spo2,
     String notes = '',
   }) async {
     setState(() => _isLoading = true);
@@ -165,11 +170,11 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
     await _storageService.addHealthControlEntry(
       targetPatientId: widget.profile.id,
       authorName: _author,
-      authorRole: 'Cuidador Principal',
-      peakFlowAttempts: peakFlowAttempts,
+      authorRole: _author == 'Mãe' || _author == 'Pai' ? 'Cuidador Principal' : 'Responsável',
+      peakFlowAttempts: peakFlowAttempts ?? [],
       spo2: spo2 ?? 98,
-      symptoms: symptoms.isNotEmpty ? symptoms : ['Sem sintomas aparentes'],
-      medications: medications,
+      symptoms: symptoms != null && symptoms.isNotEmpty ? symptoms : ['Sem sintomas aparentes'],
+      medications: medications ?? [],
       mouthRinseCompleted: mouthRinse,
       notes: notes,
     );
@@ -180,7 +185,7 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Registro salvo com sucesso!'),
+          content: Text('Registro de saúde salvo com sucesso!'),
           backgroundColor: HCColors.greenMain,
           behavior: SnackBarBehavior.floating,
         ),
@@ -190,11 +195,9 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+    final theme = context.hcTheme;
+
+    return Padding(
       padding: EdgeInsets.only(
         left: 20,
         right: 20,
@@ -213,7 +216,7 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: HCColors.neutral300,
+                    color: theme.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -228,7 +231,7 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
                     children: [
                       if (_currentView != 'MENU')
                         IconButton(
-                          icon: const Icon(Icons.arrow_back, size: 20),
+                          icon: Icon(Icons.arrow_back, size: 20, color: theme.textPrimary),
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () => setState(() => _currentView = 'MENU'),
@@ -236,12 +239,12 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
                       if (_currentView != 'MENU') const SizedBox(width: 8),
                       Text(
                         _getTitleForView(),
-                        style: HCTypography.heading.copyWith(fontSize: 16),
+                        style: HCTypography.heading.copyWith(fontSize: 16, color: theme.textPrimary),
                       ),
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: HCColors.neutral400),
+                    icon: Icon(Icons.close, color: theme.textMuted),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () => Navigator.pop(context),
@@ -250,7 +253,7 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
               ),
               Text(
                 'Paciente: ${widget.profile.name}',
-                style: HCTypography.bodySmall.copyWith(color: HCColors.neutral500),
+                style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
               ),
               const SizedBox(height: 16),
 
@@ -286,12 +289,14 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
   }
 
   Widget _buildMenuView() {
+    final theme = context.hcTheme;
+
     return Column(
       children: [
         _buildActionTile(
           icon: Icons.medication_outlined,
-          color: HCColors.primary600,
-          bgColor: HCColors.primary50,
+          color: theme.primary,
+          bgColor: theme.primarySubtle,
           title: 'Medicação (Rotina ou Resgate)',
           subtitle: 'Checklist das bombinhas e remédios prescritos',
           onTap: () => setState(() => _currentView = 'MEDICATION'),
@@ -299,8 +304,8 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
         const SizedBox(height: 10),
         _buildActionTile(
           icon: Icons.air,
-          color: HCColors.blueMain,
-          bgColor: HCColors.blueLight,
+          color: theme.info,
+          bgColor: theme.infoBg,
           title: 'Pico de Fluxo (Peak Flow)',
           subtitle: 'Registro dos 3 sopros e cálculo de variabilidade',
           onTap: () => setState(() => _currentView = 'PEAK_FLOW'),
@@ -308,8 +313,8 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
         const SizedBox(height: 10),
         _buildActionTile(
           icon: Icons.sick_outlined,
-          color: HCColors.yellowMain,
-          bgColor: HCColors.yellowLight,
+          color: theme.warning,
+          bgColor: theme.warningBg,
           title: 'Sintomas e Chiado no Peito',
           subtitle: 'Tosse, cansaço, ruídos respiratórios ou indisposição',
           onTap: () => setState(() => _currentView = 'SYMPTOMS'),
@@ -317,8 +322,8 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
         const SizedBox(height: 10),
         _buildActionTile(
           icon: Icons.monitor_heart_outlined,
-          color: HCColors.greenMain,
-          bgColor: HCColors.greenLight,
+          color: theme.success,
+          bgColor: theme.successBg,
           title: 'Saturação de Oxigênio (SpO2)',
           subtitle: 'Leitura rápida do oxímetro de pulso',
           onTap: () => setState(() => _currentView = 'SPO2'),
@@ -326,8 +331,8 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
         const SizedBox(height: 10),
         _buildActionTile(
           icon: Icons.edit_note,
-          color: HCColors.neutral700,
-          bgColor: HCColors.neutral100,
+          color: theme.textSecondary,
+          bgColor: theme.elevatedSurface,
           title: 'Observação Livre',
           subtitle: 'Anotar recados da escola, clima ou rotina',
           onTap: () => setState(() => _currentView = 'NOTE'),
@@ -344,11 +349,13 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final theme = context.hcTheme;
+
     return Material(
-      color: Colors.white,
+      color: theme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: HCRadii.radiusMd,
-        side: const BorderSide(color: HCColors.neutral200),
+        side: BorderSide(color: theme.border),
       ),
       child: InkWell(
         onTap: onTap,
@@ -372,17 +379,17 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
                   children: [
                     Text(
                       title,
-                      style: HCTypography.subHeading.copyWith(fontSize: 14),
+                      style: HCTypography.title.copyWith(fontSize: 14, color: theme.textPrimary),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: HCTypography.bodySmall.copyWith(color: HCColors.neutral500),
+                      style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: HCColors.neutral400, size: 20),
+              Icon(Icons.chevron_right, color: theme.textMuted, size: 20),
             ],
           ),
         ),
@@ -392,74 +399,98 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
 
   // --- Sub-View: Medicação ---
   Widget _buildMedicationView() {
+    final theme = context.hcTheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Selecione os medicamentos administrados agora:',
-          style: HCTypography.bodySmall.copyWith(color: HCColors.neutral600),
+          style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
         ),
         const SizedBox(height: 12),
-        ..._prescriptions.map((med) {
-          final isSel = _selectedMeds.any((m) => m.name == med.commercialName);
-          final isRescue = med.category == MedicationCategory.rescueInhaled;
-
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Material(
-              color: isSel ? HCColors.primary50 : Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: HCRadii.radiusMd,
-                side: BorderSide(
-                  color: isSel ? HCColors.primary500 : HCColors.neutral200,
-                  width: isSel ? 1.5 : 1,
-                ),
-              ),
-              child: CheckboxListTile(
-              value: isSel,
-              activeColor: HCColors.primary500,
-              title: Text(
-                med.commercialName,
-                style: HCTypography.subHeading.copyWith(fontSize: 13),
-              ),
-              subtitle: Text(
-                '${isRescue ? "Resgate" : "Manutenção"} • Dose: ${med.dosage}',
-                style: HCTypography.bodySmall.copyWith(
-                  color: isRescue ? HCColors.yellowText : HCColors.neutral600,
-                ),
-              ),
-              onChanged: (val) {
-                setState(() {
-                  if (val == true) {
-                    _selectedMeds.add(
-                      MedicationUsage(
-                        name: med.commercialName,
-                        dosage: med.dosage,
-                        type: isRescue ? MedicationType.rescue : MedicationType.maintenance,
-                      ),
-                    );
-                  } else {
-                    _selectedMeds.removeWhere((m) => m.name == med.commercialName);
-                  }
-                });
-              },
+        if (_prescriptions.isEmpty || _prescriptions.expand((p) => p.medications).isEmpty)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.elevatedSurface,
+              borderRadius: HCRadii.radiusMd,
+              border: Border.all(color: theme.border),
             ),
-          ),
-        );
-      }),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: theme.textMuted, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Nenhuma receita cadastrada ainda. Você pode registrar uma medicação livre ou escanear uma receita.',
+                    style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ..._prescriptions.expand((p) => p.medications).map((med) {
+            final isSel = _selectedMeds.any((m) => m.name == med.commercialName);
+            final isRescue = med.category == MedicationCategory.rescueInhaled;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Material(
+                color: isSel ? theme.primarySubtle : theme.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: HCRadii.radiusMd,
+                  side: BorderSide(
+                    color: isSel ? theme.primary : theme.border,
+                    width: isSel ? 1.5 : 1,
+                  ),
+                ),
+                child: CheckboxListTile(
+                  value: isSel,
+                  activeColor: theme.primary,
+                  title: Text(
+                    med.commercialName,
+                    style: HCTypography.title.copyWith(fontSize: 13, color: theme.textPrimary),
+                  ),
+                  subtitle: Text(
+                    '${isRescue ? "Resgate" : "Manutenção"} • Dose: ${med.dosage}',
+                    style: HCTypography.bodySmall.copyWith(
+                      color: isRescue ? theme.warningText : theme.textSecondary,
+                    ),
+                  ),
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        _selectedMeds.add(
+                          MedicationUsage(
+                            name: med.commercialName,
+                            dosage: med.dosage,
+                            type: isRescue ? MedicationType.rescue : MedicationType.maintenance,
+                          ),
+                        );
+                      } else {
+                        _selectedMeds.removeWhere((m) => m.name == med.commercialName);
+                      }
+                    });
+                  },
+                ),
+              ),
+            );
+          }),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: HCColors.neutral50,
+            color: theme.elevatedSurface,
             borderRadius: HCRadii.radiusMd,
-            border: Border.all(color: HCColors.neutral200),
+            border: Border.all(color: theme.border),
           ),
           child: Row(
             children: [
               Checkbox(
                 value: _mouthRinseDone,
-                activeColor: HCColors.primary500,
+                activeColor: theme.primary,
                 onChanged: (v) => setState(() => _mouthRinseDone = v ?? true),
               ),
               Expanded(
@@ -468,11 +499,11 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
                   children: [
                     Text(
                       'Bochecho com água ou escovação realizada',
-                      style: HCTypography.labelBold.copyWith(fontSize: 12),
+                      style: HCTypography.labelBold.copyWith(fontSize: 12, color: theme.textPrimary),
                     ),
                     Text(
                       'Prevenção de sapinho e rouquidão pós-corticoide',
-                      style: HCTypography.bodySmall.copyWith(color: HCColors.neutral500),
+                      style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
                     ),
                   ],
                 ),
@@ -501,12 +532,14 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
 
   // --- Sub-View: Peak Flow ---
   Widget _buildPeakFlowView() {
+    final theme = context.hcTheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Registre os 3 sopros consecutivos no aparelho de Peak Flow:',
-          style: HCTypography.bodySmall.copyWith(color: HCColors.neutral600),
+          style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
         ),
         const SizedBox(height: 12),
         Row(
@@ -547,37 +580,75 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _hasVarianceAlert ? HCColors.yellowLight : HCColors.greenLight,
+              color: _calcZone == ActionZoneType.red
+                  ? theme.criticalBg
+                  : (_calcZone == ActionZoneType.yellow || _hasVarianceAlert ? theme.warningBg : theme.successBg),
               borderRadius: HCRadii.radiusMd,
               border: Border.all(
-                color: _hasVarianceAlert ? HCColors.yellowBorder : HCColors.greenBorder,
+                color: _calcZone == ActionZoneType.red
+                    ? theme.criticalBorder
+                    : (_calcZone == ActionZoneType.yellow || _hasVarianceAlert ? theme.warningBorder : theme.successBorder),
               ),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  _hasVarianceAlert ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-                  color: _hasVarianceAlert ? HCColors.yellowMain : HCColors.greenMain,
-                  size: 20,
+                  _calcZone == ActionZoneType.red
+                      ? Icons.emergency
+                      : (_hasVarianceAlert || _calcZone == ActionZoneType.yellow ? Icons.warning_amber_rounded : Icons.check_circle_outline),
+                  color: _calcZone == ActionZoneType.red
+                      ? theme.critical
+                      : (_hasVarianceAlert || _calcZone == ActionZoneType.yellow ? theme.warning : theme.success),
+                  size: 22,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Melhor Sopro: $_calcBest L/min',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: _hasVarianceAlert ? HCColors.yellowText : HCColors.greenText,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Melhor Sopro: $_calcBest L/min',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: _calcZone == ActionZoneType.red
+                                  ? theme.criticalText
+                                  : (_hasVarianceAlert || _calcZone == ActionZoneType.yellow ? theme.warningText : theme.successText),
+                            ),
+                          ),
+                          if (_calcZone != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _calcZone == ActionZoneType.red
+                                    ? HCColors.redMain
+                                    : (_calcZone == ActionZoneType.yellow ? HCColors.yellowMain : HCColors.greenMain),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                _calcZone == ActionZoneType.green
+                                    ? 'ZONA VERDE'
+                                    : (_calcZone == ActionZoneType.yellow ? 'ZONA AMARELA' : 'ZONA VERMELHA'),
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
+                      const SizedBox(height: 3),
                       Text(
                         _hasVarianceAlert
-                            ? 'Variação de $_calcVariance L/min entre sopros (> 20 L/min). Verifique a vedação da boca.'
-                            : 'Técnica consistente (variância: $_calcVariance L/min).',
-                        style: const TextStyle(fontSize: 11, color: HCColors.neutral700),
+                            ? 'Variação de $_calcVariance L/min entre sopros (> 20 L/min). Verifique a vedação da boca e repita se necessário.'
+                            : 'Técnica consistente (variância: $_calcVariance L/min). Siga o plano de ação médica correspondente.',
+                        style: TextStyle(fontSize: 11, color: theme.textSecondary),
                       ),
                     ],
                   ),
@@ -611,12 +682,14 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
 
   // --- Sub-View: Sintomas ---
   Widget _buildSymptomsView() {
+    final theme = context.hcTheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Selecione os sintomas observados na criança hoje:',
-          style: HCTypography.bodySmall.copyWith(color: HCColors.neutral600),
+          style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -625,11 +698,18 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
           children: _commonSymptoms.map((symptom) {
             final isSel = _selectedSymptoms.contains(symptom);
             return FilterChip(
-              label: Text(symptom, style: TextStyle(fontSize: 12, fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
+              label: Text(
+                symptom,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                  color: isSel ? theme.primary : theme.textPrimary,
+                ),
+              ),
               selected: isSel,
-              selectedColor: HCColors.primary100,
-              backgroundColor: HCColors.neutral100,
-              side: BorderSide(color: isSel ? HCColors.primary500 : HCColors.neutral200),
+              selectedColor: theme.primarySubtle,
+              backgroundColor: theme.elevatedSurface,
+              side: BorderSide(color: isSel ? theme.primary : theme.border),
               onSelected: (selected) {
                 setState(() {
                   if (selected) {
@@ -665,6 +745,7 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
 
   // --- Sub-View: SpO2 ---
   Widget _buildSpo2View() {
+    final theme = context.hcTheme;
     final val = int.tryParse(_spo2Ctrl.text.trim()) ?? 98;
     final isCritical = val < 92;
 
@@ -673,14 +754,19 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
       children: [
         Text(
           'Informe a Saturação de Oxigênio (SpO2) medida no oxímetro:',
-          style: HCTypography.bodySmall.copyWith(color: HCColors.neutral600),
+          style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
         ),
         const SizedBox(height: 12),
         TextFormField(
           controller: _spo2Ctrl,
           keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2),
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 2,
+            color: theme.textPrimary,
+          ),
           decoration: const InputDecoration(
             labelText: 'Saturação de Oxigênio (%)',
             suffixText: '%',
@@ -691,15 +777,15 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isCritical ? HCColors.redLight : HCColors.greenLight,
+            color: isCritical ? theme.criticalBg : theme.successBg,
             borderRadius: HCRadii.radiusMd,
-            border: Border.all(color: isCritical ? HCColors.redBorder : HCColors.greenBorder),
+            border: Border.all(color: isCritical ? theme.criticalBorder : theme.successBorder),
           ),
           child: Row(
             children: [
               Icon(
                 isCritical ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-                color: isCritical ? HCColors.redMain : HCColors.greenMain,
+                color: isCritical ? theme.critical : theme.success,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -710,7 +796,7 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: isCritical ? HCColors.redText : HCColors.greenText,
+                    color: isCritical ? theme.criticalText : theme.successText,
                   ),
                 ),
               ),
@@ -733,17 +819,20 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
 
   // --- Sub-View: Observação ---
   Widget _buildNoteView() {
+    final theme = context.hcTheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Escreva qualquer relato relevante sobre a saúde do seu filho hoje:',
-          style: HCTypography.bodySmall.copyWith(color: HCColors.neutral600),
+          style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _noteCtrl,
           maxLines: 4,
+          style: TextStyle(color: theme.textPrimary),
           decoration: const InputDecoration(
             hintText: 'Ex: Teve contato com fumaça na casa da avó. Não tossiu durante a noite.',
           ),
@@ -763,22 +852,28 @@ class _HCQuickActionsModalSheetState extends State<HCQuickActionsModalSheet> {
   }
 
   Widget _buildAuthorSelector() {
+    final theme = context.hcTheme;
+
     return Row(
       children: [
         Text(
           'Quem está anotando:',
-          style: HCTypography.bodySmall.copyWith(fontWeight: FontWeight.w600),
+          style: HCTypography.bodySmall.copyWith(fontWeight: FontWeight.w600, color: theme.textSecondary),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: DropdownButtonFormField<String>(
             initialValue: _author,
             isDense: true,
+            dropdownColor: theme.surface,
             decoration: const InputDecoration(
               contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             ),
             items: _authors
-                .map((a) => DropdownMenuItem(value: a, child: Text(a, style: const TextStyle(fontSize: 12))))
+                .map((a) => DropdownMenuItem(
+                      value: a,
+                      child: Text(a, style: TextStyle(fontSize: 12, color: theme.textPrimary)),
+                    ))
                 .toList(),
             onChanged: (v) {
               if (v != null) setState(() => _author = v);

@@ -96,7 +96,7 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('ARTHUR SACCOMANI'), findsOneWidget);
+      expect(find.text('Arthur Saccomani'), findsOneWidget);
       expect(find.byType(CrisisReassessmentTimer), findsOneWidget);
       expect(find.byType(CrisisEmergencyActions), findsOneWidget);
     });
@@ -134,7 +134,7 @@ void main() {
                   'medication': presc.medications.first,
                 }
               ],
-              onAdministerDose: ({required dosage, required medicationName, required prescriptionId}) {},
+              onAdministerDose: ({required dosage, required medicationName, required prescriptionId, administeredBy = 'Cuidador'}) {},
             ),
           ),
         ),
@@ -142,7 +142,7 @@ void main() {
 
       await tester.pump();
       expect(find.text('Aerolin Spray 100mcg'), findsOneWidget);
-      expect(find.text('Dose Prescrita: 2 jatos'), findsOneWidget);
+      expect(find.text('2 jatos'), findsOneWidget);
       expect(find.textContaining('Dr. Marco Aurélio Valente'), findsOneWidget);
       expect(find.text('Registrar Medicação Administrada'), findsOneWidget);
     });
@@ -160,7 +160,7 @@ void main() {
       );
 
       await tester.pump();
-      expect(find.text('NENHUM PLANO DE RESGATE CADASTRADO'), findsOneWidget);
+      expect(find.text('PLANO DE RESGATE NÃO CADASTRADO'), findsOneWidget);
       expect(find.text('Ligar 192 (SAMU Emergência)'), findsOneWidget);
     });
   });

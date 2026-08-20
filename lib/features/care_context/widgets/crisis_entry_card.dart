@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/design_system/design_system.dart';
 
 /// Card de Ação Global de Crise ("CRIANÇA EM CRISE").
-/// Projetado com alta saliência visual e controle estético (sem vermelho berrante excessivo).
+/// Projetado com alta saliência visual e controle estético sofisticado (sem vermelho berrante excessivo).
+/// Hierarquia: Ícone -> Título -> Descrição Curta -> Ação.
 class CrisisEntryCard extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -13,15 +14,15 @@ class CrisisEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = context.hcTheme;
 
     return Material(
-      color: isDark ? const Color(0xFF2C0B0B) : const Color(0xFFFEF2F2),
+      color: theme.criticalBg,
       shape: RoundedRectangleBorder(
         borderRadius: HCRadii.radiusLg,
         side: BorderSide(
-          color: isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA),
-          width: 1.5,
+          color: theme.criticalBorder,
+          width: 1.2,
         ),
       ),
       child: InkWell(
@@ -33,8 +34,8 @@ class CrisisEntryCard extends StatelessWidget {
             children: [
               // Ícone de Emergência Clínico
               Container(
-                width: 44,
-                height: 44,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
                   color: HCColors.redMain,
                   borderRadius: BorderRadius.circular(10),
@@ -47,7 +48,7 @@ class CrisisEntryCard extends StatelessWidget {
               ),
               const SizedBox(width: 14),
 
-              // Textos do Alerta de Crise
+              // Textos do Alerta de Crise (Título + Descrição Curta)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,24 +56,26 @@ class CrisisEntryCard extends StatelessWidget {
                     Text(
                       'CRIANÇA EM CRISE',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.5,
-                        color: isDark ? const Color(0xFFFCA5A5) : HCColors.redMain,
+                        color: theme.criticalText,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Iniciar atendimento de emergência e resgate',
+                      'Iniciar atendimento de emergência',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: isDark ? HCColors.darkTextMuted : HCColors.neutral700,
+                        color: theme.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
+
+              const SizedBox(width: 8),
 
               // Indicador de Ação Imediata
               Container(
@@ -96,7 +99,7 @@ class CrisisEntryCard extends StatelessWidget {
                     SizedBox(width: 4),
                     Icon(
                       Icons.arrow_forward_ios,
-                      size: 11,
+                      size: 10,
                       color: Colors.white,
                     ),
                   ],
