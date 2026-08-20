@@ -3,7 +3,7 @@ import 'package:clinical_core/clinical_core.dart';
 import '../../../main.dart' show appThemeModeNotifier;
 import '../../../core/storage/health_storage_service.dart';
 import '../../../core/design_system/design_system.dart';
-import '../../emergency/screens/emergency_screen.dart';
+import '../../crisis/screens/crisis_screen.dart';
 import '../../cact/screens/cact_quiz_screen.dart';
 import '../../physio/screens/physio_screen.dart';
 import '../../pro_connect/screens/pro_connect_screen.dart';
@@ -23,7 +23,9 @@ import '../widgets/history_entry_tile.dart';
 /// D. Ações Rápidas Secundárias (Medicação, Pico de Fluxo, Sintomas, Crise, Nota)
 /// E. Histórico Recente Relevante
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final String? initialPatientId;
+
+  const HomeScreen({super.key, this.initialPatientId});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -42,12 +44,13 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadData();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData({String? targetPatientId}) async {
     setState(() => _isLoading = true);
+    final targetId = targetPatientId ?? widget.initialPatientId;
     final results = await Future.wait([
       _storageService.getAllProfiles(),
-      _storageService.getPatientProfile(),
-      _storageService.getHealthEntries(),
+      _storageService.getPatientProfile(patientId: targetId),
+      _storageService.getHealthEntries(patientId: targetId),
     ]);
     if (!mounted) return;
     setState(() {
@@ -305,7 +308,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 case 'emergency':
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => EmergencyScreen(patientId: _profile!.id)),
+                    MaterialPageRoute(builder: (_) => CrisisScreen(patientId: _profile!.id)),
                   );
                   _loadData();
                   break;
@@ -410,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   profile: _profile!,
                   onSosPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => EmergencyScreen(patientId: _profile!.id)),
+                    MaterialPageRoute(builder: (_) => CrisisScreen(patientId: _profile!.id)),
                   ),
                 ),
 
@@ -428,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onDirectAction: _openDirectAction,
                   onSosPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => EmergencyScreen(patientId: _profile!.id)),
+                    MaterialPageRoute(builder: (_) => CrisisScreen(patientId: _profile!.id)),
                   ),
                 ),
 

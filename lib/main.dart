@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'core/storage/health_storage_service.dart';
-import 'features/home/screens/home_screen.dart';
+import 'features/care_context/screens/care_context_screen.dart';
 
 /// Notificador reativo global de modo de tema para permitir alternar entre Sistema, Claro e Escuro.
 final ValueNotifier<ThemeMode> appThemeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
@@ -27,7 +27,7 @@ class HealthControlApp extends StatelessWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: currentThemeMode,
-          home: const HomeScreen(),
+          home: const CareContextScreen(),
         );
       },
     );

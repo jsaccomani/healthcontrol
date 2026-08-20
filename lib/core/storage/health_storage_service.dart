@@ -14,6 +14,7 @@ class HealthStorageService {
   static const String _keyDoctorPairingCodePrefix = 'health_control_pairing_code_';
   static const String _keyLegacyDoctorPairingCode = 'health_control_doctor_pairing_code';
   static const String _keyPrescriptionsPrefix = 'health_control_prescriptions_';
+  static const String _keyCrisisEventsPrefix = 'health_control_crisis_events_';
   static const String _keyThemeMode = 'health_control_theme_mode';
 
   static final HealthStorageService _instance = HealthStorageService._internal();
@@ -31,6 +32,7 @@ class HealthStorageService {
   final Map<String, List<HealthControlEntry>> _cachedEntries = {};
   final Map<String, List<PrescriptionRecord>> _cachedPrescriptions = {};
   final Map<String, List<ClinicalEventLog>> _cachedEventLogs = {};
+  final Map<String, List<CrisisEvent>> _cachedCrisisEvents = {};
 
   Future<SharedPreferences> _getPrefs() async {
     _cachedPrefs ??= await SharedPreferences.getInstance();
@@ -43,12 +45,14 @@ class HealthStorageService {
       _cachedEntries.remove(patientId);
       _cachedPrescriptions.remove(patientId);
       _cachedEventLogs.remove(patientId);
+      _cachedCrisisEvents.remove(patientId);
     } else {
       _cachedProfiles = null;
       _cachedSelectedProfileId = null;
       _cachedEntries.clear();
       _cachedPrescriptions.clear();
       _cachedEventLogs.clear();
+      _cachedCrisisEvents.clear();
     }
   }
 
@@ -467,6 +471,66 @@ class HealthStorageService {
     final prefs = await _getPrefs();
     final raw = list.map((p) => jsonEncode(p.toJson())).toList();
     await prefs.setStringList('$_keyPrescriptionsPrefix$patientId', raw);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Eventos de Crise Respiratória (Auditoria & Rastreamento)
+  // ---------------------------------------------------------------------------
+
+  /// Retorna o histórico de eventos de crise de um paciente.
+  Future<List<CrisisEvent>> getCrisisEvents({String? patientId}) async {
+    final profile = await getPatientProfile(patientId: patientId);
+    if (_cachedCrisisEvents.containsKey(profile.id)) {
+      return List.unmodifiable(_cachedCrisisEvents[profile.id]!);
+    }
+
+    final prefs = await _getPrefs();
+    final rawList = prefs.getStringList('$_keyCrisisEventsPrefix${profile.id}');
+
+    if (rawList == null || rawList.isEmpty) {
+      _cachedCrisisEvents[profile.id] = [];
+      return const [];
+    }
+
+    try {
+      final loaded = rawList
+          .map((str) => CrisisEvent.fromJson(jsonDecode(str) as Map<String, dynamic>))
+          .toList();
+      _cachedCrisisEvents[profile.id] = loaded;
+      return List.unmodifiable(loaded);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Retorna o evento de crise ativo no momento, se houver.
+  Future<CrisisEvent?> getActiveCrisisEvent(String patientId) async {
+    final events = await getCrisisEvents(patientId: patientId);
+    final active = events.where((e) => e.isActive);
+    if (active.isNotEmpty) {
+      return active.first;
+    }
+    return null;
+  }
+
+  /// Salva ou atualiza um evento de crise.
+  Future<void> saveCrisisEvent(CrisisEvent event) async {
+    final list = await getCrisisEvents(patientId: event.patientId);
+    final idx = list.indexWhere((e) => e.id == event.id);
+    List<CrisisEvent> updated;
+    if (idx >= 0) {
+      updated = List.from(list)..[idx] = event;
+    } else {
+      updated = [event, ...list];
+    }
+    _cachedCrisisEvents[event.patientId] = updated;
+    await _saveCrisisEventsList(event.patientId, updated);
+  }
+
+  Future<void> _saveCrisisEventsList(String patientId, List<CrisisEvent> list) async {
+    final prefs = await _getPrefs();
+    final raw = list.map((e) => jsonEncode(e.toJson())).toList();
+    await prefs.setStringList('$_keyCrisisEventsPrefix$patientId', raw);
   }
 
   PatientProfile _generateDefaultArthurProfile() {

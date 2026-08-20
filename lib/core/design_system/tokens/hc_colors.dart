@@ -73,10 +73,12 @@ class HCColors {
 
   // Superfícies do Modo Escuro (Nocturnal Healthcare)
   static const Color darkBackground = Color(0xFF090D16);
+  static const Color darkBg = darkBackground;
   static const Color darkSurface = Color(0xFF131B2E);
   static const Color darkSurfaceElevated = Color(0xFF1E293B);
   static const Color darkBorder = Color(0xFF23304B);
   static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkText = darkTextPrimary;
   static const Color darkTextSecondary = Color(0xFF94A3B8);
   static const Color darkTextMuted = Color(0xFF64748B);
 }
