@@ -7,8 +7,9 @@ import '../storage/health_storage_service.dart';
 abstract class CrisisAlertService {
   Future<void> notifyCrisisStarted(CrisisEvent event, PatientProfile patient);
   Future<void> notifyMedicationAdministered(CrisisEvent event, PatientProfile patient);
+  Future<void> notifyCrisisReassessment(CrisisEvent event, PatientProfile patient);
   Future<void> notifyCrisisResolved(CrisisEvent event, PatientProfile patient);
-  Future<void> notifyEscalatedToHospital(CrisisEvent event, PatientProfile patient);
+  Future<void> notifyCrisisEscalated(CrisisEvent event, PatientProfile patient);
 }
 
 /// Implementação padrão que realiza a persistência e auditoria clínica local dos eventos de crise.
@@ -31,7 +32,7 @@ class LocalAuditCrisisAlertService implements CrisisAlertService {
     if (event.medicationAdministered != null && event.medicationAdministered!.isNotEmpty) {
       await _storageService.addHealthControlEntry(
         targetPatientId: patient.id,
-        authorName: event.startedBy,
+        authorName: event.startedByName.isNotEmpty ? event.startedByName : event.startedBy,
         authorRole: event.startedByRole,
         peakFlowAttempts: [],
         spo2: 95,
@@ -50,13 +51,18 @@ class LocalAuditCrisisAlertService implements CrisisAlertService {
   }
 
   @override
+  Future<void> notifyCrisisReassessment(CrisisEvent event, PatientProfile patient) async {
+    await _storageService.saveCrisisEvent(event);
+  }
+
+  @override
   Future<void> notifyCrisisResolved(CrisisEvent event, PatientProfile patient) async {
     final updated = event.copyWith(status: 'resolved');
     await _storageService.saveCrisisEvent(updated);
   }
 
   @override
-  Future<void> notifyEscalatedToHospital(CrisisEvent event, PatientProfile patient) async {
+  Future<void> notifyCrisisEscalated(CrisisEvent event, PatientProfile patient) async {
     final updated = event.copyWith(status: 'escalatedToHospital');
     await _storageService.saveCrisisEvent(updated);
   }

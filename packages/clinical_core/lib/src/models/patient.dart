@@ -202,6 +202,12 @@ class PatientProfile {
     return null;
   }
 
+  /// Indica se a criança possui plano de cuidado ou acompanhamento cadastrado
+  bool get hasCarePlan =>
+      specialConditions.isNotEmpty ||
+      healthcareProfessionals.isNotEmpty ||
+      continuousMedications.isNotEmpty;
+
   PatientProfile copyWith({
     String? id,
     int? schemaVersion,

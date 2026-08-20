@@ -3,8 +3,9 @@ class CrisisEvent {
   final String id;
   final String patientId;
   final DateTime startedAt;
-  final String startedBy;
-  final String startedByRole;
+  final String startedBy; // ID do usuário / cuidador
+  final String startedByName; // Nome legível para auditoria
+  final String startedByRole; // 'Cuidador Principal', 'Mãe', 'Pai', 'Médico', etc.
   final String status; // 'active', 'resolved', 'escalatedToHospital'
   final String? rescuePlanId;
   final String? medicationAdministered;
@@ -20,6 +21,7 @@ class CrisisEvent {
     required this.patientId,
     required this.startedAt,
     required this.startedBy,
+    this.startedByName = 'Cuidador',
     this.startedByRole = 'Cuidador Principal',
     this.status = 'active',
     this.rescuePlanId,
@@ -41,6 +43,7 @@ class CrisisEvent {
     String? patientId,
     DateTime? startedAt,
     String? startedBy,
+    String? startedByName,
     String? startedByRole,
     String? status,
     String? rescuePlanId,
@@ -57,6 +60,7 @@ class CrisisEvent {
       patientId: patientId ?? this.patientId,
       startedAt: startedAt ?? this.startedAt,
       startedBy: startedBy ?? this.startedBy,
+      startedByName: startedByName ?? this.startedByName,
       startedByRole: startedByRole ?? this.startedByRole,
       status: status ?? this.status,
       rescuePlanId: rescuePlanId ?? this.rescuePlanId,
@@ -76,6 +80,7 @@ class CrisisEvent {
       'patient_id': patientId,
       'started_at': startedAt.toIso8601String(),
       'started_by': startedBy,
+      'started_by_name': startedByName,
       'started_by_role': startedByRole,
       'status': status,
       'rescue_plan_id': rescuePlanId,
@@ -90,11 +95,15 @@ class CrisisEvent {
   }
 
   factory CrisisEvent.fromJson(Map<String, dynamic> json) {
+    final sBy = json['started_by'] as String? ?? 'Cuidador';
+    final sByName = json['started_by_name'] as String? ?? sBy;
+
     return CrisisEvent(
       id: json['id'] as String? ?? '',
       patientId: json['patient_id'] as String? ?? '',
       startedAt: json['started_at'] != null ? DateTime.parse(json['started_at'] as String) : DateTime.now(),
-      startedBy: json['started_by'] as String? ?? 'Cuidador',
+      startedBy: sBy,
+      startedByName: sByName,
       startedByRole: json['started_by_role'] as String? ?? 'Cuidador Principal',
       status: json['status'] as String? ?? 'active',
       rescuePlanId: json['rescue_plan_id'] as String?,
