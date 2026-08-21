@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:clinical_core/clinical_core.dart';
 import 'package:health_control/core/design_system/design_system.dart';
+import 'package:health_control/core/theme/app_theme.dart';
 
 void main() {
   Widget createTestableWidget(Widget child) {
@@ -128,7 +129,8 @@ void main() {
       // 1. Modo Claro
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData(brightness: Brightness.light),
+          theme: AppTheme.lightTheme,
+          themeMode: ThemeMode.light,
           home: const Scaffold(
             body: HCCard(child: Text('Card Claro')),
           ),
@@ -145,7 +147,9 @@ void main() {
       // 2. Modo Escuro
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData(brightness: Brightness.dark),
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: ThemeMode.dark,
           home: const Scaffold(
             body: HCCard(child: Text('Card Escuro')),
           ),
