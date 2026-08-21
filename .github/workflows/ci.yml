@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, chore/ci-github-actions, 'chore/**', 'fix/**', 'feature/**' ]
+    branches: [ main, 'chore/**', 'fix/**', 'feature/**', 'feat/**' ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
