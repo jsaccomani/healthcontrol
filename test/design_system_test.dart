@@ -128,7 +128,7 @@ void main() {
       // 1. Modo Claro
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData.light(),
+          theme: ThemeData(brightness: Brightness.light),
           home: const Scaffold(
             body: HCCard(child: Text('Card Claro')),
           ),
@@ -145,7 +145,7 @@ void main() {
       // 2. Modo Escuro
       await tester.pumpWidget(
         MaterialApp(
-          theme: ThemeData.dark(),
+          theme: ThemeData(brightness: Brightness.dark),
           home: const Scaffold(
             body: HCCard(child: Text('Card Escuro')),
           ),
