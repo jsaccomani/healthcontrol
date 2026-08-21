@@ -125,17 +125,16 @@ void main() {
       expect(find.byIcon(Icons.bloodtype), findsOneWidget);
     });
 
-    testWidgets('HCCard aplica HCRadii.radiusXl e sombra elevated no modo claro, sem sombra no modo escuro', (tester) async {
-      // 1. Modo Claro
+    testWidgets('HCCard aplica HCRadii.radiusXl e sombra elevated no modo claro', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.lightTheme,
-          themeMode: ThemeMode.light,
           home: const Scaffold(
             body: HCCard(child: Text('Card Claro')),
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       final Container containerLight = tester.widget<Container>(
         find.descendant(of: find.byType(HCCard), matching: find.byType(Container)),
@@ -143,18 +142,18 @@ void main() {
       final BoxDecoration decoLight = containerLight.decoration as BoxDecoration;
       expect(decoLight.borderRadius, equals(HCRadii.radiusXl));
       expect(decoLight.boxShadow, equals(HCShadows.elevated));
+    });
 
-      // 2. Modo Escuro
+    testWidgets('HCCard não aplica sombra no modo escuro', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: ThemeMode.dark,
+          theme: AppTheme.darkTheme,
           home: const Scaffold(
             body: HCCard(child: Text('Card Escuro')),
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       final Container containerDark = tester.widget<Container>(
         find.descendant(of: find.byType(HCCard), matching: find.byType(Container)),
