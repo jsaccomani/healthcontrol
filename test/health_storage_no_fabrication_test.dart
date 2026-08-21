@@ -105,7 +105,13 @@ void main() {
       expect(listB, isEmpty);
     });
 
-    test('4. Criar o primeiro perfil da criança não deve falhar nem lançar exceção quando lista está vazia', () async {
+    test('4. getPatientProfile() lança StateError se nenhum perfil existir e createNewChildProfile() cria o primeiro perfil com sucesso', () async {
+      // Segurança clínica estrita: nunca fabricar placeholder patient
+      expect(
+        () => storageService.getPatientProfile(),
+        throwsA(isA<StateError>()),
+      );
+
       final created = await storageService.createNewChildProfile(
         name: 'Primeiro Filho',
         birthDate: DateTime(2022, 1, 1),

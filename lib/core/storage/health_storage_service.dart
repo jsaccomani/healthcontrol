@@ -87,6 +87,7 @@ class HealthStorageService {
   }
 
   /// Retorna o perfil do filho específico ou do atualmente selecionado.
+  /// Lança [StateError] caso nenhum perfil esteja cadastrado (segurança clínica: nunca fabricar placeholder).
   Future<PatientProfile> getPatientProfile({String? patientId}) async {
     final profiles = await getAllProfiles();
     
@@ -107,17 +108,8 @@ class HealthStorageService {
       return profiles.first;
     }
 
-    return PatientProfile(
-      id: 'patient_default',
-      name: 'Paciente',
-      birthDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
-      gender: 'Masculino',
-      heightCm: 110,
-      weightKg: 20,
-      personalBestPef: 200,
-      susCardNumber: '',
-      healthInsurance: '',
-      insuranceCardNumber: '',
+    throw StateError(
+      'Nenhum perfil de paciente cadastrado. Cadastre um perfil antes de consultar os dados clínicos.',
     );
   }
 

@@ -34,17 +34,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final profiles = await _storageService.getAllProfiles();
     final currentId = targetId ?? await _storageService.getSelectedProfileId();
 
-    PatientProfile active;
-    if (profiles.isEmpty) {
-      active = await _storageService.getPatientProfile();
-    } else {
+    PatientProfile? active;
+    List<PrescriptionRecord> presc = [];
+
+    if (profiles.isNotEmpty) {
       active = profiles.firstWhere(
         (p) => p.id == currentId,
         orElse: () => profiles.first,
       );
+      presc = await _storageService.getPrescriptions(active.id);
     }
-
-    final presc = await _storageService.getPrescriptions(active.id);
 
     if (!mounted) return;
     setState(() {
@@ -894,11 +893,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final theme = context.hcTheme;
 
-    if (_isLoading || _activeProfile == null) {
+    if (_isLoading) {
       return Scaffold(
         backgroundColor: theme.background,
         appBar: AppBar(title: const Text('Ficha Médica')),
         body: const Center(child: HCLoadingState(message: 'Carregando ficha clínica...')),
+      );
+    }
+
+    if (_activeProfile == null) {
+      return Scaffold(
+        backgroundColor: theme.background,
+        appBar: AppBar(
+          title: Text(
+            'Perfil Clínico do Paciente',
+            style: HCTypography.heading.copyWith(fontSize: 16, color: theme.textPrimary),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.person_add_alt_1_outlined, size: 64, color: theme.primary),
+                const SizedBox(height: 16),
+                Text(
+                  'Nenhum perfil cadastrado',
+                  style: HCTypography.heading.copyWith(color: theme.textPrimary),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Cadastre o perfil da primeira criança para gerenciar o plano de ação e prontuário clínico.',
+                  textAlign: TextAlign.center,
+                  style: HCTypography.body.copyWith(color: theme.textSecondary),
+                ),
+                const SizedBox(height: 24),
+                HCPrimaryButton(
+                  label: 'Cadastrar Criança',
+                  icon: Icons.add,
+                  onPressed: _showAddChildDialog,
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
