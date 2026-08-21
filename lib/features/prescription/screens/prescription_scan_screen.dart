@@ -404,10 +404,18 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.verified, size: 16, color: theme.primary),
+                  Icon(
+                    p.verificationStatus == PrescriptionVerificationStatus.verified
+                        ? Icons.verified
+                        : Icons.description_outlined,
+                    size: 16,
+                    color: p.verificationStatus == PrescriptionVerificationStatus.verified
+                        ? theme.success
+                        : theme.primary,
+                  ),
                   const SizedBox(width: 6),
                   Text(
-                    p.doctorName,
+                    p.doctorName.isNotEmpty ? p.doctorName : 'Receita Médica',
                     style: HCTypography.title.copyWith(fontSize: 14, color: theme.textPrimary),
                   ),
                 ],
@@ -415,13 +423,13 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: theme.successBg,
+                  color: theme.elevatedSurface,
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: theme.successBorder, width: 0.8),
+                  border: Border.all(color: theme.border, width: 0.8),
                 ),
                 child: Text(
                   DateFormat('dd/MM/yyyy').format(p.prescriptionDate),
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.successText),
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.textSecondary),
                 ),
               ),
             ],
@@ -433,6 +441,8 @@ class _PrescriptionScanScreenState extends State<PrescriptionScanScreen> {
               style: HCTypography.caption.copyWith(color: theme.textSecondary),
             ),
           ],
+          const SizedBox(height: 8),
+          HCPrescriptionVerificationBadge(prescription: p),
 
           const SizedBox(height: 12),
           Divider(height: 1, color: theme.borderSubtle),

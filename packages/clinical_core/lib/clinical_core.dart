@@ -19,3 +19,4 @@ export 'src/models/care_requirement.dart';
 export 'src/models/prescription.dart';
 export 'src/models/crisis_event.dart';
 export 'src/pediatric_pharmacopeia.dart';
+export 'src/prescription_verification_service.dart';

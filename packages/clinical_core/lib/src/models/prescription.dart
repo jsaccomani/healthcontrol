@@ -106,6 +106,36 @@ class PrescribedMedication {
   }
 }
 
+/// Status do ciclo de vida da verificação de autenticidade da receita médica.
+enum PrescriptionVerificationStatus {
+  unknown, // default — cadastrado pelo cuidador, nunca verificado
+  pending, // enviado para verificação, aguardando resposta
+  verified, // confirmado por autoridade real (CFM, sistema do Health Control Pro, etc.)
+  invalid, // autoridade confirmou que NÃO é uma receita válida
+  expired, // a VERIFICAÇÃO em si expirou (não confundir com isExpired, que já existe e é sobre a validade de uso da receita por data — são conceitos independentes)
+  revoked, // médico ou autoridade revogou depois de verificada
+}
+
+/// Extensão com nomes amigáveis para status de verificação
+extension PrescriptionVerificationStatusExt on PrescriptionVerificationStatus {
+  String get displayName {
+    switch (this) {
+      case PrescriptionVerificationStatus.unknown:
+        return 'Autenticidade não verificada';
+      case PrescriptionVerificationStatus.pending:
+        return 'Verificação pendente';
+      case PrescriptionVerificationStatus.verified:
+        return 'Verificada por autoridade';
+      case PrescriptionVerificationStatus.invalid:
+        return 'Receita inválida';
+      case PrescriptionVerificationStatus.expired:
+        return 'Verificação expirada';
+      case PrescriptionVerificationStatus.revoked:
+        return 'Receita revogada';
+    }
+  }
+}
+
 /// Registro Completo de Receita Médica Escaneada / Digitalizada
 class PrescriptionRecord {
   final String id;
@@ -120,6 +150,13 @@ class PrescriptionRecord {
   final String notes;
   final bool isLmeAltoCusto; // Laudo de Medicamento Especializado (SUS)
 
+  // Ciclo de vida e verificação de autenticidade (HC-009)
+  final PrescriptionVerificationStatus verificationStatus;
+  final DateTime? verifiedAt;
+  final String verificationProvider;
+  final String verificationReference;
+  final String? documentHash;
+
   const PrescriptionRecord({
     required this.id,
     required this.patientId,
@@ -132,6 +169,11 @@ class PrescriptionRecord {
     required this.medications,
     this.notes = '',
     this.isLmeAltoCusto = false,
+    this.verificationStatus = PrescriptionVerificationStatus.unknown,
+    this.verifiedAt,
+    this.verificationProvider = '',
+    this.verificationReference = '',
+    this.documentHash,
   });
 
   /// Data calculada de vencimento da receita
@@ -163,6 +205,44 @@ class PrescriptionRecord {
     return 'Válida por mais $daysUntilExpiration dias';
   }
 
+  PrescriptionRecord copyWith({
+    String? id,
+    String? patientId,
+    String? doctorName,
+    String? doctorCrm,
+    String? clinicName,
+    DateTime? prescriptionDate,
+    int? validityMonths,
+    String? scannedImageUrl,
+    List<PrescribedMedication>? medications,
+    String? notes,
+    bool? isLmeAltoCusto,
+    PrescriptionVerificationStatus? verificationStatus,
+    DateTime? verifiedAt,
+    String? verificationProvider,
+    String? verificationReference,
+    String? documentHash,
+  }) {
+    return PrescriptionRecord(
+      id: id ?? this.id,
+      patientId: patientId ?? this.patientId,
+      doctorName: doctorName ?? this.doctorName,
+      doctorCrm: doctorCrm ?? this.doctorCrm,
+      clinicName: clinicName ?? this.clinicName,
+      prescriptionDate: prescriptionDate ?? this.prescriptionDate,
+      validityMonths: validityMonths ?? this.validityMonths,
+      scannedImageUrl: scannedImageUrl ?? this.scannedImageUrl,
+      medications: medications ?? this.medications,
+      notes: notes ?? this.notes,
+      isLmeAltoCusto: isLmeAltoCusto ?? this.isLmeAltoCusto,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      verifiedAt: verifiedAt ?? this.verifiedAt,
+      verificationProvider: verificationProvider ?? this.verificationProvider,
+      verificationReference: verificationReference ?? this.verificationReference,
+      documentHash: documentHash ?? this.documentHash,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -176,6 +256,11 @@ class PrescriptionRecord {
       'medications': medications.map((m) => m.toJson()).toList(),
       'notes': notes,
       'is_lme_alto_custo': isLmeAltoCusto,
+      'verification_status': verificationStatus.name,
+      'verified_at': verifiedAt?.toIso8601String(),
+      'verification_provider': verificationProvider,
+      'verification_reference': verificationReference,
+      'document_hash': documentHash,
     };
   }
 
@@ -183,7 +268,7 @@ class PrescriptionRecord {
     return PrescriptionRecord(
       id: json['id'] as String,
       patientId: json['patient_id'] as String,
-      doctorName: json['doctor_name'] as String? ?? 'Dr. Médico Assistente',
+      doctorName: json['doctor_name'] as String? ?? '',
       doctorCrm: json['doctor_crm'] as String? ?? '',
       clinicName: json['clinic_name'] as String? ?? '',
       prescriptionDate: DateTime.parse(json['prescription_date'] as String),
@@ -195,6 +280,14 @@ class PrescriptionRecord {
           [],
       notes: json['notes'] as String? ?? '',
       isLmeAltoCusto: json['is_lme_alto_custo'] as bool? ?? false,
+      verificationStatus: PrescriptionVerificationStatus.values.firstWhere(
+        (s) => s.name == json['verification_status'],
+        orElse: () => PrescriptionVerificationStatus.unknown,
+      ),
+      verifiedAt: json['verified_at'] != null ? DateTime.tryParse(json['verified_at'] as String) : null,
+      verificationProvider: json['verification_provider'] as String? ?? '',
+      verificationReference: json['verification_reference'] as String? ?? '',
+      documentHash: json['document_hash'] as String?,
     );
   }
 }

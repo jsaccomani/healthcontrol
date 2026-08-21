@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, chore/ci-github-actions, 'chore/**', 'fix/**', 'feature/**' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.47.0'
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          cd packages/clinical_core && dart pub get
+
+      - name: Run static analysis
+        run: flutter analyze --fatal-infos
+
+  domain-tests:
+    name: Clinical Core Domain Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter & Dart SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.47.0'
+          cache: true
+
+      - name: Run Clinical Core Domain Tests
+        run: |
+          cd packages/clinical_core
+          dart pub get
+          dart test
+
+  widget-tests:
+    name: Flutter Widget & Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: '3.47.0'
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          cd packages/clinical_core && dart pub get
+
+      - name: Run Flutter Widget Tests
+        run: flutter test

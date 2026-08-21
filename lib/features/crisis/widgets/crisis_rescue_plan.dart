@@ -376,13 +376,17 @@ class CrisisRescuePlan extends StatelessWidget {
 
               const SizedBox(height: 8),
 
-              // Origem Médica Explícita (Prescrito por Dr. X, CRM, Data)
+              // Origem Médica (Prescrito por Dr. X, CRM, Data)
               Row(
                 children: [
                   Icon(
-                    Icons.verified_outlined,
+                    presc.verificationStatus == PrescriptionVerificationStatus.verified
+                        ? Icons.verified
+                        : Icons.assignment_outlined,
                     size: 14,
-                    color: theme.primary,
+                    color: presc.verificationStatus == PrescriptionVerificationStatus.verified
+                        ? theme.success
+                        : theme.primary,
                   ),
                   const SizedBox(width: 5),
                   Expanded(
@@ -395,6 +399,8 @@ class CrisisRescuePlan extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: 6),
+              HCPrescriptionVerificationBadge(prescription: presc),
 
               const SizedBox(height: 14),
 

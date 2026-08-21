@@ -1054,7 +1054,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildInlineField('Medicamentos Diários', p.continuousMedications.isNotEmpty ? p.continuousMedications.join(' • ') : 'Conforme prescrição'),
-                    _buildInlineField('Receitas Cadastradas', '${_prescriptions.length} prescrição(ões) ativa(s)'),
+                    _buildInlineField('Receitas Cadastradas', '${_prescriptions.length} prescrição(ões)'),
+                    if (_prescriptions.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      ..._prescriptions.map((presc) => Container(
+                            margin: const EdgeInsets.only(top: 6),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: theme.elevatedSurface,
+                              borderRadius: HCRadii.radiusMd,
+                              border: Border.all(color: theme.border),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      presc.verificationStatus == PrescriptionVerificationStatus.verified
+                                          ? Icons.verified
+                                          : Icons.description_outlined,
+                                      size: 14,
+                                      color: presc.verificationStatus == PrescriptionVerificationStatus.verified
+                                          ? theme.success
+                                          : theme.primary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        '${presc.doctorName.isNotEmpty ? presc.doctorName : "Prescrição Médica"}${presc.doctorCrm.isNotEmpty ? " (${presc.doctorCrm})" : ""}',
+                                        style: HCTypography.bodySmall.copyWith(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                HCPrescriptionVerificationBadge(prescription: presc),
+                                if (presc.medications.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    presc.medications.map((m) => '${m.commercialName} (${m.dosage})').join(' • '),
+                                    style: HCTypography.caption.copyWith(color: theme.textSecondary),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          )),
+                    ],
                   ],
                 ),
               ),
