@@ -104,5 +104,22 @@ void main() {
       final listB = await storageService.getPrescriptions(patientB);
       expect(listB, isEmpty);
     });
+
+    test('4. Criar o primeiro perfil da criança não deve falhar nem lançar exceção quando lista está vazia', () async {
+      final created = await storageService.createNewChildProfile(
+        name: 'Primeiro Filho',
+        birthDate: DateTime(2022, 1, 1),
+        gender: 'Masculino',
+        heightCm: 98,
+        weightKg: 15,
+        personalBestPef: 160,
+      );
+
+      expect(created.name, equals('Primeiro Filho'));
+      expect(created.personalBestPef, equals(160));
+
+      final active = await storageService.getPatientProfile();
+      expect(active.name, equals('Primeiro Filho'));
+    });
   });
 }

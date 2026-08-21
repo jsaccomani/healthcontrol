@@ -103,7 +103,22 @@ class HealthStorageService {
       if (found.isNotEmpty) return found.first;
     }
 
-    return profiles.first;
+    if (profiles.isNotEmpty) {
+      return profiles.first;
+    }
+
+    return PatientProfile(
+      id: 'patient_default',
+      name: 'Paciente',
+      birthDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
+      gender: 'Masculino',
+      heightCm: 110,
+      weightKg: 20,
+      personalBestPef: 200,
+      susCardNumber: '',
+      healthInsurance: '',
+      insuranceCardNumber: '',
+    );
   }
 
   /// Retorna um perfil específico por ID, ou null se não existir.
@@ -163,7 +178,13 @@ class HealthStorageService {
     String healthInsurance = '',
     String insuranceCardNumber = '',
   }) async {
-    final active = await getPatientProfile();
+    final profiles = await getAllProfiles();
+    final active = profiles.isNotEmpty
+        ? profiles.firstWhere(
+            (p) => p.id == _cachedSelectedProfileId,
+            orElse: () => profiles.first,
+          )
+        : null;
     final newId = 'child_${_uuid.v4().substring(0, 8)}';
 
     final newProfile = PatientProfile(
@@ -178,21 +199,25 @@ class HealthStorageService {
       weightKg: weightKg,
       personalBestPef: personalBestPef,
       susCardNumber: susCardNumber,
-      healthInsurance: healthInsurance,
-      insuranceCardNumber: insuranceCardNumber,
-      // Herda contatos e profissionais dos pais para conveniência
-      legalGuardians: active.legalGuardians,
-      caregivers: active.caregivers,
-      emergencyContacts: active.emergencyContacts,
-      healthcareProfessionals: active.healthcareProfessionals,
-      motherName: active.motherName,
-      motherPhone: active.motherPhone,
-      motherEmail: active.motherEmail,
-      fatherName: active.fatherName,
-      fatherPhone: active.fatherPhone,
-      emergencyContactName: active.emergencyContactName,
-      emergencyContactPhone: active.emergencyContactPhone,
-      addressCityState: active.addressCityState,
+      healthInsurance: healthInsurance.isNotEmpty
+          ? healthInsurance
+          : (active?.healthInsurance ?? ''),
+      insuranceCardNumber: insuranceCardNumber.isNotEmpty
+          ? insuranceCardNumber
+          : (active?.insuranceCardNumber ?? ''),
+      // Herda contatos e profissionais dos pais para conveniência se houver perfil existente
+      legalGuardians: active?.legalGuardians ?? const [],
+      caregivers: active?.caregivers ?? const [],
+      emergencyContacts: active?.emergencyContacts ?? const [],
+      healthcareProfessionals: active?.healthcareProfessionals ?? const [],
+      motherName: active?.motherName ?? '',
+      motherPhone: active?.motherPhone ?? '',
+      motherEmail: active?.motherEmail ?? '',
+      fatherName: active?.fatherName ?? '',
+      fatherPhone: active?.fatherPhone ?? '',
+      emergencyContactName: active?.emergencyContactName ?? '',
+      emergencyContactPhone: active?.emergencyContactPhone ?? '',
+      addressCityState: active?.addressCityState ?? '',
     );
 
     await savePatientProfile(newProfile);
