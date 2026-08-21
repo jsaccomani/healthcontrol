@@ -33,9 +33,9 @@ class HCMetricCard extends StatelessWidget {
       padding: HCSpacing.paddingCardCompact,
       decoration: BoxDecoration(
         color: theme.surface,
-        borderRadius: HCRadii.radiusLg,
+        borderRadius: HCRadii.radiusXl,
         border: Border.all(color: theme.border),
-        boxShadow: theme.isDark ? null : HCShadows.subtle,
+        boxShadow: theme.isDark ? null : HCShadows.elevated,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,7 +45,10 @@ class HCMetricCard extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: HCTypography.label.copyWith(color: theme.textSecondary),
+                style: HCTypography.label.copyWith(
+                  color: theme.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               Icon(icon, color: color, size: 18),
             ],
@@ -57,12 +60,19 @@ class HCMetricCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: HCTypography.clinicalValueLarge.copyWith(color: color),
+                style: HCTypography.clinicalValueLarge.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                ),
               ),
               const SizedBox(width: HCSpacing.space4),
               Text(
                 unit,
-                style: HCTypography.label.copyWith(color: theme.textSecondary),
+                style: HCTypography.label.copyWith(
+                  color: theme.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -80,7 +90,7 @@ class HCMetricCard extends StatelessWidget {
     if (onTap != null) {
       return InkWell(
         onTap: onTap,
-        borderRadius: HCRadii.radiusLg,
+        borderRadius: HCRadii.radiusXl,
         child: card,
       );
     }

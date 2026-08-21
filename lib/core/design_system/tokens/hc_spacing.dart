@@ -75,6 +75,11 @@ class HCShadows {
     ),
   ];
 
+  static const List<BoxShadow> elevated = [
+    BoxShadow(color: Color(0x0A0F172A), blurRadius: 4, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x140F172A), blurRadius: 24, offset: Offset(0, 8)),
+  ];
+
   static const List<BoxShadow> floating = [
     BoxShadow(
       color: Color(0x10000000),

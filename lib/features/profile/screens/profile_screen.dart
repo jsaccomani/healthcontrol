@@ -913,28 +913,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.person_add_alt_1_outlined, size: 64, color: theme.primary),
-                const SizedBox(height: 16),
-                Text(
-                  'Nenhum perfil cadastrado',
-                  style: HCTypography.heading.copyWith(color: theme.textPrimary),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Cadastre o perfil da primeira criança para gerenciar o plano de ação e prontuário clínico.',
-                  textAlign: TextAlign.center,
-                  style: HCTypography.body.copyWith(color: theme.textSecondary),
-                ),
-                const SizedBox(height: 24),
-                HCPrimaryButton(
-                  label: 'Cadastrar Criança',
-                  icon: Icons.add,
-                  onPressed: _showAddChildDialog,
-                ),
-              ],
+            child: HCEmptyState(
+              icon: Icons.person_add_alt_1_outlined,
+              title: 'Nenhum perfil cadastrado',
+              message: 'Cadastre o perfil da primeira criança para gerenciar o plano de ação e prontuário clínico.',
+              actionLabel: 'Cadastrar Criança',
+              onActionPressed: _showAddChildDialog,
             ),
           ),
         ),
@@ -1094,7 +1078,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     _buildInlineField('Medicamentos Diários', p.continuousMedications.isNotEmpty ? p.continuousMedications.join(' • ') : 'Conforme prescrição'),
                     _buildInlineField('Receitas Cadastradas', '${_prescriptions.length} prescrição(ões)'),
-                    if (_prescriptions.isNotEmpty) ...[
+                    if (_prescriptions.isEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: theme.elevatedSurface,
+                          borderRadius: HCRadii.radiusMd,
+                          border: Border.all(color: theme.border),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.document_scanner_outlined, size: 20, color: theme.primary),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Nenhuma receita digitalizada ainda. Toque em "Editar" para escanear uma nova receita.',
+                                style: HCTypography.caption.copyWith(color: theme.textSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
                       const SizedBox(height: 8),
                       ..._prescriptions.map((presc) => Container(
                             margin: const EdgeInsets.only(top: 6),
@@ -1271,8 +1278,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.surface,
-        borderRadius: HCRadii.radiusLg,
+        borderRadius: HCRadii.radiusXl,
         border: Border.all(color: theme.border),
+        boxShadow: theme.isDark ? null : HCShadows.elevated,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

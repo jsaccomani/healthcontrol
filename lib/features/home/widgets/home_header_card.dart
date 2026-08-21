@@ -27,25 +27,45 @@ class HomeHeaderCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: theme.surface,
-        borderRadius: HCRadii.radiusLg,
+        borderRadius: HCRadii.radiusXl,
         border: Border.all(color: theme.border),
-        boxShadow: theme.isDark ? null : HCShadows.subtle,
+        boxShadow: theme.isDark ? null : HCShadows.elevated,
       ),
       child: Row(
         children: [
-          // Avatar com iniciais
+          // Avatar com iniciais em squircle com gradiente e sombra sutil
           InkWell(
             onTap: onSwitchChild ?? onOpenProfile,
-            borderRadius: BorderRadius.circular(24),
-            child: CircleAvatar(
-              radius: 24,
-              backgroundColor: theme.primary,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    theme.primary,
+                    Color.lerp(theme.primary, Colors.black, 0.18) ?? theme.primary,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.primary.withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
               child: Text(
                 initials,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 15,
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.2,
                 ),
               ),
             ),

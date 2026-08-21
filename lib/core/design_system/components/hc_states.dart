@@ -59,34 +59,49 @@ class HCEmptyState extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: HCSpacing.paddingCard * 1.5,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
       decoration: BoxDecoration(
         color: theme.surface,
-        borderRadius: HCRadii.radiusLg,
+        borderRadius: HCRadii.radiusXl,
         border: Border.all(color: theme.border),
+        boxShadow: theme.isDark ? null : HCShadows.elevated,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            color: theme.textMuted,
-            size: 40,
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: theme.primarySubtle,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: theme.primary,
+              size: 32,
+            ),
           ),
-          const SizedBox(height: HCSpacing.space12),
+          const SizedBox(height: HCSpacing.space16),
           Text(
             title,
-            style: HCTypography.title.copyWith(color: theme.textPrimary),
+            style: HCTypography.title.copyWith(
+              color: theme.textPrimary,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: HCSpacing.space4),
+          const SizedBox(height: 6),
           Text(
             message,
-            style: HCTypography.bodySmall.copyWith(color: theme.textSecondary),
+            style: HCTypography.bodySmall.copyWith(
+              color: theme.textSecondary,
+              height: 1.45,
+            ),
             textAlign: TextAlign.center,
           ),
           if (actionLabel != null && onActionPressed != null) ...[
-            const SizedBox(height: HCSpacing.space16),
+            const SizedBox(height: HCSpacing.space20),
             HCPrimaryButton(label: actionLabel!, onPressed: onActionPressed),
           ],
         ],

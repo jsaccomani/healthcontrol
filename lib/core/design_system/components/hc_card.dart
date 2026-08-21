@@ -31,9 +31,9 @@ class HCCard extends StatelessWidget {
       padding: padding ?? HCSpacing.paddingCard,
       decoration: BoxDecoration(
         color: backgroundColor ?? theme.surface,
-        borderRadius: HCRadii.radiusLg,
+        borderRadius: HCRadii.radiusXl,
         border: Border.all(color: borderColor ?? theme.border, width: 1.0),
-        boxShadow: theme.isDark ? null : HCShadows.subtle,
+        boxShadow: theme.isDark ? null : HCShadows.elevated,
       ),
       child: child,
     );
@@ -43,7 +43,7 @@ class HCCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: HCRadii.radiusLg,
+          borderRadius: HCRadii.radiusXl,
           child: card,
         ),
       );
@@ -144,7 +144,7 @@ class HCAlertCard extends StatelessWidget {
       padding: HCSpacing.paddingCard,
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: HCRadii.radiusLg,
+        borderRadius: HCRadii.radiusXl,
         border: Border.all(color: border, width: 1.2),
       ),
       child: Column(

@@ -123,5 +123,67 @@ void main() {
       expect(find.text('%'), findsOneWidget);
       expect(find.byIcon(Icons.bloodtype), findsOneWidget);
     });
+
+    testWidgets('HCCard aplica HCRadii.radiusXl e sombra elevated no modo claro, sem sombra no modo escuro', (tester) async {
+      // 1. Modo Claro
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.light(),
+          home: const Scaffold(
+            body: HCCard(child: Text('Card Claro')),
+          ),
+        ),
+      );
+
+      final Container containerLight = tester.widget<Container>(
+        find.descendant(of: find.byType(HCCard), matching: find.byType(Container)),
+      );
+      final BoxDecoration decoLight = containerLight.decoration as BoxDecoration;
+      expect(decoLight.borderRadius, equals(HCRadii.radiusXl));
+      expect(decoLight.boxShadow, equals(HCShadows.elevated));
+
+      // 2. Modo Escuro
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: const Scaffold(
+            body: HCCard(child: Text('Card Escuro')),
+          ),
+        ),
+      );
+
+      final Container containerDark = tester.widget<Container>(
+        find.descendant(of: find.byType(HCCard), matching: find.byType(Container)),
+      );
+      final BoxDecoration decoDark = containerDark.decoration as BoxDecoration;
+      expect(decoDark.borderRadius, equals(HCRadii.radiusXl));
+      expect(decoDark.boxShadow, isNull);
+    });
+
+    testWidgets('HCMetricCard renderiza com escala de fonte 2.0x sem estourar layout', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: MediaQuery(
+              data: MediaQueryData(
+                textScaler: TextScaler.linear(2.0),
+                size: Size(400, 800),
+              ),
+              child: HCMetricCard(
+                label: 'Pico de Fluxo',
+                value: '350',
+                unit: 'L/min',
+                icon: Icons.air,
+                comparisonText: 'Dentro do esperado',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Pico de Fluxo'), findsOneWidget);
+      expect(find.text('350'), findsOneWidget);
+      expect(find.text('L/min'), findsOneWidget);
+    });
   });
 }
