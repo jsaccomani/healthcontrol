@@ -108,7 +108,7 @@ void main() {
     test('4. getPatientProfile() lança StateError se nenhum perfil existir e createNewChildProfile() cria o primeiro perfil com sucesso', () async {
       // Segurança clínica estrita: nunca fabricar placeholder patient
       expect(
-        () => storageService.getPatientProfile(),
+        storageService.getPatientProfile(),
         throwsA(isA<StateError>()),
       );
 

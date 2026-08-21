@@ -58,19 +58,15 @@ class HealthStorageService {
 
   /// Retorna a lista de todos os filhos/perfis cadastrados.
   Future<List<PatientProfile>> getAllProfiles() async {
-    if (_cachedProfiles != null && _cachedProfiles!.isNotEmpty) {
+    if (_cachedProfiles != null) {
       return List.unmodifiable(_cachedProfiles!);
     }
 
     final prefs = await _getPrefs();
     final rawList = prefs.getStringList(_keyProfilesList);
     if (rawList == null || rawList.isEmpty) {
-      final defaultChild = _generateDefaultArthurProfile();
-      _cachedProfiles = [defaultChild];
-      _cachedSelectedProfileId = defaultChild.id;
-      await savePatientProfile(defaultChild);
-      await setSelectedProfileId(defaultChild.id);
-      return [defaultChild];
+      _cachedProfiles = [];
+      return const [];
     }
 
     try {
@@ -80,9 +76,8 @@ class HealthStorageService {
       _cachedProfiles = loaded;
       return List.unmodifiable(loaded);
     } catch (_) {
-      final defaultChild = _generateDefaultArthurProfile();
-      _cachedProfiles = [defaultChild];
-      return [defaultChild];
+      _cachedProfiles = [];
+      return const [];
     }
   }
 
@@ -558,141 +553,6 @@ class HealthStorageService {
     final prefs = await _getPrefs();
     final raw = list.map((e) => jsonEncode(e.toJson())).toList();
     await prefs.setStringList('$_keyCrisisEventsPrefix$patientId', raw);
-  }
-
-  PatientProfile _generateDefaultArthurProfile() {
-    const childId = 'arthur_saccomani_01';
-    final guardians = [
-      const LegalGuardian(
-        id: 'guardian_juliana_01',
-        fullName: 'Juliana Saccomani',
-        relationshipType: LegalGuardianRelationshipType.mother,
-        phone: '(11) 98765-4321',
-        email: 'juliana.saccomani@email.com',
-        hasLegalCustody: true,
-        isPrimaryContact: true,
-      ),
-      const LegalGuardian(
-        id: 'guardian_pai_01',
-        fullName: 'Pai',
-        relationshipType: LegalGuardianRelationshipType.father,
-        phone: '(11) 91234-5678',
-        hasLegalCustody: true,
-        isPrimaryContact: false,
-      ),
-    ];
-
-    final caregivers = [
-      const Caregiver(
-        id: 'caregiver_juliana_01',
-        fullName: 'Juliana Saccomani',
-        relationshipType: CaregiverRelationshipType.mother,
-        phone: '(11) 98765-4321',
-        email: 'juliana.saccomani@email.com',
-        accessLevel: CaregiverAccessLevel.primaryGuardian,
-        isPrimary: true,
-      ),
-      const Caregiver(
-        id: 'caregiver_pai_01',
-        fullName: 'Pai',
-        relationshipType: CaregiverRelationshipType.father,
-        phone: '(11) 91234-5678',
-        accessLevel: CaregiverAccessLevel.guardian,
-        isPrimary: false,
-      ),
-    ];
-
-    final emergencyContacts = [
-      const EmergencyContact(
-        id: 'em_contact_juliana_01',
-        fullName: 'Juliana Saccomani (Mãe)',
-        relationship: 'Mãe',
-        phone: '(11) 98765-4321',
-        priority: 1,
-      ),
-      const EmergencyContact(
-        id: 'em_contact_pai_01',
-        fullName: 'Pai',
-        relationship: 'Pai',
-        phone: '(11) 91234-5678',
-        priority: 2,
-      ),
-    ];
-
-    final doctors = [
-      const HealthcareProfessional(
-        id: 'doc_valente_01',
-        fullName: 'Dr. Marco Aurélio Valente',
-        specialty: HealthcareSpecialty.pediatricPulmonologist,
-        primaryPhone: '(11) 98888-7777',
-        clinicOrHospital: 'Instituto Pediátrico de Pneumologia / Sabará',
-        licenseNumber: 'CRM/SP 129.840',
-        rqeNumber: 'RQE 48.211',
-        isPrimaryAttending: true,
-        isActiveRelationship: true,
-      ),
-    ];
-
-    final conditions = [
-      const SpecialCondition(
-        id: 'cond_arthur_01',
-        name: 'Asma Grave Pediátrica',
-        category: ConditionCategory.respiratory,
-        clinicalCode: 'J45.5',
-        isConfirmed: true,
-      ),
-      const SpecialCondition(
-        id: 'cond_arthur_02',
-        name: 'Rinite Alérgica Perene',
-        category: ConditionCategory.respiratory,
-        clinicalCode: 'J30.1',
-        isConfirmed: true,
-      ),
-    ];
-
-    return PatientProfile(
-      id: childId,
-      schemaVersion: 2,
-      name: 'Arthur Saccomani',
-      avatarId: 'boy_1',
-      birthDate: DateTime(2021, 5, 15),
-      gender: 'Masculino',
-      bloodType: 'A+',
-      heightCm: 110.0,
-      weightKg: 19.5,
-      personalBestPef: 220,
-      susCardNumber: '898 0000 1234 5678',
-      healthInsurance: 'Bradesco Saúde Top',
-      insuranceCardNumber: '987654321000',
-      legalGuardians: guardians,
-      caregivers: caregivers,
-      emergencyContacts: emergencyContacts,
-      healthcareProfessionals: doctors,
-      specialConditions: conditions,
-      motherName: 'Juliana Saccomani',
-      motherPhone: '(11) 98765-4321',
-      motherEmail: 'juliana.saccomani@email.com',
-      fatherName: 'Pai',
-      fatherPhone: '(11) 91234-5678',
-      emergencyContactName: 'Mãe (Juliana)',
-      emergencyContactPhone: '(11) 98765-4321',
-      addressCityState: 'São Paulo - SP',
-      symptomsStartAge: 'Aos 8 meses de idade (bronquiolites de repetição)',
-      hadIcuAdmission: false,
-      icuAdmissionsCount: 0,
-      lastHospitalizationInfo: 'Atendimento ambulatorial e pronto-socorro para inalação',
-      familyAsthmaHistory: const ['Mãe (Rinite/Asma)', 'Pai (Rinite)'],
-      drugAllergies: const ['Nenhuma conhecida até o momento'],
-      foodAllergies: const ['Nenhuma alimentar confirmada'],
-      environmentalAllergies: const ['Ácaros da poeira doméstica', 'Pólen', 'Mudança brusca de temperatura'],
-      comorbidities: const ['Rinite Alérgica Perene', 'Hiper-reatividade Brônquica'],
-      continuousMedications: const ['Clenil HFA 250mcg (1 puff 12/12h com espaçador valvulado)'],
-      igeLevel: 480.0,
-      eosinophilsCount: 550,
-      doctorName: 'Dr. Marco Aurélio Valente',
-      doctorPhone: '(11) 98888-7777',
-      preferredHospital: 'Hospital Infantil Sabará / Samaritano',
-    );
   }
 
   // ---------------------------------------------------------------------------
