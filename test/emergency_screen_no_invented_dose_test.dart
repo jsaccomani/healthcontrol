@@ -30,18 +30,18 @@ void main() {
       // Valida que o alerta clínico é exibido
       expect(find.text('PLANO DE RESGATE NÃO CADASTRADO'), findsOneWidget);
       expect(
-        find.textContaining('O aplicativo não sugere doses ou medicamentos sem prescrição médica cadastrada.'),
+        find.textContaining('não sugere medicamentos ou dosagens sem prévia prescrição cadastrada'),
         findsOneWidget,
       );
 
       // Valida as opções seguras de ação
-      expect(find.text('LIGAR 192 (SAMU)'), findsOneWidget);
-      expect(find.text('Ver Ficha Médica de Emergência'), findsOneWidget);
+      expect(find.text('Ligar 192 (SAMU Emergência)'), findsOneWidget);
+      expect(find.text('Ver Ficha Clínica'), findsOneWidget);
 
-      await tester.tap(find.text('LIGAR 192 (SAMU)'));
+      await tester.tap(find.text('Ligar 192 (SAMU Emergência)'));
       expect(samuCalled, isTrue);
 
-      await tester.tap(find.text('Ver Ficha Médica de Emergência'));
+      await tester.tap(find.text('Ver Ficha Clínica'));
       expect(summaryOpened, isTrue);
     });
 
@@ -91,17 +91,18 @@ void main() {
         ),
       );
 
-      expect(find.text('PLANO DE RESGATE MÉDICO PRESCRITO'), findsOneWidget);
+      expect(find.text('PLANO DE RESGATE PRESCRITO'), findsOneWidget);
       expect(find.textContaining('Dr. Marco Aurélio Valente'), findsOneWidget);
       expect(find.text('Aerolin 100mcg Spray'), findsOneWidget);
       expect(find.textContaining('2 a 4 jatos'), findsOneWidget);
+      expect(find.textContaining('Autenticidade não verificada'), findsOneWidget);
 
-      await tester.tap(find.text('ADMINISTRAR DOSE DE RESGATE'));
+      await tester.tap(find.text('Registrar Medicação Administrada'));
       await tester.pumpAndSettle();
 
       // Confirmação no dialog
       expect(find.text('Confirmar Administração'), findsOneWidget);
-      await tester.tap(find.text('Confirmar e Iniciar Timer (20 min)'));
+      await tester.tap(find.text('Confirmar e Iniciar Timer'));
       expect(administered, isTrue);
     });
   });

@@ -90,3 +90,98 @@ class HCActionZoneBadge extends StatelessWidget {
     );
   }
 }
+
+/// Badge Visual de Status de Autenticidade e Verificação da Receita Médica (HC-009).
+///
+/// Princípio de Segurança Clínica:
+/// - unknown: Nunca omitir o aviso de "Autenticidade não verificada".
+/// - verified: Exibir autoridade e data.
+/// - invalid/revoked/expired: Alerta visual com alto contraste.
+class HCPrescriptionVerificationBadge extends StatelessWidget {
+  final PrescriptionRecord prescription;
+
+  const HCPrescriptionVerificationBadge({super.key, required this.prescription});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+    final status = prescription.verificationStatus;
+
+    final (label, icon, bg, text, border) = switch (status) {
+      PrescriptionVerificationStatus.unknown => (
+          'Autenticidade não verificada (Cadastrada pelo cuidador)',
+          Icons.shield_outlined,
+          theme.elevatedSurface,
+          theme.textSecondary,
+          theme.border,
+        ),
+      PrescriptionVerificationStatus.pending => (
+          'Verificação pendente',
+          Icons.hourglass_empty_rounded,
+          theme.warningBg,
+          theme.warningText,
+          theme.warningBorder,
+        ),
+      PrescriptionVerificationStatus.verified => (
+          prescription.verificationProvider.isNotEmpty
+              ? 'Verificada por ${prescription.verificationProvider}${prescription.verifiedAt != null ? " em ${_formatDate(prescription.verifiedAt!)}" : ""}'
+              : 'Verificada por autoridade médica',
+          Icons.verified,
+          theme.successBg,
+          theme.successText,
+          theme.successBorder,
+        ),
+      PrescriptionVerificationStatus.invalid => (
+          'Receita Inválida (Não reconhecida por autoridade)',
+          Icons.cancel_outlined,
+          theme.criticalBg,
+          theme.criticalText,
+          theme.criticalBorder,
+        ),
+      PrescriptionVerificationStatus.expired => (
+          'Verificação expirada (Requer nova confirmação)',
+          Icons.history_toggle_off,
+          theme.warningBg,
+          theme.warningText,
+          theme.warningBorder,
+        ),
+      PrescriptionVerificationStatus.revoked => (
+          'Receita Revogada pelo prescritor',
+          Icons.block,
+          theme.criticalBg,
+          theme.criticalText,
+          theme.criticalBorder,
+        ),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: HCRadii.radiusSm,
+        border: Border.all(color: border, width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: text),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: text,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    return '${dt.day.toString().padLeft(2, "0")}/${dt.month.toString().padLeft(2, "0")}/${dt.year}';
+  }
+}

@@ -1,5 +1,7 @@
 # 🫁 Health Control: Asma
 
+![CI](https://github.com/jsaccomani/healthcontrol/actions/workflows/ci.yml/badge.svg)
+
 > **Plataforma Modular de Copiloto de Saúde Digital, Prontuário Pediátrico e Reabilitação Respiratória Offline-First**
 
 O **Health Control: Asma** é o primeiro módulo da plataforma **Health Control**, voltado para o monitoramento contínuo, prevenção de crises, profilaxia e reabilitação respiratória de pacientes pediátricos asmáticos (com foco na faixa de 4 a 11 anos).
