@@ -26,6 +26,7 @@ class CareContextScreen extends StatefulWidget {
 class _CareContextScreenState extends State<CareContextScreen> {
   final HealthStorageService _storageService = HealthStorageService();
   List<PatientProfile> _profiles = [];
+  int _corruptedProfilesCount = 0;
   bool _isLoading = true;
 
   @override
@@ -37,9 +38,11 @@ class _CareContextScreenState extends State<CareContextScreen> {
   Future<void> _loadProfiles() async {
     setState(() => _isLoading = true);
     final profiles = await _storageService.getAllProfiles();
+    final corruptedCount = _storageService.lastLoadCorruptedProfilesCount;
     if (!mounted) return;
     setState(() {
       _profiles = profiles;
+      _corruptedProfilesCount = corruptedCount;
       _isLoading = false;
     });
   }
@@ -230,8 +233,21 @@ class _CareContextScreenState extends State<CareContextScreen> {
 
                     const SizedBox(height: 18),
 
-                    // 3. Estados: Empty State vs Lista de Crianças
-                    if (_profiles.isEmpty)
+                    // 3. Estados: Erro de Integridade vs Empty State vs Lista de Crianças
+                    //
+                    // Corrupção com zero perfis saudáveis restantes NUNCA usa o
+                    // mesmo empty state de "instalação nova" — isso mascararia um
+                    // problema real de dados como se fosse o estado legítimo de
+                    // "nenhuma criança cadastrada ainda".
+                    if (_profiles.isEmpty && _corruptedProfilesCount > 0)
+                      HCErrorState(
+                        title: 'Não foi possível carregar os perfis',
+                        message: _corruptedProfilesCount == 1
+                            ? 'Havia 1 perfil salvo, mas os dados dele estão corrompidos e não puderam ser lidos.'
+                            : 'Havia $_corruptedProfilesCount perfis salvos, mas os dados deles estão corrompidos e não puderam ser lidos.',
+                        onRetry: _loadProfiles,
+                      )
+                    else if (_profiles.isEmpty)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(28),
@@ -281,6 +297,16 @@ class _CareContextScreenState extends State<CareContextScreen> {
                         ),
                       )
                     else ...[
+                      // Aviso não bloqueante: alguns perfis não carregaram, mas os
+                      // filhos saudáveis abaixo continuam totalmente acessíveis.
+                      if (_corruptedProfilesCount > 0) ...[
+                        _CorruptedProfilesBanner(
+                          count: _corruptedProfilesCount,
+                          onRetry: _loadProfiles,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+
                       // Lista de Crianças
                       ..._profiles.map(
                         (profile) => Padding(
@@ -308,6 +334,67 @@ class _CareContextScreenState extends State<CareContextScreen> {
                 ),
               ),
             ),
+    );
+  }
+}
+
+/// Aviso não bloqueante de que N perfis salvos não puderam ser carregados
+/// (dados corrompidos). Os filhos saudáveis continuam totalmente acessíveis
+/// na lista abaixo — este banner nunca substitui ou trava a tela.
+class _CorruptedProfilesBanner extends StatelessWidget {
+  final int count;
+  final VoidCallback onRetry;
+
+  const _CorruptedProfilesBanner({required this.count, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.hcTheme;
+    final message = count == 1
+        ? '1 perfil não pôde ser carregado corretamente — os dados podem estar corrompidos.'
+        : '$count perfis não puderam ser carregados corretamente — os dados podem estar corrompidos.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.warningBg,
+        borderRadius: HCRadii.radiusMd,
+        border: Border.all(color: theme.warningBorder),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.warning_amber_rounded, color: theme.warning, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message,
+                  style: HCTypography.bodySmall.copyWith(
+                    color: theme.warningText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: onRetry,
+                  child: Text(
+                    'Tentar novamente',
+                    style: HCTypography.bodySmall.copyWith(
+                      color: theme.warningText,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:clinical_core/clinical_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -29,6 +30,14 @@ class HealthStorageService {
   SharedPreferences? _cachedPrefs;
   List<PatientProfile>? _cachedProfiles;
   String? _cachedSelectedProfileId;
+
+  /// Quantos perfis salvos falharam ao parsear na última chamada real de
+  /// [getAllProfiles] (não incrementado em hits de cache — reflete a última
+  /// carga de fato). Nunca carrega o dado corrompido em si, só a contagem:
+  /// permite a UI distinguir "nenhum perfil cadastrado" (rawList vazio) de
+  /// "havia perfis, mas alguns/todos não puderam ser carregados" (erro real
+  /// de integridade de dados que não pode ser mascarado como estado vazio).
+  int lastLoadCorruptedProfilesCount = 0;
   final Map<String, List<HealthControlEntry>> _cachedEntries = {};
   final Map<String, List<PrescriptionRecord>> _cachedPrescriptions = {};
   final Map<String, List<ClinicalEventLog>> _cachedEventLogs = {};
@@ -49,6 +58,7 @@ class HealthStorageService {
     } else {
       _cachedProfiles = null;
       _cachedSelectedProfileId = null;
+      lastLoadCorruptedProfilesCount = 0;
       _cachedEntries.clear();
       _cachedPrescriptions.clear();
       _cachedEventLogs.clear();
@@ -57,6 +67,9 @@ class HealthStorageService {
   }
 
   /// Retorna a lista de todos os filhos/perfis cadastrados.
+  /// Cada perfil salvo é parseado individualmente: um perfil com JSON
+  /// corrompido é descartado e contado em [lastLoadCorruptedProfilesCount],
+  /// mas nunca derruba a visibilidade dos demais perfis saudáveis da lista.
   Future<List<PatientProfile>> getAllProfiles() async {
     if (_cachedProfiles != null) {
       return List.unmodifiable(_cachedProfiles!);
@@ -66,19 +79,26 @@ class HealthStorageService {
     final rawList = prefs.getStringList(_keyProfilesList);
     if (rawList == null || rawList.isEmpty) {
       _cachedProfiles = [];
+      lastLoadCorruptedProfilesCount = 0;
       return const [];
     }
 
-    try {
-      final loaded = rawList
-          .map((str) => PatientProfile.fromJson(jsonDecode(str) as Map<String, dynamic>))
-          .toList();
-      _cachedProfiles = loaded;
-      return List.unmodifiable(loaded);
-    } catch (_) {
-      _cachedProfiles = [];
-      return const [];
+    final loaded = <PatientProfile>[];
+    var corruptedCount = 0;
+    for (var i = 0; i < rawList.length; i++) {
+      try {
+        loaded.add(PatientProfile.fromJson(jsonDecode(rawList[i]) as Map<String, dynamic>));
+      } catch (e) {
+        corruptedCount++;
+        // Loga apenas índice e tipo do erro — nunca o conteúdo do JSON, que
+        // pode carregar dado clínico do perfil que falhou ao parsear.
+        debugPrint('HealthStorageService.getAllProfiles: perfil corrompido descartado (índice $i, ${e.runtimeType})');
+      }
     }
+
+    _cachedProfiles = loaded;
+    lastLoadCorruptedProfilesCount = corruptedCount;
+    return List.unmodifiable(loaded);
   }
 
   /// Retorna o perfil do filho específico ou do atualmente selecionado.
