@@ -46,7 +46,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData({String? targetPatientId}) async {
     setState(() => _isLoading = true);
-    final targetId = targetPatientId ?? widget.initialPatientId;
+    // Prioridade correta: (1) id explícito desta chamada; (2) o paciente
+    // já carregado nesta tela (_profile, reflete a última troca feita
+    // pelo usuário); (3) só na primeiríssima carga, antes de _profile
+    // existir, usa o id com que a tela foi aberta. Usar
+    // widget.initialPatientId como fallback permanente era a causa raiz
+    // do bug de troca não "colar" — qualquer refresh subsequente
+    // revertia para o paciente original da instância.
+    final targetId = targetPatientId ?? _profile?.id ?? widget.initialPatientId;
     final results = await Future.wait([
       _storageService.getAllProfiles(),
       _storageService.getPatientProfile(patientId: targetId),
@@ -63,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _switchChild(PatientProfile target) async {
     await _storageService.setSelectedProfileId(target.id);
-    _loadData();
+    await _loadData(targetPatientId: target.id);
   }
 
   void _showHashAuditDialog(HealthControlEntry entry) {
@@ -133,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (newChild != null) {
       await _storageService.setSelectedProfileId(newChild.id);
-      await _loadData();
+      await _loadData(targetPatientId: newChild.id);
     }
   }
 
